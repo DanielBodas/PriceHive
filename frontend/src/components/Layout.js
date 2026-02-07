@@ -20,16 +20,16 @@ const Layout = ({ children }) => {
     const navigate = useNavigate();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
 
-    const navItems = [
+    const baseNavItems = [
         { path: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
         { path: "/feed", label: "Muro", icon: <MessageSquare className="w-5 h-5" /> },
         { path: "/shopping-list", label: "Lista de Compra", icon: <ShoppingCart className="w-5 h-5" /> },
         { path: "/analytics", label: "Análisis", icon: <BarChart3 className="w-5 h-5" /> },
     ];
 
-    if (isAdmin()) {
-        navItems.push({ path: "/admin", label: "Admin", icon: <Settings className="w-5 h-5" /> });
-    }
+    const navItems = user?.role === 'admin' 
+        ? [...baseNavItems, { path: "/admin", label: "Admin", icon: <Settings className="w-5 h-5" /> }]
+        : baseNavItems;
 
     const handleLogout = () => {
         logout();
