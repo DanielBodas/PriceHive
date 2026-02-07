@@ -1,8 +1,11 @@
 import { Link } from "react-router-dom";
+import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui/button";
-import { ShoppingCart, TrendingDown, Users, BarChart3, Shield, Tag, ArrowRight } from "lucide-react";
+import { ShoppingCart, TrendingDown, Users, BarChart3, Shield, Tag, ArrowRight, Star } from "lucide-react";
 
 const LandingPage = () => {
+    const { loginWithGoogle } = useAuth();
+
     const features = [
         {
             icon: <Users className="w-6 h-6" />,
@@ -45,11 +48,13 @@ const LandingPage = () => {
                                 Iniciar Sesión
                             </Button>
                         </Link>
-                        <Link to="/register">
-                            <Button className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-6 btn-lift" data-testid="register-nav-btn">
-                                Registrarse
-                            </Button>
-                        </Link>
+                        <Button 
+                            onClick={loginWithGoogle}
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-6 btn-lift" 
+                            data-testid="register-nav-btn"
+                        >
+                            Empezar con Google
+                        </Button>
                     </div>
                 </div>
             </nav>
@@ -72,16 +77,15 @@ const LandingPage = () => {
                                 Detecta subidas de precios encubiertas y ahorra en cada compra.
                             </p>
                             <div className="flex flex-wrap gap-4">
-                                <Link to="/register">
-                                    <Button 
-                                        size="lg" 
-                                        className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-8 py-6 text-lg font-semibold btn-lift shadow-lg shadow-emerald-500/20"
-                                        data-testid="hero-cta-btn"
-                                    >
-                                        Empezar Gratis
-                                        <ArrowRight className="w-5 h-5 ml-2" />
-                                    </Button>
-                                </Link>
+                                <Button 
+                                    size="lg" 
+                                    className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-8 py-6 text-lg font-semibold btn-lift shadow-lg shadow-emerald-500/20"
+                                    data-testid="hero-cta-btn"
+                                    onClick={loginWithGoogle}
+                                >
+                                    Empezar con Google
+                                    <ArrowRight className="w-5 h-5 ml-2" />
+                                </Button>
                                 <Link to="/login">
                                     <Button 
                                         variant="outline" 
@@ -188,16 +192,15 @@ const LandingPage = () => {
                     <p className="text-emerald-100 text-lg mb-8 max-w-2xl mx-auto">
                         Más de 10.000 usuarios ya están ahorrando en sus compras semanales
                     </p>
-                    <Link to="/register">
-                        <Button 
-                            size="lg" 
-                            className="bg-white text-emerald-600 hover:bg-slate-100 rounded-full px-10 py-6 text-lg font-semibold shadow-xl"
-                            data-testid="cta-register-btn"
-                        >
-                            Crear cuenta gratis
-                            <ArrowRight className="w-5 h-5 ml-2" />
-                        </Button>
-                    </Link>
+                    <Button 
+                        size="lg" 
+                        className="bg-white text-emerald-600 hover:bg-slate-100 rounded-full px-10 py-6 text-lg font-semibold shadow-xl"
+                        data-testid="cta-register-btn"
+                        onClick={loginWithGoogle}
+                    >
+                        Empezar con Google
+                        <ArrowRight className="w-5 h-5 ml-2" />
+                    </Button>
                 </div>
             </section>
 
