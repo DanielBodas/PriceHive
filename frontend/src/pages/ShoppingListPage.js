@@ -136,37 +136,41 @@ const ShoppingListPage = () => {
         }
     };
 
-    const handleUpdateItem = async (index, updates) => {
-        const updatedItems = selectedList.items.map((item, i) => {
-            if (i === index) {
-                return {
-                    product_id: item.product_id,
-                    quantity: updates.quantity !== undefined ? updates.quantity : item.quantity,
-                    unit_id: updates.unit_id !== undefined ? updates.unit_id : item.unit_id,
-                    price: updates.price !== undefined ? updates.price : item.price,
-                    purchased: updates.purchased !== undefined ? updates.purchased : item.purchased,
-                    brand_id: updates.brand_id !== undefined ? updates.brand_id : item.brand_id
-                };
-            }
-            return {
+    const updateLocalItem = (index, updates) => {
+        const newItems = [...selectedList.items];
+        newItems[index] = { ...newItems[index], ...updates };
+        setSelectedList({ ...selectedList, items: newItems });
+        return newItems;
+    };
+
+    const saveList = async (itemsToSave) => {
+        try {
+            // Map items to the format expected by the backend (stripping extra fields)
+            const cleanedItems = itemsToSave.map(item => ({
                 product_id: item.product_id,
                 quantity: item.quantity,
                 unit_id: item.unit_id,
                 price: item.price,
                 purchased: item.purchased,
                 brand_id: item.brand_id
-            };
-        });
+            }));
 
-        try {
             const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
-                items: updatedItems
+                items: cleanedItems
             });
+            
+            // Only update backend metadata, keep local items to avoid input jumping
+            // or update everything if we want to sync
             setSelectedList(response.data);
             setLists(lists.map(l => l.id === selectedList.id ? response.data : l));
         } catch (error) {
-            toast.error("Error al actualizar");
+            toast.error("Error al guardar cambios");
         }
+    };
+
+    const handleUpdateItem = async (index, updates) => {
+        const newItems = updateLocalItem(index, updates);
+        await saveList(newItems);
     };
 
     const handleRemoveItem = async (index) => {
