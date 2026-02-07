@@ -601,6 +601,10 @@ class PriceHiveAPITester:
 
         self.test_get_me()
 
+        # Session persistence test (Critical)
+        print("\n🔐 Testing Session Persistence (Critical)...")
+        self.test_session_persistence()
+
         # Admin CRUD tests
         self.test_admin_categories()
         self.test_admin_brands()
@@ -612,6 +616,11 @@ class PriceHiveAPITester:
         self.test_prices()
         self.test_social_features()
         self.test_shopping_lists()
+        
+        # Shopping list dynamic editing test (Critical)
+        print("\n🛒 Testing Shopping List Dynamic Editing (Critical)...")
+        self.test_shopping_list_dynamic_editing()
+        
         self.test_analytics()
         
         # Public endpoint tests
