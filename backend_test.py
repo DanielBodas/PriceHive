@@ -386,6 +386,148 @@ class PriceHiveAPITester:
         else:
             self.log_result("Create Shopping List", False, f"Status: {status}")
 
+    def test_shopping_list_dynamic_editing(self):
+        """Test shopping list dynamic editing functionality"""
+        if not (self.created_ids['products'] and self.created_ids['supermarkets'] and 
+                self.created_ids['units'] and self.created_ids['brands']):
+            self.log_result("Shopping List Dynamic Editing", False, "Missing dependencies")
+            return
+
+        # Create a shopping list named "Test List"
+        success, response, status = self.make_request(
+            'POST', 'shopping-lists',
+            data={
+                "name": "Test List",
+                "supermarket_id": self.created_ids['supermarkets'][0],
+                "items": [{
+                    "product_id": self.created_ids['products'][0],
+                    "quantity": 1,
+                    "unit_id": self.created_ids['units'][0],
+                    "purchased": False,
+                    "brand_id": None,
+                    "price": None
+                }]
+            },
+            token=self.user_token
+        )
+        
+        if not success or 'id' not in response:
+            self.log_result("Create Test List for Dynamic Editing", False, f"Status: {status}")
+            return
+            
+        list_id = response['id']
+        self.created_ids['shopping_lists'].append(list_id)
+        self.log_result("Create Test List for Dynamic Editing", True)
+        
+        # Test dynamic editing: Update brand, quantity, and price
+        updated_items = [{
+            "product_id": self.created_ids['products'][0],
+            "quantity": 5,  # Changed quantity to 5
+            "unit_id": self.created_ids['units'][0],
+            "purchased": False,
+            "brand_id": self.created_ids['brands'][0],  # Changed brand
+            "price": 10.50  # Added price with € symbol test
+        }]
+        
+        success, response, status = self.make_request(
+            'PUT', f'shopping-lists/{list_id}',
+            data={
+                "name": "Test List",
+                "supermarket_id": self.created_ids['supermarkets'][0],
+                "items": updated_items
+            },
+            token=self.user_token
+        )
+        
+        if success:
+            self.log_result("Update Shopping List - Dynamic Editing", True)
+            
+            # Verify the changes were saved by getting the list again
+            success, response, status = self.make_request(
+                'GET', f'shopping-lists/{list_id}', token=self.user_token
+            )
+            
+            if success and 'items' in response and len(response['items']) > 0:
+                item = response['items'][0]
+                
+                # Check if quantity was updated to 5
+                if item.get('quantity') == 5:
+                    self.log_result("Verify Quantity Update (5)", True)
+                else:
+                    self.log_result("Verify Quantity Update (5)", False, f"Expected 5, got {item.get('quantity')}")
+                
+                # Check if brand was updated
+                if item.get('brand_id') == self.created_ids['brands'][0]:
+                    self.log_result("Verify Brand Update", True)
+                else:
+                    self.log_result("Verify Brand Update", False, f"Brand not updated correctly")
+                
+                # Check if price was updated to 10.50
+                if item.get('price') == 10.50:
+                    self.log_result("Verify Price Update (10.50€)", True)
+                else:
+                    self.log_result("Verify Price Update (10.50€)", False, f"Expected 10.50, got {item.get('price')}")
+                    
+                # Test data persistence after "refresh" (another GET request)
+                success2, response2, status2 = self.make_request(
+                    'GET', f'shopping-lists/{list_id}', token=self.user_token
+                )
+                
+                if success2 and 'items' in response2 and len(response2['items']) > 0:
+                    item2 = response2['items'][0]
+                    if (item2.get('quantity') == 5 and 
+                        item2.get('brand_id') == self.created_ids['brands'][0] and 
+                        item2.get('price') == 10.50):
+                        self.log_result("Verify Data Persistence After Refresh", True)
+                    else:
+                        self.log_result("Verify Data Persistence After Refresh", False, "Data not persisted")
+                else:
+                    self.log_result("Verify Data Persistence After Refresh", False, f"Status: {status2}")
+                    
+            else:
+                self.log_result("Verify Shopping List Updates", False, f"Status: {status}")
+        else:
+            self.log_result("Update Shopping List - Dynamic Editing", False, f"Status: {status}")
+
+    def test_session_persistence(self):
+        """Test session persistence using cookies"""
+        # This test simulates session persistence by checking if the session token works
+        # across multiple requests without re-authentication
+        
+        # First, login and get session info
+        success, response, status = self.make_request(
+            'POST', 'auth/login',
+            data={"email": "admin@pricehive.com", "password": "admin123"}
+        )
+        
+        if not success or 'access_token' not in response:
+            self.log_result("Session Persistence - Initial Login", False, f"Status: {status}")
+            return
+            
+        session_token = response['access_token']
+        self.log_result("Session Persistence - Initial Login", True)
+        
+        # Test that the token works for accessing protected endpoints
+        success, response, status = self.make_request(
+            'GET', 'auth/me', token=session_token
+        )
+        
+        if success and 'email' in response:
+            self.log_result("Session Persistence - Access Protected Endpoint", True)
+            
+            # Simulate "navigation" to alerts endpoint (another protected endpoint)
+            success, response, status = self.make_request(
+                'GET', 'alerts', token=session_token
+            )
+            
+            if success:
+                self.log_result("Session Persistence - Navigate to Alerts", True)
+            else:
+                self.log_result("Session Persistence - Navigate to Alerts", False, f"Status: {status}")
+                
+        else:
+            self.log_result("Session Persistence - Access Protected Endpoint", False, f"Status: {status}")
+
     def test_analytics(self):
         """Test analytics endpoints"""
         # Get general stats
