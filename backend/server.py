@@ -411,7 +411,7 @@ async def google_session(data: GoogleSessionRequest, response: Response):
         value=session_token,
         httponly=True,
         secure=True,
-        samesite="lax",
+        samesite="none",
         path="/",
         max_age=SESSION_EXPIRY_DAYS * 24 * 60 * 60
     )
@@ -436,7 +436,7 @@ async def logout(request: Request, response: Response):
     if session_token:
         await db.user_sessions.delete_many({"session_token": session_token})
     
-    response.delete_cookie(key="session_token", path="/", secure=True, samesite="lax")
+    response.delete_cookie(key="session_token", path="/", secure=True, samesite="none")
     return {"message": "Logged out successfully"}
 
 # ==================== LEGACY AUTH ENDPOINTS ====================
