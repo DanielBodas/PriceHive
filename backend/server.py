@@ -186,6 +186,7 @@ class ShoppingListItemResponse(BaseModel):
     unit_id: str
     unit_name: Optional[str] = None
     price: Optional[float] = None
+    unit_price: Optional[float] = None
     estimated_price: Optional[float] = None
     purchased: bool
     brand_id: Optional[str] = None
@@ -955,11 +956,17 @@ async def create_shopping_list(data: ShoppingListCreate, user: dict = Depends(ge
             {"_id": 0},
             sort=[("created_at", -1)]
         )
-        estimated = latest["price"] * item.quantity if latest else None
-        if estimated:
+        # Calculate estimate using unit price from latest record
+        estimated = None
+        if latest:
+            latest_price = latest["price"]
+            latest_qty = latest.get("quantity", 1) or 1
+            unit_price_est = latest_price / latest_qty
+            estimated = unit_price_est * item.quantity
             total_estimated += estimated
+        
         if item.price:
-            total_actual += item.price * item.quantity
+            total_actual += item.price
         
         product = await db.products.find_one({"id": item.product_id}, {"_id": 0})
         unit = await db.units.find_one({"id": item.unit_id}, {"_id": 0})
@@ -972,6 +979,7 @@ async def create_shopping_list(data: ShoppingListCreate, user: dict = Depends(ge
             "unit_id": item.unit_id,
             "unit_name": unit["name"] if unit else None,
             "price": item.price,
+            "unit_price": item.price / item.quantity if item.price and item.quantity else None,
             "estimated_price": estimated,
             "purchased": item.purchased,
             "brand_id": item.brand_id,
@@ -1025,11 +1033,17 @@ async def get_shopping_lists(user: dict = Depends(get_current_user)):
                 {"_id": 0},
                 sort=[("created_at", -1)]
             )
-            estimated = latest["price"] * item["quantity"] if latest else None
-            if estimated:
+            # Calculate estimate using unit price from latest record
+            estimated = None
+            if latest:
+                latest_price = latest["price"]
+                latest_qty = latest.get("quantity", 1) or 1
+                unit_price_est = latest_price / latest_qty
+                estimated = unit_price_est * item["quantity"]
                 total_estimated += estimated
+            
             if item.get("price"):
-                total_actual += item["price"] * item["quantity"]
+                total_actual += item["price"]
             
             items_with_info.append(ShoppingListItemResponse(
                 product_id=item["product_id"],
@@ -1038,6 +1052,7 @@ async def get_shopping_lists(user: dict = Depends(get_current_user)):
                 unit_id=item["unit_id"],
                 unit_name=units.get(item["unit_id"]),
                 price=item.get("price"),
+                unit_price=item.get("price") / item["quantity"] if item.get("price") and item.get("quantity") else None,
                 estimated_price=estimated,
                 purchased=item.get("purchased", False),
                 brand_id=item.get("brand_id"),
@@ -1079,11 +1094,17 @@ async def get_shopping_list(list_id: str, user: dict = Depends(get_current_user)
             {"_id": 0},
             sort=[("created_at", -1)]
         )
-        estimated = latest["price"] * item["quantity"] if latest else None
-        if estimated:
+        # Calculate estimate using unit price from latest record
+        estimated = None
+        if latest:
+            latest_price = latest["price"]
+            latest_qty = latest.get("quantity", 1) or 1
+            unit_price_est = latest_price / latest_qty
+            estimated = unit_price_est * item["quantity"]
             total_estimated += estimated
+        
         if item.get("price"):
-            total_actual += item["price"] * item["quantity"]
+            total_actual += item["price"]
         
         items_with_info.append(ShoppingListItemResponse(
             product_id=item["product_id"],
@@ -1092,6 +1113,7 @@ async def get_shopping_list(list_id: str, user: dict = Depends(get_current_user)
             unit_id=item["unit_id"],
             unit_name=units.get(item["unit_id"]),
             price=item.get("price"),
+            unit_price=item.get("price") / item["quantity"] if item.get("price") and item.get("quantity") else None,
             estimated_price=estimated,
             purchased=item.get("purchased", False),
             brand_id=item.get("brand_id"),

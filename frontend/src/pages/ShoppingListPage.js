@@ -9,10 +9,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { Checkbox } from "../components/ui/checkbox";
 import { toast } from "sonner";
-import { 
-    ShoppingCart, 
-    Plus, 
-    Trash2, 
+import {
+    ShoppingCart,
+    Plus,
+    Trash2,
     Upload,
     Store,
     Package,
@@ -59,7 +59,7 @@ const ShoppingListPage = () => {
             setSupermarkets(supermarketsRes.data);
             setUnits(unitsRes.data);
             setBrands(brandsRes.data);
-            
+
             // Set default unit if available
             if (unitsRes.data.length > 0) {
                 setNewItemUnit(unitsRes.data[0].id);
@@ -97,11 +97,11 @@ const ShoppingListPage = () => {
             toast.error("Selecciona un producto");
             return;
         }
-        
+
         // Get product info for default values
         const product = products.find(p => p.id === newItemProduct);
         const defaultUnit = newItemUnit || (units.length > 0 ? units[0].id : "");
-        
+
         try {
             const currentItems = selectedList.items.map(item => ({
                 product_id: item.product_id,
@@ -111,7 +111,7 @@ const ShoppingListPage = () => {
                 purchased: item.purchased,
                 brand_id: item.brand_id
             }));
-            
+
             const newItem = {
                 product_id: newItemProduct,
                 quantity: parseFloat(newItemQuantity) || 1,
@@ -124,7 +124,7 @@ const ShoppingListPage = () => {
             const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
                 items: [...currentItems, newItem]
             });
-            
+
             setSelectedList(response.data);
             setLists(lists.map(l => l.id === selectedList.id ? response.data : l));
             setNewItemProduct("");
@@ -158,7 +158,7 @@ const ShoppingListPage = () => {
             const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
                 items: cleanedItems
             });
-            
+
             // Only update backend metadata, keep local items to avoid input jumping
             // or update everything if we want to sync
             setSelectedList(response.data);
@@ -295,13 +295,12 @@ const ShoppingListPage = () => {
                         ) : (
                             <div className="space-y-2">
                                 {lists.map((list) => (
-                                    <Card 
+                                    <Card
                                         key={list.id}
-                                        className={`border cursor-pointer transition-all ${
-                                            selectedList?.id === list.id 
-                                                ? 'border-emerald-500 bg-emerald-50' 
+                                        className={`border cursor-pointer transition-all ${selectedList?.id === list.id
+                                                ? 'border-emerald-500 bg-emerald-50'
                                                 : 'border-slate-200 hover:border-emerald-300'
-                                        }`}
+                                            }`}
                                         onClick={() => setSelectedList(list)}
                                         data-testid={`list-card-${list.id}`}
                                     >
@@ -414,7 +413,7 @@ const ShoppingListPage = () => {
                                                     </div>
                                                 </DialogContent>
                                             </Dialog>
-                                            <Button 
+                                            <Button
                                                 onClick={handleSubmitPrices}
                                                 className="bg-emerald-500 hover:bg-emerald-600 gap-2"
                                                 data-testid="submit-prices-btn"
@@ -437,19 +436,20 @@ const ShoppingListPage = () => {
                                             {/* Table Header */}
                                             <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500 uppercase">
                                                 <div className="col-span-1"></div>
-                                                <div className="col-span-3">Producto</div>
+                                                <div className="col-span-2">Producto</div>
                                                 <div className="col-span-2">Marca</div>
-                                                <div className="col-span-2">Cantidad</div>
+                                                <div className="col-span-1">Cant.</div>
+                                                <div className="col-span-2 text-center">P. Unit</div>
                                                 <div className="col-span-1 text-center">Est.</div>
                                                 <div className="col-span-2 text-center">Precio €</div>
                                                 <div className="col-span-1"></div>
                                             </div>
-                                            
+
                                             <div className="divide-y divide-slate-100">
                                                 {selectedList.items?.map((item, index) => (
-                                                    <div 
-                                                        key={index} 
-                                                        className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-slate-50 transition-colors" 
+                                                    <div
+                                                        key={index}
+                                                        className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-slate-50 transition-colors"
                                                         data-testid={`list-item-${index}`}
                                                     >
                                                         {/* Checkbox */}
@@ -460,21 +460,21 @@ const ShoppingListPage = () => {
                                                                 data-testid={`item-checkbox-${index}`}
                                                             />
                                                         </div>
-                                                        
+
                                                         {/* Producto (solo lectura) */}
-                                                        <div className="col-span-3">
-                                                            <p className={`font-medium text-sm ${item.purchased ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                                                        <div className="col-span-2">
+                                                            <p className={`font-medium text-xs ${item.purchased ? 'line-through text-slate-400' : 'text-slate-900'}`}>
                                                                 {item.product_name}
                                                             </p>
                                                         </div>
-                                                        
+
                                                         {/* Marca (editable) */}
                                                         <div className="col-span-2">
-                                                            <Select 
-                                                                value={item.brand_id || ""} 
+                                                            <Select
+                                                                value={item.brand_id || ""}
                                                                 onValueChange={(value) => handleUpdateItem(index, { brand_id: value || null })}
                                                             >
-                                                                <SelectTrigger className="h-8 text-xs" data-testid={`item-brand-select-${index}`}>
+                                                                <SelectTrigger className="h-8 text-[10px]" data-testid={`item-brand-select-${index}`}>
                                                                     <SelectValue placeholder="-" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
@@ -484,9 +484,9 @@ const ShoppingListPage = () => {
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
-                                                        
+
                                                         {/* Cantidad (editable) */}
-                                                        <div className="col-span-2 flex items-center gap-1">
+                                                        <div className="col-span-1 flex flex-col items-start">
                                                             <Input
                                                                 type="number"
                                                                 min="0.1"
@@ -494,23 +494,37 @@ const ShoppingListPage = () => {
                                                                 value={item.quantity}
                                                                 onChange={(e) => updateLocalItem(index, { quantity: parseFloat(e.target.value) || 1 })}
                                                                 onBlur={() => saveList(selectedList.items)}
-                                                                className="h-8 w-16 text-xs font-mono"
+                                                                className="h-7 w-full text-[10px] font-mono px-1"
                                                                 data-testid={`item-quantity-input-${index}`}
                                                             />
-                                                            <span className="text-xs text-slate-500">{item.unit_name}</span>
+                                                            <span className="text-[9px] text-slate-400 truncate w-full">{item.unit_name}</span>
                                                         </div>
-                                                        
+
+                                                        {/* Precio Unitario (calculado) */}
+                                                        <div className="col-span-2 text-center">
+                                                            {item.unit_price ? (
+                                                                <div className="flex flex-col items-center">
+                                                                    <span className="font-mono text-xs text-emerald-600 font-medium">
+                                                                        {item.unit_price.toFixed(3)}€
+                                                                    </span>
+                                                                    <span className="text-[9px] text-slate-400">por {item.unit_name}</span>
+                                                                </div>
+                                                            ) : (
+                                                                <span className="text-xs text-slate-300">-</span>
+                                                            )}
+                                                        </div>
+
                                                         {/* Precio Estimado */}
                                                         <div className="col-span-1 text-center">
                                                             {item.estimated_price ? (
-                                                                <span className="font-mono text-xs text-slate-500">
+                                                                <span className="font-mono text-[10px] text-slate-500">
                                                                     {item.estimated_price.toFixed(2)}€
                                                                 </span>
                                                             ) : (
                                                                 <span className="text-xs text-slate-300">-</span>
                                                             )}
                                                         </div>
-                                                        
+
                                                         {/* Precio Real (editable) */}
                                                         <div className="col-span-2">
                                                             <div className="relative">
@@ -518,33 +532,33 @@ const ShoppingListPage = () => {
                                                                     type="number"
                                                                     min="0"
                                                                     step="0.01"
-                                                                    placeholder="0.00"
+                                                                    placeholder="00.00"
                                                                     value={item.price || ""}
                                                                     onChange={(e) => updateLocalItem(index, { price: parseFloat(e.target.value) || null })}
                                                                     onBlur={() => saveList(selectedList.items)}
-                                                                    className="h-8 text-sm font-mono pr-6"
+                                                                    className="h-8 text-xs font-mono pr-5 pl-1"
                                                                     data-testid={`item-price-input-${index}`}
                                                                 />
-                                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">€</span>
+                                                                <span className="absolute right-1 top-1/2 -translate-y-1/2 text-slate-400 text-[10px]">€</span>
                                                             </div>
                                                         </div>
-                                                        
+
                                                         {/* Eliminar */}
                                                         <div className="col-span-1 text-right">
                                                             <Button
                                                                 variant="ghost"
                                                                 size="icon"
                                                                 onClick={() => handleRemoveItem(index)}
-                                                                className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                                                                className="h-7 w-7 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
                                                                 data-testid={`remove-item-${index}`}
                                                             >
-                                                                <Trash2 className="w-4 h-4" />
+                                                                <Trash2 className="w-3.5 h-3.5" />
                                                             </Button>
                                                         </div>
                                                     </div>
                                                 ))}
                                             </div>
-                                            
+
                                             {/* Totals */}
                                             <div className="p-4 bg-slate-50 border-t border-slate-200">
                                                 <div className="flex items-center justify-between">
