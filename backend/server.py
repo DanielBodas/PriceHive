@@ -36,22 +36,24 @@ app = FastAPI(title="PriceHive API")
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer(auto_error=False)
 
-# --- CONFIGURACIÓN CORS CORREGIDA ---
-# En producción, NO podemos usar "*" con allow_credentials=True
-frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+# --- CONFIGURACIÓN CORS DE PRODUCCIÓN ---
+frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip('/')
+backend_url = os.environ.get("BACKEND_URL", "http://localhost:10000").rstrip('/')
+
 origins = [
     "http://localhost:3000",
-    frontend_url.rstrip('/'),
+    "http://127.0.0.1:3000",
+    frontend_url,
 ]
 
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
     allow_credentials=True,
-    allow_methods=["*"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
+    expose_headers=["*"],
 )
-# --------------------------------------
 # --------------------------------------
 
 # Configure logging
@@ -419,6 +421,7 @@ async def auth_google_callback(code: str, response: Response):
             },
         )
         tokens = token_resp.json()
+        logger.info(f"Google Token intercambiado. Status: {token_resp.status_code}")
         
         # 2. Obtener datos del usuario
         user_info_resp = await client_http.get(
@@ -426,6 +429,7 @@ async def auth_google_callback(code: str, response: Response):
             headers={"Authorization": f"Bearer {tokens.get('access_token')}"}
         )
         google_data = user_info_resp.json()
+        logger.info(f"Datos de Google recibidos para: {google_data.get('email')}")
 
     # 3. Buscar o crear usuario en MongoDB
     email = google_data["email"]
@@ -451,6 +455,7 @@ async def auth_google_callback(code: str, response: Response):
     session_token = str(uuid.uuid4())
     expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRY_DAYS)
     
+    logger.info(f"Creando sesión local para usuario: {email}")
     await db.user_sessions.delete_many({"user_id": user_id})
     await db.user_sessions.insert_one({
         "user_id": user_id,
@@ -458,6 +463,7 @@ async def auth_google_callback(code: str, response: Response):
         "expires_at": expires_at.isoformat(),
         "created_at": datetime.now(timezone.utc).isoformat()
     })
+    logger.info(f"Sesión creada. Redirigiendo a Frontend.")
 
     # 5. Redirigir al frontend con el session_id
     frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
@@ -489,9 +495,11 @@ async def google_session(data: GoogleSessionRequest, response: Response):
         user = await db.users.find_one({"id": session["user_id"]}, {"_id": 0})
         
         if not user:
+            logger.error(f"Usuario NO encontrado para la sesión: {session['user_id']}")
             raise HTTPException(status_code=404, detail="Usuario no encontrado")
         
         # 3. Crear el token JWT para que el frontend lo use en sus cabeceras
+        logger.info(f"Generando JWT para intercambio de sesión de Google: {user['email']}")
         access_token = create_token(user["id"], user["email"], user["role"])
         
         return {
@@ -515,69 +523,109 @@ async def google_session(data: GoogleSessionRequest, response: Response):
 
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate):
+    # 1. Normalización: Pasamos el email a minúsculas y quitamos espacios
     user_email = user_data.email.lower().strip()
+    
+    # 2. Verificación de existencia
     existing = await db.users.find_one({"email": user_email})
     if existing:
-        raise HTTPException(status_code=400, detail="Email already registered")
+        logging.warning(f"Intento de registro con email ya existente: {user_email}")
+        raise HTTPException(status_code=400, detail="El email ya está registrado")
     
+    # 3. Preparación del documento de usuario
     user_id = str(uuid.uuid4())
+    now = datetime.now(timezone.utc).isoformat()
+    
     user_doc = {
         "id": user_id,
         "email": user_email,
         "password": hash_password(user_data.password),
         "name": user_data.name,
         "role": "user",
-        "points": 0,
-        "created_at": datetime.now(timezone.utc).isoformat()
+        "points": 0, # Se inicializa en 0 para la base de datos
+        "created_at": now
     }
-    await db.users.insert_one(user_doc)
-    await add_points(user_id, 50, "Bienvenido a PriceHive")
     
-    token = create_token(user_id, user_data.email, "user")
-    return TokenResponse(
-        access_token=token,
-        token_type="bearer",
-        user=UserResponse(
-            id=user_id,
-            email=user_data.email,
-            name=user_data.name,
-            role="user",
-            points=50,
-            created_at=user_doc["created_at"]
+    try:
+        # 4. Inserción en la base de datos
+        await db.users.insert_one(user_doc)
+        logging.info(f"Usuario creado exitosamente: {user_email}")
+
+        # 5. Asignación de puntos de bienvenida
+        # Envolvemos esto en su propio try/except para que el registro no falle 
+        # si hay un problema momentáneo con la colección de puntos.
+        points_assigned = 0
+        try:
+            await add_points(user_id, 50, "Bienvenido a PriceHive")
+            points_assigned = 50
+        except Exception as e:
+            logging.error(f"Error no crítico al asignar puntos a {user_id}: {e}")
+
+        # 6. Generación del Token JWT
+        # Es vital que las variables de entorno para el secreto del JWT estén configuradas.
+        try:
+            token = create_token(user_id, user_email, "user")
+        except Exception as e:
+            logging.error(f"Error al generar el token para {user_email}: {e}")
+            raise HTTPException(status_code=500, detail="Error al generar el token de acceso")
+
+        # 7. Respuesta exitosa estructurada
+        return TokenResponse(
+            access_token=token,
+            token_type="bearer",
+            user=UserResponse(
+                id=user_id,
+                email=user_email,
+                name=user_data.name,
+                role="user",
+                points=points_assigned,
+                created_at=now
+            )
         )
-    )
+
+    except Exception as e:
+        logging.error(f"Error crítico durante el proceso de registro: {e}")
+        # Si el usuario se llegó a crear pero algo falló después, podrías considerar 
+        # una lógica de limpieza, pero lo ideal es devolver un error 500 claro.
+        raise HTTPException(status_code=500, detail="Error interno al procesar el registro")
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
     user_email = credentials.email.lower().strip()
+    logger.info(f"Intento de login para: {user_email}")
     user = await db.users.find_one({"email": user_email}, {"_id": 0})
     
     if not user:
         logger.warning(f"Login fallido: Usuario no encontrado ({user_email})")
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
         
-    if not user.get("password"):
-        logger.warning(f"Login fallido: Usuario ({user_email}) no tiene password (posible usuario de Google)")
-        raise HTTPException(status_code=401, detail="Por favor, inicia sesión con Google")
-        
     if not verify_password(credentials.password, user["password"]):
         logger.warning(f"Login fallido: Contraseña incorrecta para {user_email}")
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
     
-    token = create_token(user["id"], user["email"], user["role"])
-    return TokenResponse(
-        access_token=token,
-        token_type="bearer",
-        user=UserResponse(
-            id=user["id"],
-            email=user["email"],
-            name=user["name"],
-            role=user["role"],
-            picture=user.get("picture"),
-            points=user.get("points", 0),
-            created_at=user["created_at"]
+    logger.info(f"Password verificada para {user_email}. Generando respuesta...")
+    try:
+        # Usamos el mail del objeto 'user' que es el que viene de la DB
+        token_email = user.get("email", user_email)
+        token = create_token(user["id"], token_email, user["role"])
+        logger.info(f"JWT generado con éxito para {user_email}")
+        
+        return TokenResponse(
+            access_token=token,
+            token_type="bearer",
+            user=UserResponse(
+                id=user["id"],
+                email=user.get("email"),
+                name=user["name"],
+                role=user["role"],
+                picture=user.get("picture"),
+                points=user.get("points", 0),
+                created_at=user.get("created_at", datetime.now(timezone.utc).isoformat())
+            )
         )
-    )
+    except Exception as e:
+        logger.error(f"Error crítico enviando respuesta de login: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Error interno: {str(e)}")
 
 @api_router.get("/auth/me", response_model=UserResponse)
 async def get_me(user: dict = Depends(get_current_user)):
