@@ -369,8 +369,10 @@ async def create_notification(user_id: str, title: str, message: str, notificati
 async def auth_google():
     """Paso 1: Redirigir al usuario directamente a Google OAuth"""
     client_id = os.environ.get("GOOGLE_CLIENT_ID")
-    # Importante: Esta URL debe coincidir con la de tu Google Cloud Console
-    redirect_uri = "http://localhost:10000/api/auth/google/callback"
+
+    # Detectamos la URL del backend. Si no existe en Render, usa localhost.
+    backend_url = os.environ.get("BACKEND_URL", "http://localhost:10000")
+    redirect_uri = f"{backend_url}/api/auth/google/callback"
     
     google_url = (
         f"https://accounts.google.com/o/oauth2/v2/auth?"
@@ -388,7 +390,10 @@ async def auth_google_callback(code: str, response: Response):
     """Paso 2: Recibir el código de Google y crear la sesión en TU base de datos"""
     client_id = os.environ.get("GOOGLE_CLIENT_ID")
     client_secret = os.environ.get("GOOGLE_CLIENT_SECRET")
-    redirect_uri = "http://localhost:10000/api/auth/google/callback"
+
+    # IMPORTANTE: Esta URI debe ser idéntica a la del Paso 1
+    backend_url = os.environ.get("BACKEND_URL", "http://localhost:10000")
+    redirect_uri = f"{backend_url}/api/auth/google/callback"
 
     # 1. Intercambiar código por tokens
     async with httpx.AsyncClient() as client_http:

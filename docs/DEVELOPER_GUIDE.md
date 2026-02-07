@@ -25,7 +25,7 @@
 | Backend | Python 3.11 + FastAPI |
 | Frontend | React 19 + Tailwind CSS |
 | Base de Datos | MongoDB |
-| Autenticación | Google OAuth (Emergent) + JWT |
+| Autenticación | Google OAuth + JWT |
 | UI Components | Shadcn/UI |
 | Gráficos | Recharts |
 
@@ -80,8 +80,7 @@
                               ▼
 ┌─────────────────────────────────────────────────────────────────┐
 │                   SERVICIOS EXTERNOS                             │
-│  - Emergent Auth (auth.emergentagent.com)                       │
-│  - Session Validation API                                        │
+│  - Google OAuth API                                              │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -157,7 +156,7 @@ httpx==0.28.1         # Para llamadas HTTP async
 ### Módulos del Backend
 
 #### 1. Autenticación (`/api/auth/*`)
-- Google OAuth con Emergent Auth
+- Google OAuth
 - JWT para autenticación legacy
 - Gestión de sesiones con cookies
 
@@ -367,24 +366,22 @@ db.user_sessions.createIndex({ "expires_at": 1 }, { expireAfterSeconds: 0 })
 
 ## Autenticación
 
-### Flujo Google OAuth (Emergent Auth)
+### Flujo Google OAuth
 
 ```
 1. Usuario hace click en "Continuar con Google"
    │
-2. Redirect a: https://auth.emergentagent.com/?redirect={callback_url}
+2. Redirect a Google OAuth
    │
 3. Usuario autoriza con Google
    │
-4. Redirect de vuelta: {callback_url}#session_id={token}
+4. Redirect de vuelta con código de autorización
    │
-5. Frontend extrae session_id del hash URL
+5. Frontend intercambia código por tokens
    │
 6. POST /api/auth/google/session { session_id }
    │
-7. Backend valida con Emergent:
-   GET https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data
-   Headers: X-Session-ID: {session_id}
+7. Backend valida la sesión
    │
 8. Backend crea/actualiza usuario y sesión
    │
@@ -935,7 +932,6 @@ print('Seed data created successfully!')
 
 ### Error: "Google OAuth redirect"
 - Verificar que la URL de callback coincide exactamente
-- No modificar la URL de auth.emergentagent.com
 
 ### Error: "Session expired"
 - Las sesiones duran 7 días por defecto
