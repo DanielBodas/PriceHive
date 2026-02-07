@@ -935,6 +935,7 @@ async def get_shopping_list(list_id: str, user: dict = Depends(get_current_user)
     supermarket = await db.supermarkets.find_one({"id": lst["supermarket_id"]}, {"_id": 0})
     products = {p["id"]: p["name"] for p in await db.products.find({}, {"_id": 0}).to_list(1000)}
     units = {u["id"]: u["name"] for u in await db.units.find({}, {"_id": 0}).to_list(1000)}
+    brands = {b["id"]: b["name"] for b in await db.brands.find({}, {"_id": 0}).to_list(1000)}
     
     items_with_info = []
     total_estimated = 0
@@ -960,7 +961,9 @@ async def get_shopping_list(list_id: str, user: dict = Depends(get_current_user)
             unit_name=units.get(item["unit_id"]),
             price=item.get("price"),
             estimated_price=estimated,
-            purchased=item.get("purchased", False)
+            purchased=item.get("purchased", False),
+            brand_id=item.get("brand_id"),
+            brand_name=brands.get(item.get("brand_id"))
         ))
     
     return ShoppingListResponse(
