@@ -104,27 +104,33 @@ user_problem_statement: "Fix session persistence issues and test the new shoppin
 backend:
   - task: "Session Persistence (Cookie)"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Changed samesite to 'none' for cross-site cookie support in preview env."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Session persistence working correctly. Admin login successful with admin@pricehive.com/admin123. JWT token persists across multiple API calls including /auth/me and /alerts endpoints. Backend session management is functioning properly."
 
   - task: "Shopping List API - Dynamic Editing"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/backend/server.py"
     stuck_count: 0
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Previous agent implemented it. Needs verification of brand/quantity updates."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Shopping list dynamic editing working perfectly. Successfully created 'Test List', updated brand_id, changed quantity to 5, set price to 10.50€. All changes persist correctly after refresh. PUT /shopping-lists/{id} API working as expected."
 
 frontend:
   - task: "Session Persistence (Direct Navigation)"
