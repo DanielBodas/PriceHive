@@ -54,7 +54,7 @@ const AnalyticsPage = () => {
         }
         setAnalyticsLoading(true);
         try {
-            const params = selectedSupermarket ? `?supermarket_id=${selectedSupermarket}` : '';
+            const params = selectedSupermarket && selectedSupermarket !== 'all' ? `?supermarket_id=${selectedSupermarket}` : '';
             const response = await axios.get(`${API}/analytics/product/${selectedProduct}${params}`);
             setProductAnalytics(response.data);
         } catch (error) {
@@ -136,7 +136,7 @@ const AnalyticsPage = () => {
                                         <SelectValue placeholder="Todos" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="">Todos</SelectItem>
+                                        <SelectItem value="all">Todos</SelectItem>
                                         {supermarkets.map((sm) => (
                                             <SelectItem key={sm.id} value={sm.id}>{sm.name}</SelectItem>
                                         ))}
