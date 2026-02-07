@@ -151,6 +151,7 @@ class ShoppingListItemCreate(BaseModel):
     unit_id: str
     price: Optional[float] = None
     purchased: bool = False
+    brand_id: Optional[str] = None
 
 class ShoppingListCreate(BaseModel):
     name: str
@@ -166,6 +167,8 @@ class ShoppingListItemResponse(BaseModel):
     price: Optional[float] = None
     estimated_price: Optional[float] = None
     purchased: bool
+    brand_id: Optional[str] = None
+    brand_name: Optional[str] = None
 
 class ShoppingListResponse(BaseModel):
     id: str
