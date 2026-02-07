@@ -13,7 +13,6 @@ import {
     ShoppingCart, 
     Plus, 
     Trash2, 
-    Check, 
     Upload,
     Store,
     Package,
@@ -27,6 +26,7 @@ const ShoppingListPage = () => {
     const [products, setProducts] = useState([]);
     const [supermarkets, setSupermarkets] = useState([]);
     const [units, setUnits] = useState([]);
+    const [brands, setBrands] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedList, setSelectedList] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -36,7 +36,7 @@ const ShoppingListPage = () => {
     const [newListName, setNewListName] = useState("");
     const [newListSupermarket, setNewListSupermarket] = useState("");
 
-    // New item form
+    // New item form - solo producto obligatorio inicialmente
     const [newItemProduct, setNewItemProduct] = useState("");
     const [newItemQuantity, setNewItemQuantity] = useState("1");
     const [newItemUnit, setNewItemUnit] = useState("");
@@ -47,16 +47,23 @@ const ShoppingListPage = () => {
 
     const fetchData = async () => {
         try {
-            const [listsRes, productsRes, supermarketsRes, unitsRes] = await Promise.all([
+            const [listsRes, productsRes, supermarketsRes, unitsRes, brandsRes] = await Promise.all([
                 axios.get(`${API}/shopping-lists`),
                 axios.get(`${API}/public/products`),
                 axios.get(`${API}/public/supermarkets`),
-                axios.get(`${API}/admin/units`)
+                axios.get(`${API}/admin/units`),
+                axios.get(`${API}/admin/brands`)
             ]);
             setLists(listsRes.data);
             setProducts(productsRes.data);
             setSupermarkets(supermarketsRes.data);
             setUnits(unitsRes.data);
+            setBrands(brandsRes.data);
+            
+            // Set default unit if available
+            if (unitsRes.data.length > 0) {
+                setNewItemUnit(unitsRes.data[0].id);
+            }
         } catch (error) {
             console.error("Error fetching data:", error);
         } finally {
@@ -86,25 +93,32 @@ const ShoppingListPage = () => {
     };
 
     const handleAddItem = async () => {
-        if (!newItemProduct || !newItemQuantity || !newItemUnit) {
-            toast.error("Completa todos los campos");
+        if (!newItemProduct) {
+            toast.error("Selecciona un producto");
             return;
         }
+        
+        // Get product info for default values
+        const product = products.find(p => p.id === newItemProduct);
+        const defaultUnit = newItemUnit || (units.length > 0 ? units[0].id : "");
+        
         try {
             const currentItems = selectedList.items.map(item => ({
                 product_id: item.product_id,
                 quantity: item.quantity,
                 unit_id: item.unit_id,
                 price: item.price,
-                purchased: item.purchased
+                purchased: item.purchased,
+                brand_id: item.brand_id
             }));
             
             const newItem = {
                 product_id: newItemProduct,
-                quantity: parseFloat(newItemQuantity),
-                unit_id: newItemUnit,
+                quantity: parseFloat(newItemQuantity) || 1,
+                unit_id: defaultUnit,
                 price: null,
-                purchased: false
+                purchased: false,
+                brand_id: product?.brand_id || null
             };
 
             const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
@@ -115,7 +129,6 @@ const ShoppingListPage = () => {
             setLists(lists.map(l => l.id === selectedList.id ? response.data : l));
             setNewItemProduct("");
             setNewItemQuantity("1");
-            setNewItemUnit("");
             setAddItemDialogOpen(false);
             toast.success("Producto añadido");
         } catch (error) {
@@ -129,9 +142,10 @@ const ShoppingListPage = () => {
                 return {
                     product_id: item.product_id,
                     quantity: updates.quantity !== undefined ? updates.quantity : item.quantity,
-                    unit_id: item.unit_id,
+                    unit_id: updates.unit_id !== undefined ? updates.unit_id : item.unit_id,
                     price: updates.price !== undefined ? updates.price : item.price,
-                    purchased: updates.purchased !== undefined ? updates.purchased : item.purchased
+                    purchased: updates.purchased !== undefined ? updates.purchased : item.purchased,
+                    brand_id: updates.brand_id !== undefined ? updates.brand_id : item.brand_id
                 };
             }
             return {
@@ -139,7 +153,8 @@ const ShoppingListPage = () => {
                 quantity: item.quantity,
                 unit_id: item.unit_id,
                 price: item.price,
-                purchased: item.purchased
+                purchased: item.purchased,
+                brand_id: item.brand_id
             };
         });
 
@@ -162,7 +177,8 @@ const ShoppingListPage = () => {
                 quantity: item.quantity,
                 unit_id: item.unit_id,
                 price: item.price,
-                purchased: item.purchased
+                purchased: item.purchased,
+                brand_id: item.brand_id
             }));
 
         try {
@@ -197,6 +213,12 @@ const ShoppingListPage = () => {
         } catch (error) {
             toast.error("Error al eliminar lista");
         }
+    };
+
+    // Get brand name helper
+    const getBrandName = (brandId) => {
+        const brand = brands.find(b => b.id === brandId);
+        return brand?.name || "-";
     };
 
     return (
@@ -339,7 +361,7 @@ const ShoppingListPage = () => {
                                                     </DialogHeader>
                                                     <div className="space-y-4 pt-4">
                                                         <div className="space-y-2">
-                                                            <Label>Producto</Label>
+                                                            <Label>Producto *</Label>
                                                             <Select value={newItemProduct} onValueChange={setNewItemProduct}>
                                                                 <SelectTrigger data-testid="add-item-product-select">
                                                                     <SelectValue placeholder="Selecciona producto" />
@@ -347,15 +369,18 @@ const ShoppingListPage = () => {
                                                                 <SelectContent>
                                                                     {products.map((p) => (
                                                                         <SelectItem key={p.id} value={p.id}>
-                                                                            {p.name} ({p.brand_name})
+                                                                            {p.name}
                                                                         </SelectItem>
                                                                     ))}
                                                                 </SelectContent>
                                                             </Select>
+                                                            <p className="text-xs text-slate-400">
+                                                                Puedes cambiar marca, cantidad y precio en la lista
+                                                            </p>
                                                         </div>
                                                         <div className="grid grid-cols-2 gap-4">
                                                             <div className="space-y-2">
-                                                                <Label>Cantidad</Label>
+                                                                <Label>Cantidad inicial</Label>
                                                                 <Input
                                                                     type="number"
                                                                     min="0.1"
@@ -405,54 +430,110 @@ const ShoppingListPage = () => {
                                         </div>
                                     ) : (
                                         <>
+                                            {/* Table Header */}
+                                            <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500 uppercase">
+                                                <div className="col-span-1"></div>
+                                                <div className="col-span-3">Producto</div>
+                                                <div className="col-span-2">Marca</div>
+                                                <div className="col-span-2">Cantidad</div>
+                                                <div className="col-span-1 text-center">Est.</div>
+                                                <div className="col-span-2 text-center">Precio €</div>
+                                                <div className="col-span-1"></div>
+                                            </div>
+                                            
                                             <div className="divide-y divide-slate-100">
                                                 {selectedList.items?.map((item, index) => (
-                                                    <div key={index} className="p-4 hover:bg-slate-50 transition-colors" data-testid={`list-item-${index}`}>
-                                                        <div className="flex items-center gap-4">
+                                                    <div 
+                                                        key={index} 
+                                                        className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-slate-50 transition-colors" 
+                                                        data-testid={`list-item-${index}`}
+                                                    >
+                                                        {/* Checkbox */}
+                                                        <div className="col-span-1">
                                                             <Checkbox
                                                                 checked={item.purchased}
                                                                 onCheckedChange={(checked) => handleUpdateItem(index, { purchased: checked })}
                                                                 data-testid={`item-checkbox-${index}`}
                                                             />
-                                                            <div className="flex-1 min-w-0">
-                                                                <p className={`font-medium ${item.purchased ? 'line-through text-slate-400' : 'text-slate-900'}`}>
-                                                                    {item.product_name}
-                                                                </p>
-                                                                <p className="text-sm text-slate-500">
-                                                                    {item.quantity} {item.unit_name}
-                                                                </p>
+                                                        </div>
+                                                        
+                                                        {/* Producto (solo lectura) */}
+                                                        <div className="col-span-3">
+                                                            <p className={`font-medium text-sm ${item.purchased ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                                                                {item.product_name}
+                                                            </p>
+                                                        </div>
+                                                        
+                                                        {/* Marca (editable) */}
+                                                        <div className="col-span-2">
+                                                            <Select 
+                                                                value={item.brand_id || ""} 
+                                                                onValueChange={(value) => handleUpdateItem(index, { brand_id: value || null })}
+                                                            >
+                                                                <SelectTrigger className="h-8 text-xs" data-testid={`item-brand-select-${index}`}>
+                                                                    <SelectValue placeholder="-" />
+                                                                </SelectTrigger>
+                                                                <SelectContent>
+                                                                    {brands.map((b) => (
+                                                                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                                                                    ))}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        </div>
+                                                        
+                                                        {/* Cantidad (editable) */}
+                                                        <div className="col-span-2 flex items-center gap-1">
+                                                            <Input
+                                                                type="number"
+                                                                min="0.1"
+                                                                step="0.1"
+                                                                value={item.quantity}
+                                                                onChange={(e) => handleUpdateItem(index, { quantity: parseFloat(e.target.value) || 1 })}
+                                                                className="h-8 w-16 text-xs font-mono"
+                                                                data-testid={`item-quantity-input-${index}`}
+                                                            />
+                                                            <span className="text-xs text-slate-500">{item.unit_name}</span>
+                                                        </div>
+                                                        
+                                                        {/* Precio Estimado */}
+                                                        <div className="col-span-1 text-center">
+                                                            {item.estimated_price ? (
+                                                                <span className="font-mono text-xs text-slate-500">
+                                                                    {item.estimated_price.toFixed(2)}€
+                                                                </span>
+                                                            ) : (
+                                                                <span className="text-xs text-slate-300">-</span>
+                                                            )}
+                                                        </div>
+                                                        
+                                                        {/* Precio Real (editable) */}
+                                                        <div className="col-span-2">
+                                                            <div className="relative">
+                                                                <Input
+                                                                    type="number"
+                                                                    min="0"
+                                                                    step="0.01"
+                                                                    placeholder="0.00"
+                                                                    value={item.price || ""}
+                                                                    onChange={(e) => handleUpdateItem(index, { price: parseFloat(e.target.value) || null })}
+                                                                    className="h-8 text-sm font-mono pr-6"
+                                                                    data-testid={`item-price-input-${index}`}
+                                                                />
+                                                                <span className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 text-sm">€</span>
                                                             </div>
-                                                            <div className="flex items-center gap-3">
-                                                                {item.estimated_price && (
-                                                                    <div className="text-right">
-                                                                        <p className="text-xs text-slate-400">Estimado</p>
-                                                                        <p className="font-mono text-sm text-slate-500">
-                                                                            {item.estimated_price.toFixed(2)} €
-                                                                        </p>
-                                                                    </div>
-                                                                )}
-                                                                <div className="w-24">
-                                                                    <Input
-                                                                        type="number"
-                                                                        min="0"
-                                                                        step="0.01"
-                                                                        placeholder="Precio"
-                                                                        value={item.price || ""}
-                                                                        onChange={(e) => handleUpdateItem(index, { price: parseFloat(e.target.value) || null })}
-                                                                        className="h-9 text-sm font-mono"
-                                                                        data-testid={`item-price-input-${index}`}
-                                                                    />
-                                                                </div>
-                                                                <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleRemoveItem(index)}
-                                                                    className="text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                                                                    data-testid={`remove-item-${index}`}
-                                                                >
-                                                                    <Trash2 className="w-4 h-4" />
-                                                                </Button>
-                                                            </div>
+                                                        </div>
+                                                        
+                                                        {/* Eliminar */}
+                                                        <div className="col-span-1 text-right">
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                onClick={() => handleRemoveItem(index)}
+                                                                className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                                                                data-testid={`remove-item-${index}`}
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
                                                         </div>
                                                     </div>
                                                 ))}
@@ -465,7 +546,7 @@ const ShoppingListPage = () => {
                                                         <Calculator className="w-5 h-5" />
                                                         <span className="font-medium">Totales</span>
                                                     </div>
-                                                    <div className="flex items-center gap-6">
+                                                    <div className="flex items-center gap-8">
                                                         <div className="text-right">
                                                             <p className="text-xs text-slate-400">Estimado</p>
                                                             <p className="font-mono font-semibold text-slate-600">
@@ -474,7 +555,7 @@ const ShoppingListPage = () => {
                                                         </div>
                                                         <div className="text-right">
                                                             <p className="text-xs text-slate-400">Real</p>
-                                                            <p className="font-mono font-semibold text-emerald-600">
+                                                            <p className="font-mono font-semibold text-lg text-emerald-600">
                                                                 {selectedList.total_actual?.toFixed(2) || '0.00'} €
                                                             </p>
                                                         </div>
