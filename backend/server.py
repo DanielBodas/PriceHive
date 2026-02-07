@@ -35,6 +35,22 @@ app = FastAPI(title="PriceHive API")
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer(auto_error=False)
 
+# --- CONFIGURACIÓN CORS ACTUALIZADA ---
+# Esto permite que tu frontend en Render hable con este backend
+origins = [
+    "http://localhost:3000",  # Para cuando pruebas en tu PC
+    os.environ.get("FRONTEND_URL", "") # La URL que te dará Render luego
+]
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"], # TRUCO: Por ahora permitimos todo para que no te falle el primer despliegue
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+# --------------------------------------
+
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 logger = logging.getLogger(__name__)
