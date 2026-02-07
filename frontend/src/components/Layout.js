@@ -1,6 +1,14 @@
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "./ui/button";
+import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
+import { 
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuSeparator,
+    DropdownMenuTrigger,
+} from "./ui/dropdown-menu";
 import { 
     Tag, 
     LayoutDashboard, 
@@ -10,29 +18,53 @@ import {
     Settings, 
     LogOut,
     Menu,
-    X
+    X,
+    Bell,
+    User,
+    Star
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import axios from "axios";
+
+const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const Layout = ({ children }) => {
-    const { user, logout, isAdmin } = useAuth();
+    const { user, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+    const [unreadCount, setUnreadCount] = useState(0);
 
     const baseNavItems = [
         { path: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
         { path: "/feed", label: "Muro", icon: <MessageSquare className="w-5 h-5" /> },
         { path: "/shopping-list", label: "Lista de Compra", icon: <ShoppingCart className="w-5 h-5" /> },
         { path: "/analytics", label: "Análisis", icon: <BarChart3 className="w-5 h-5" /> },
+        { path: "/alerts", label: "Alertas", icon: <Bell className="w-5 h-5" /> },
     ];
 
     const navItems = user?.role === 'admin' 
         ? [...baseNavItems, { path: "/admin", label: "Admin", icon: <Settings className="w-5 h-5" /> }]
         : baseNavItems;
 
-    const handleLogout = () => {
-        logout();
+    useEffect(() => {
+        const fetchUnreadCount = async () => {
+            try {
+                const response = await axios.get(`${API}/notifications/unread-count`);
+                setUnreadCount(response.data.count);
+            } catch (error) {
+                console.error("Error fetching unread count:", error);
+            }
+        };
+
+        fetchUnreadCount();
+        // Refresh every 30 seconds
+        const interval = setInterval(fetchUnreadCount, 30000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const handleLogout = async () => {
+        await logout();
         navigate("/");
     };
 
@@ -68,32 +100,66 @@ const Layout = ({ children }) => {
                                     >
                                         {item.icon}
                                         {item.label}
+                                        {item.path === "/alerts" && unreadCount > 0 && (
+                                            <span className="w-5 h-5 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center">
+                                                {unreadCount > 9 ? "9+" : unreadCount}
+                                            </span>
+                                        )}
                                     </Button>
                                 </Link>
                             ))}
                         </div>
 
                         <div className="flex items-center gap-3">
-                            <div className="hidden sm:flex items-center gap-2 text-sm text-slate-600">
-                                <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-medium">
-                                    {user?.name?.charAt(0).toUpperCase()}
-                                </div>
-                                <span className="font-medium">{user?.name}</span>
-                                {user?.role === 'admin' && (
-                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
-                                        Admin
-                                    </span>
-                                )}
+                            {/* Points Badge */}
+                            <div className="hidden sm:flex items-center gap-1 px-3 py-1.5 bg-emerald-50 rounded-full">
+                                <Star className="w-4 h-4 text-emerald-500" />
+                                <span className="font-mono text-sm font-medium text-emerald-600">
+                                    {user?.points || 0}
+                                </span>
                             </div>
-                            <Button 
-                                variant="ghost" 
-                                size="icon"
-                                onClick={handleLogout}
-                                className="text-slate-500 hover:text-rose-600 hover:bg-rose-50"
-                                data-testid="logout-btn"
-                            >
-                                <LogOut className="w-5 h-5" />
-                            </Button>
+
+                            {/* User Dropdown */}
+                            <DropdownMenu>
+                                <DropdownMenuTrigger asChild>
+                                    <Button variant="ghost" className="flex items-center gap-2 px-2">
+                                        <Avatar className="w-8 h-8">
+                                            <AvatarImage src={user?.picture} />
+                                            <AvatarFallback className="bg-emerald-100 text-emerald-600 text-sm">
+                                                {user?.name?.charAt(0).toUpperCase()}
+                                            </AvatarFallback>
+                                        </Avatar>
+                                        <span className="hidden sm:block text-sm font-medium text-slate-700">
+                                            {user?.name}
+                                        </span>
+                                        {user?.role === 'admin' && (
+                                            <span className="hidden sm:inline px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+                                                Admin
+                                            </span>
+                                        )}
+                                    </Button>
+                                </DropdownMenuTrigger>
+                                <DropdownMenuContent align="end" className="w-48">
+                                    <DropdownMenuItem onClick={() => navigate('/profile')} className="cursor-pointer">
+                                        <User className="w-4 h-4 mr-2" />
+                                        Mi Perfil
+                                    </DropdownMenuItem>
+                                    <DropdownMenuItem onClick={() => navigate('/alerts')} className="cursor-pointer">
+                                        <Bell className="w-4 h-4 mr-2" />
+                                        Notificaciones
+                                        {unreadCount > 0 && (
+                                            <span className="ml-auto w-5 h-5 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center">
+                                                {unreadCount}
+                                            </span>
+                                        )}
+                                    </DropdownMenuItem>
+                                    <DropdownMenuSeparator />
+                                    <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-rose-600">
+                                        <LogOut className="w-4 h-4 mr-2" />
+                                        Cerrar Sesión
+                                    </DropdownMenuItem>
+                                </DropdownMenuContent>
+                            </DropdownMenu>
                             
                             {/* Mobile menu button */}
                             <Button
