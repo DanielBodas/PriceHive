@@ -3,6 +3,7 @@ import axios from "axios";
 import Layout from "../components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
+import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
 import { toast } from "sonner";
@@ -10,9 +11,9 @@ import {
     BarChart3, 
     TrendingUp, 
     TrendingDown,
-    ArrowRight,
     Store,
-    Package
+    Package,
+    Search
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -20,7 +21,12 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const AnalyticsPage = () => {
     const [products, setProducts] = useState([]);
     const [supermarkets, setSupermarkets] = useState([]);
+    const [categories, setCategories] = useState([]);
     const [loading, setLoading] = useState(true);
+    
+    const [searchQuery, setSearchQuery] = useState("");
+    const [selectedCategory, setSelectedCategory] = useState("");
+    const [filteredProducts, setFilteredProducts] = useState([]);
     
     const [selectedProduct, setSelectedProduct] = useState("");
     const [selectedSupermarket, setSelectedSupermarket] = useState("");
@@ -32,14 +38,35 @@ const AnalyticsPage = () => {
         fetchBaseData();
     }, []);
 
+    useEffect(() => {
+        // Filter products based on search and category
+        let filtered = products;
+        
+        if (searchQuery) {
+            filtered = filtered.filter(p => 
+                p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+                p.brand_name?.toLowerCase().includes(searchQuery.toLowerCase())
+            );
+        }
+        
+        if (selectedCategory && selectedCategory !== "all") {
+            filtered = filtered.filter(p => p.category_id === selectedCategory);
+        }
+        
+        setFilteredProducts(filtered);
+    }, [searchQuery, selectedCategory, products]);
+
     const fetchBaseData = async () => {
         try {
-            const [productsRes, supermarketsRes] = await Promise.all([
+            const [productsRes, supermarketsRes, categoriesRes] = await Promise.all([
                 axios.get(`${API}/public/products`),
-                axios.get(`${API}/public/supermarkets`)
+                axios.get(`${API}/public/supermarkets`),
+                axios.get(`${API}/public/categories`)
             ]);
             setProducts(productsRes.data);
+            setFilteredProducts(productsRes.data);
             setSupermarkets(supermarketsRes.data);
+            setCategories(categoriesRes.data);
         } catch (error) {
             console.error("Error fetching data:", error);
         } finally {
@@ -110,9 +137,36 @@ const AnalyticsPage = () => {
                     <p className="text-slate-500 mt-1">Explora la evolución y compara precios</p>
                 </div>
 
-                {/* Filters */}
-                <Card className="border-slate-200" data-testid="filters-card">
+                {/* Search & Filters */}
+                <Card className="border-slate-200" data-testid="search-card">
                     <CardContent className="p-6">
+                        <div className="grid md:grid-cols-3 gap-4 mb-4">
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+                                <Input
+                                    placeholder="Buscar producto..."
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
+                                    className="pl-10"
+                                    data-testid="search-input"
+                                />
+                            </div>
+                            <Select value={selectedCategory} onValueChange={setSelectedCategory}>
+                                <SelectTrigger data-testid="category-filter-select">
+                                    <SelectValue placeholder="Todas las categorías" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="all">Todas las categorías</SelectItem>
+                                    {categories.map((cat) => (
+                                        <SelectItem key={cat.id} value={cat.id}>{cat.name}</SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                            <div className="text-sm text-slate-500 flex items-center">
+                                {filteredProducts.length} productos encontrados
+                            </div>
+                        </div>
+                        
                         <div className="grid md:grid-cols-4 gap-4 items-end">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-slate-700">Producto</label>
@@ -121,7 +175,7 @@ const AnalyticsPage = () => {
                                         <SelectValue placeholder="Selecciona producto" />
                                     </SelectTrigger>
                                     <SelectContent>
-                                        {products.map((p) => (
+                                        {filteredProducts.map((p) => (
                                             <SelectItem key={p.id} value={p.id}>
                                                 {p.name} ({p.brand_name})
                                             </SelectItem>
