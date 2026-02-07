@@ -492,7 +492,8 @@ const ShoppingListPage = () => {
                                                                 min="0.1"
                                                                 step="0.1"
                                                                 value={item.quantity}
-                                                                onChange={(e) => handleUpdateItem(index, { quantity: parseFloat(e.target.value) || 1 })}
+                                                                onChange={(e) => updateLocalItem(index, { quantity: parseFloat(e.target.value) || 1 })}
+                                                                onBlur={() => saveList(selectedList.items)}
                                                                 className="h-8 w-16 text-xs font-mono"
                                                                 data-testid={`item-quantity-input-${index}`}
                                                             />
@@ -519,7 +520,8 @@ const ShoppingListPage = () => {
                                                                     step="0.01"
                                                                     placeholder="0.00"
                                                                     value={item.price || ""}
-                                                                    onChange={(e) => handleUpdateItem(index, { price: parseFloat(e.target.value) || null })}
+                                                                    onChange={(e) => updateLocalItem(index, { price: parseFloat(e.target.value) || null })}
+                                                                    onBlur={() => saveList(selectedList.items)}
                                                                     className="h-8 text-sm font-mono pr-6"
                                                                     data-testid={`item-price-input-${index}`}
                                                                 />
