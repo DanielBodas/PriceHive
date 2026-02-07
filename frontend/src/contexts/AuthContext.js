@@ -1,17 +1,23 @@
-import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext(null);
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
+// Set initial token from localStorage immediately
+const initialToken = localStorage.getItem('token');
+if (initialToken) {
+    axios.defaults.headers.common['Authorization'] = `Bearer ${initialToken}`;
+}
+
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(null);
-    const [loading, setLoading] = useState(true);
-    const initialized = useRef(false);
+    const [token, setToken] = useState(initialToken);
+    const [loading, setLoading] = useState(!!initialToken);
 
-    const fetchUser = useCallback(async (currentToken) => {
+    const fetchUser = useCallback(async () => {
+        const currentToken = localStorage.getItem('token');
         if (!currentToken) {
             setLoading(false);
             return;
@@ -35,15 +41,9 @@ export const AuthProvider = ({ children }) => {
 
     // Initialize auth state from localStorage on mount
     useEffect(() => {
-        if (initialized.current) return;
-        initialized.current = true;
-        
         const storedToken = localStorage.getItem('token');
         if (storedToken) {
-            // Set the header immediately
-            axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
-            setToken(storedToken);
-            fetchUser(storedToken);
+            fetchUser();
         } else {
             setLoading(false);
         }
