@@ -98,8 +98,8 @@ yarn start
        │                   │
        ▼                   ▼
 ┌─────────────┐     ┌─────────────┐
-│  Tailwind   │     │  Emergent   │
-│  Shadcn/UI  │     │  Google Auth│
+│  Tailwind   │     │  Google     │
+│  Shadcn/UI  │     │  OAuth      │
 └─────────────┘     └─────────────┘
 ```
 

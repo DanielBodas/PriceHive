@@ -11,7 +11,7 @@ Crear una app/web colaborativa donde los usuarios puedan registrar precios de pr
 3. **Administrador**: Gestiona los datos base (productos, marcas, supermercados)
 
 ## Requisitos Core (Estáticos)
-- ✅ Autenticación Google OAuth (Emergent Auth) + Legacy JWT
+- ✅ Autenticación Google OAuth + Legacy JWT
 - ✅ Landing page explicativa
 - ✅ Muro social con posts, reacciones y comentarios
 - ✅ Lista de compra con selector de supermercado
@@ -25,7 +25,7 @@ Crear una app/web colaborativa donde los usuarios puedan registrar precios de pr
 ## Lo Implementado ✅
 
 ### Backend (FastAPI + MongoDB)
-- **Auth**: Google OAuth (Emergent) + JWT legacy
+- **Auth**: Google OAuth + JWT legacy
 - **Sesiones**: Cookie-based sessions con expiración 7 días
 - **CRUD**: Categorías, marcas, supermercados, unidades, productos
 - **Precios**: Registro colaborativo con detección de cambios
@@ -102,5 +102,5 @@ Crear una app/web colaborativa donde los usuarios puedan registrar precios de pr
 ## Stack Tecnológico
 - **Backend**: FastAPI, MongoDB (Motor), JWT, bcrypt, httpx
 - **Frontend**: React 19, Tailwind CSS, Shadcn/UI, Recharts
-- **Auth**: Emergent Google OAuth + JWT fallback
-- **Infraestructura**: Kubernetes (Emergent)
+- **Auth**: Google OAuth + JWT fallback
+- **Infraestructura**: Cloud hosting

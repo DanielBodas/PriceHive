@@ -4,7 +4,7 @@ import json
 from datetime import datetime
 
 class PriceHiveAPITester:
-    def __init__(self, base_url="https://pricehive.preview.emergentagent.com/api"):
+    def __init__(self, base_url="http://localhost:8001/api"):
         self.base_url = base_url
         self.admin_token = None
         self.user_token = None
