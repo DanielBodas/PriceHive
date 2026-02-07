@@ -171,9 +171,9 @@ metadata:
 
 test_plan:
   current_focus:
-    - "Session Persistence (Direct Navigation)"
     - "Shopping List UI - Dynamic Editing"
-  stuck_tasks: []
+  stuck_tasks:
+    - "Shopping List UI - Dynamic Editing"
   test_all: false
   test_priority: "high_first"
 
