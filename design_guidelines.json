@@ -1,0 +1,160 @@
+{
+  "identity": {
+    "app_name": "PriceHive",
+    "tone": "Trustworthy, Community-Driven, Efficient, Fresh",
+    "aesthetic": "Modern Minimalist, Swiss-inspired High Contrast, Clean",
+    "theme_strategy": "Light Mode Default (Freshness) with Dark Mode Option (Power User)"
+  },
+  "typography": {
+    "headings": {
+      "font_family": "Manrope, sans-serif",
+      "weights": ["600", "700", "800"],
+      "tracking": "tight",
+      "usage": "All headings (h1-h6), Hero text, Big stats"
+    },
+    "body": {
+      "font_family": "Inter, sans-serif",
+      "weights": ["400", "500"],
+      "tracking": "normal",
+      "usage": "Paragraphs, UI labels, Data tables, Inputs"
+    },
+    "mono": {
+      "font_family": "JetBrains Mono, monospace",
+      "usage": "Price values in data grids, Code snippets, IDs"
+    }
+  },
+  "colors": {
+    "primary": {
+      "name": "Fresh Emerald",
+      "hex": "#10B981",
+      "tailwind": "emerald-500",
+      "usage": "Primary Buttons, Active States, Success Indicators, Price Savings"
+    },
+    "secondary": {
+      "name": "Deep Slate",
+      "hex": "#0F172A",
+      "tailwind": "slate-900",
+      "usage": "Headings, Strong Borders, Secondary Buttons"
+    },
+    "accent": {
+      "name": "Vibrant Lime",
+      "hex": "#84CC16",
+      "tailwind": "lime-500",
+      "usage": "Highlights, 'Best Price' tags, Micro-interactions"
+    },
+    "neutral": {
+      "surface": "#FFFFFF",
+      "background": "#F8FAFC",
+      "border": "#E2E8F0",
+      "text_muted": "#64748B"
+    },
+    "destructive": {
+      "hex": "#F43F5E",
+      "tailwind": "rose-500",
+      "usage": "Price Increases, Delete Actions, Errors"
+    },
+    "gradients": {
+      "hero": "bg-gradient-to-br from-emerald-50 to-slate-100 dark:from-slate-900 dark:to-slate-950",
+      "card_hover": "hover:bg-slate-50 dark:hover:bg-slate-800/50"
+    }
+  },
+  "visual_enhancers": {
+    "radius": "rounded-xl",
+    "shadows": {
+      "card": "shadow-[0_2px_8px_rgba(0,0,0,0.04)]",
+      "float": "shadow-[0_8px_30px_rgba(0,0,0,0.12)]",
+      "inner": "shadow-inner"
+    },
+    "borders": "border border-slate-200 dark:border-slate-800",
+    "glassmorphism": "bg-white/80 backdrop-blur-md border-white/20 shadow-sm",
+    "textures": "Use subtle noise overlay on Hero sections to reduce digital flatness"
+  },
+  "layout_strategies": {
+    "landing_page": {
+      "type": "Bento Grid",
+      "structure": "Asymmetric grid (Tetris style). Hero takes 2/3 width, supporting visuals take 1/3. Use generous whitespace (py-24, gap-8).",
+      "container": "max-w-7xl mx-auto px-6"
+    },
+    "dashboard": {
+      "type": "High Density Grid",
+      "structure": "Sidebar navigation (fixed). Main content area with 4-column grid. Widgets span 1-2 columns. Data tables take full width.",
+      "spacing": "Compact (gap-4, p-6)"
+    },
+    "social_feed": {
+      "type": "Central Feed",
+      "structure": "Single column feed (max-w-2xl mx-auto). Infinite scroll. Cards have distinct actions (Like, Comment, Compare).",
+      "spacing": "Vertical stack (space-y-6)"
+    }
+  },
+  "components": {
+    "buttons": {
+      "primary": "bg-emerald-500 hover:bg-emerald-600 text-white font-semibold rounded-full px-8 py-3 shadow-lg shadow-emerald-500/20 transition-all hover:-translate-y-0.5",
+      "secondary": "bg-white border border-slate-200 text-slate-900 hover:bg-slate-50 font-medium rounded-full px-6 py-3",
+      "ghost": "text-slate-600 hover:text-emerald-600 hover:bg-emerald-50 rounded-lg px-4 py-2"
+    },
+    "cards": {
+      "default": "bg-white rounded-xl border border-slate-100 shadow-sm hover:shadow-md transition-shadow p-6",
+      "interactive": "cursor-pointer hover:border-emerald-200 hover:ring-1 hover:ring-emerald-200 transition-all"
+    },
+    "inputs": {
+      "style": "bg-slate-50 border-slate-200 focus:border-emerald-500 focus:ring-2 focus:ring-emerald-100 rounded-lg h-11 px-4 transition-all"
+    },
+    "charts": {
+      "library": "Recharts (via Shadcn Charts)",
+      "style": "Minimalist. Remove grid lines where possible. Use curveMonotone for lines. Tooltips must be custom styled (glassmorphism)."
+    }
+  },
+  "image_urls": {
+    "hero_bg": {
+      "url": "https://images.unsplash.com/photo-1601599963565-b7ba29c8e3ff?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Supermarket aisle perspective",
+      "usage": "Hero section background with overlay or side image"
+    },
+    "feature_shopper": {
+      "url": "https://images.unsplash.com/photo-1588691551092-ced49046fbe8?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Smart shopper making choices",
+      "usage": "Feature section: 'Smart Decisions'"
+    },
+    "feature_fresh": {
+      "url": "https://images.unsplash.com/photo-1601600576337-c1d8a0d1373c?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Fresh produce display",
+      "usage": "Feature section: 'Track Fresh Prices'"
+    },
+    "social_proof": {
+      "url": "https://images.unsplash.com/photo-1663352209268-2048a2cccda4?crop=entropy&cs=srgb&fm=jpg&q=85",
+      "alt": "Community member checking prices",
+      "usage": "Testimonials or Community section"
+    }
+  },
+  "icons": {
+    "library": "lucide-react",
+    "style": "Stroke width 1.5px or 2px. Rounded line joins.",
+    "key_icons": {
+      "price_tag": "Tag",
+      "trending_up": "TrendingUp",
+      "trending_down": "TrendingDown",
+      "community": "Users",
+      "cart": "ShoppingCart",
+      "scan": "ScanBarcode"
+    }
+  },
+  "motion": {
+    "page_transition": "initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} transition={{ duration: 0.3 }}",
+    "hover_lift": "whileHover={{ y: -4 }} transition={{ type: 'spring', stiffness: 300 }}",
+    "list_stagger": "variants={{ hidden: { opacity: 0 }, show: { opacity: 1, transition: { staggerChildren: 0.1 } } }}"
+  },
+  "accessibility": {
+    "contrast": "Ensure text is Slate-900 on light backgrounds. Use Slate-500 for secondary text, never lighter.",
+    "focus": "Visible focus rings (emerald-500) on all interactive elements.",
+    "aria": "All icon-only buttons must have aria-label."
+  },
+  "universal_guidelines": [
+    "Do not use generic centered layouts. Use asymmetry.",
+    "Use 2-3x more spacing than typical (p-8, p-12).",
+    "Never use pure black (#000000). Use Slate-900 or Slate-950.",
+    "Interactive elements must have hover and active states.",
+    "Use 'sonner' for toasts.",
+    "All interactive elements must have data-testid attributes."
+  ],
+  "instructions_to_main_agent": "Implement the design system using Tailwind CSS and Shadcn UI. Customize the default Shadcn components to match the 'Fresh Emerald' and 'Deep Slate' theme. Use the provided image URLs for the landing page. Ensure the dashboard uses the high-density grid layout."
+}
