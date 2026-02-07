@@ -135,27 +135,33 @@ backend:
 frontend:
   - task: "Session Persistence (Direct Navigation)"
     implemented: true
-    working: "NA"
+    working: true
     file: "/app/frontend/src/contexts/AuthContext.js"
     stuck_count: 1
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Relies on backend cookie fix."
+      - working: true
+        agent: "testing"
+        comment: "✅ TESTED: Session persistence working correctly. Admin login successful with admin@pricehive.com/admin123. User stays logged in after page reload on /alerts route. JWT token and authentication state persist properly across page refreshes. AuthContext properly maintains user state."
 
   - task: "Shopping List UI - Dynamic Editing"
     implemented: true
-    working: "NA"
+    working: false
     file: "/app/frontend/src/pages/ShoppingListPage.js"
-    stuck_count: 0
+    stuck_count: 1
     priority: "medium"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
       - working: "NA"
         agent: "main"
         comment: "Verify adding items, editing brand/quantity in list, price with € symbol."
+      - working: false
+        agent: "testing"
+        comment: "❌ PARTIAL FUNCTIONALITY: Shopping list UI mostly working but has critical issue. ✅ Working: Brand dropdown editing, price input with € symbol display, price persistence after reload. ❌ FAILED: Quantity changes do not persist after page reload - quantity reverts from '3' back to '1'. This indicates the quantity update API call may not be working properly or there's a frontend state management issue."
 
 metadata:
   created_by: "main_agent"
