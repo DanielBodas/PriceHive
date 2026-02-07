@@ -1,5 +1,6 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
+from fastapi.responses import RedirectResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -362,55 +363,76 @@ async def create_notification(user_id: str, title: str, message: str, notificati
 
 # ==================== GOOGLE AUTH ENDPOINTS ====================
 
-@api_router.post("/auth/google/session")
-async def google_session(data: GoogleSessionRequest, response: Response):
-    """Exchange Google session_id for user data and create session"""
-    try:
-        async with httpx.AsyncClient() as client_http:
-            resp = await client_http.get(
-                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
-                headers={"X-Session-ID": data.session_id}
-            )
-            
-            if resp.status_code != 200:
-                raise HTTPException(status_code=401, detail="Invalid session")
-            
-            google_data = resp.json()
-    except Exception as e:
-        logger.error(f"Google auth error: {e}")
-        raise HTTPException(status_code=401, detail="Failed to verify Google session")
+# ==================== GOOGLE AUTH ENDPOINTS (DIRECTOS) ====================
+
+@api_router.get("/auth/google")
+async def auth_google():
+    """Paso 1: Redirigir al usuario directamente a Google OAuth"""
+    client_id = os.environ.get("GOOGLE_CLIENT_ID")
+    # Importante: Esta URL debe coincidir con la de tu Google Cloud Console
+    redirect_uri = "http://localhost:10000/api/auth/google/callback"
     
-    # Check if user exists
-    existing_user = await db.users.find_one({"email": google_data["email"]}, {"_id": 0})
-    
-    if existing_user:
-        user_id = existing_user["id"]
-        # Update user info if needed
-        await db.users.update_one(
-            {"id": user_id},
-            {"$set": {
-                "name": google_data["name"],
-                "picture": google_data.get("picture")
-            }}
+    google_url = (
+        f"https://accounts.google.com/o/oauth2/v2/auth?"
+        f"client_id={client_id}&"
+        f"redirect_uri={redirect_uri}&"
+        f"response_type=code&"
+        f"scope=openid%20email%20profile&"
+        f"access_type=offline&"
+        f"prompt=select_account"
+    )
+    return RedirectResponse(url=google_url)
+
+@api_router.get("/auth/google/callback")
+async def auth_google_callback(code: str, response: Response):
+    """Paso 2: Recibir el código de Google y crear la sesión en TU base de datos"""
+    client_id = os.environ.get("GOOGLE_CLIENT_ID")
+    client_secret = os.environ.get("GOOGLE_CLIENT_SECRET")
+    redirect_uri = "http://localhost:10000/api/auth/google/callback"
+
+    # 1. Intercambiar código por tokens
+    async with httpx.AsyncClient() as client_http:
+        token_resp = await client_http.post(
+            "https://oauth2.googleapis.com/token",
+            data={
+                "code": code,
+                "client_id": client_id,
+                "client_secret": client_secret,
+                "redirect_uri": redirect_uri,
+                "grant_type": "authorization_code",
+            },
         )
-    else:
-        # Create new user
+        tokens = token_resp.json()
+        
+        # 2. Obtener datos del usuario
+        user_info_resp = await client_http.get(
+            "https://www.googleapis.com/oauth2/v3/userinfo",
+            headers={"Authorization": f"Bearer {tokens.get('access_token')}"}
+        )
+        google_data = user_info_resp.json()
+
+    # 3. Buscar o crear usuario en MongoDB
+    email = google_data["email"]
+    user = await db.users.find_one({"email": email}, {"_id": 0})
+    
+    if not user:
         user_id = str(uuid.uuid4())
-        await db.users.insert_one({
+        user = {
             "id": user_id,
-            "email": google_data["email"],
-            "name": google_data["name"],
+            "email": email,
+            "name": google_data.get("name", "Usuario Google"),
             "picture": google_data.get("picture"),
             "role": "user",
-            "points": 0,
+            "points": 50, # Bono bienvenida
             "created_at": datetime.now(timezone.utc).isoformat()
-        })
-        # Welcome bonus
+        }
+        await db.users.insert_one(user)
         await add_points(user_id, 50, "Bienvenido a PriceHive")
-        await create_notification(user_id, "¡Bienvenido!", "Has ganado 50 puntos por unirte a PriceHive", "welcome")
-    
-    # Create session
-    session_token = google_data.get("session_token", str(uuid.uuid4()))
+    else:
+        user_id = user["id"]
+
+    # 4. Crear sesión local
+    session_token = str(uuid.uuid4())
     expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRY_DAYS)
     
     await db.user_sessions.delete_many({"user_id": user_id})
@@ -420,31 +442,11 @@ async def google_session(data: GoogleSessionRequest, response: Response):
         "expires_at": expires_at.isoformat(),
         "created_at": datetime.now(timezone.utc).isoformat()
     })
-    
-    # Set cookie
-    response.set_cookie(
-        key="session_token",
-        value=session_token,
-        httponly=True,
-        secure=True,
-        samesite="none",
-        path="/",
-        max_age=SESSION_EXPIRY_DAYS * 24 * 60 * 60
-    )
-    
-    user = await db.users.find_one({"id": user_id}, {"_id": 0})
-    
-    return {
-        "user": UserResponse(
-            id=user["id"],
-            email=user["email"],
-            name=user["name"],
-            role=user["role"],
-            picture=user.get("picture"),
-            points=user.get("points", 0),
-            created_at=user["created_at"]
-        )
-    }
+
+    # 5. Redirigir al frontend con el session_id
+    frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
+    # Redirigimos usando el formato que tu App.js ya reconoce (#session_id=)
+    return RedirectResponse(url=f"{frontend_url}/#session_id={session_token}")
 
 @api_router.post("/auth/logout")
 async def logout(request: Request, response: Response):
@@ -454,6 +456,44 @@ async def logout(request: Request, response: Response):
     
     response.delete_cookie(key="session_token", path="/", secure=True, samesite="none")
     return {"message": "Logged out successfully"}
+
+@api_router.post("/auth/google/session")
+async def google_session(data: GoogleSessionRequest, response: Response):
+    """Intercambia el session_id por los datos del usuario y genera un token JWT"""
+    try:
+        # 1. Buscar la sesión en TU colección 'user_sessions'
+        # Nota: Asegúrate de que el campo coincide con lo que guardas en el callback
+        session = await db.user_sessions.find_one({"session_token": data.session_id})
+        
+        if not session:
+            logger.error(f"Sesión no encontrada: {data.session_id}")
+            raise HTTPException(status_code=401, detail="Sesión no válida o expirada")
+        
+        # 2. Buscar al usuario asociado
+        user = await db.users.find_one({"id": session["user_id"]}, {"_id": 0})
+        
+        if not user:
+            raise HTTPException(status_code=404, detail="Usuario no encontrado")
+        
+        # 3. Crear el token JWT para que el frontend lo use en sus cabeceras
+        access_token = create_token(user["id"], user["email"], user["role"])
+        
+        return {
+            "access_token": access_token,
+            "token_type": "bearer",
+            "user": UserResponse(
+                id=user["id"],
+                email=user["email"],
+                name=user["name"],
+                role=user["role"],
+                picture=user.get("picture"),
+                points=user.get("points", 0),
+                created_at=user["created_at"]
+            )
+        }
+    except Exception as e:
+        logger.error(f"Error en google_session: {e}")
+        raise HTTPException(status_code=500, detail="Error interno del servidor")
 
 # ==================== LEGACY AUTH ENDPOINTS ====================
 
