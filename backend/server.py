@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, status
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, Request, Response
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
@@ -6,12 +6,13 @@ from motor.motor_asyncio import AsyncIOMotorClient
 import os
 import logging
 from pathlib import Path
-from pydantic import BaseModel, Field, ConfigDict, EmailStr
+from pydantic import BaseModel, Field, EmailStr
 from typing import List, Optional
 import uuid
 from datetime import datetime, timezone, timedelta
 import jwt
 import bcrypt
+import httpx
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -21,15 +22,18 @@ mongo_url = os.environ['MONGO_URL']
 client = AsyncIOMotorClient(mongo_url)
 db = client[os.environ['DB_NAME']]
 
-# JWT Configuration
+# JWT Configuration (for legacy auth)
 JWT_SECRET = os.environ.get('JWT_SECRET', 'pricehive_super_secret_key_2024')
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRATION_HOURS = 24
 
+# Session Configuration
+SESSION_EXPIRY_DAYS = 7
+
 # Create the main app
 app = FastAPI(title="PriceHive API")
 api_router = APIRouter(prefix="/api")
-security = HTTPBearer()
+security = HTTPBearer(auto_error=False)
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -52,12 +56,17 @@ class UserResponse(BaseModel):
     email: str
     name: str
     role: str
+    picture: Optional[str] = None
+    points: int = 0
     created_at: str
 
 class TokenResponse(BaseModel):
     access_token: str
     token_type: str
     user: UserResponse
+
+class GoogleSessionRequest(BaseModel):
+    session_id: str
 
 # Admin Base Data Models
 class CategoryCreate(BaseModel):
@@ -178,7 +187,7 @@ class ShoppingListUpdate(BaseModel):
 # Social Models
 class PostCreate(BaseModel):
     content: str
-    post_type: str = "update"  # update, price_alert, tip
+    post_type: str = "update"
 
 class PostResponse(BaseModel):
     id: str
@@ -202,7 +211,7 @@ class CommentResponse(BaseModel):
     created_at: str
 
 class ReactionCreate(BaseModel):
-    reaction_type: str  # like, love, useful, warning
+    reaction_type: str
 
 # Analytics Models
 class PriceHistoryResponse(BaseModel):
@@ -219,6 +228,41 @@ class ProductAnalyticsResponse(BaseModel):
     min_price: Optional[float] = None
     max_price: Optional[float] = None
     price_history: List[PriceHistoryResponse]
+
+# Alert Models
+class AlertCreate(BaseModel):
+    product_id: str
+    supermarket_id: Optional[str] = None
+    target_price: float
+    alert_type: str = "below"  # below, above, any_change
+
+class AlertResponse(BaseModel):
+    id: str
+    product_id: str
+    product_name: Optional[str] = None
+    supermarket_id: Optional[str] = None
+    supermarket_name: Optional[str] = None
+    target_price: float
+    alert_type: str
+    triggered: bool
+    created_at: str
+
+# Notification Models
+class NotificationResponse(BaseModel):
+    id: str
+    user_id: str
+    title: str
+    message: str
+    notification_type: str
+    read: bool
+    created_at: str
+
+# Gamification Models
+class LeaderboardEntry(BaseModel):
+    user_id: str
+    user_name: str
+    points: int
+    rank: int
 
 # ==================== AUTH HELPERS ====================
 
@@ -237,24 +281,162 @@ def create_token(user_id: str, email: str, role: str) -> str:
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
-async def get_current_user(credentials: HTTPAuthorizationCredentials = Depends(security)):
-    try:
-        payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
-        user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
-        if not user:
-            raise HTTPException(status_code=401, detail="User not found")
-        return user
-    except jwt.ExpiredSignatureError:
-        raise HTTPException(status_code=401, detail="Token expired")
-    except jwt.InvalidTokenError:
-        raise HTTPException(status_code=401, detail="Invalid token")
+async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
+    # First try session token from cookie
+    session_token = request.cookies.get("session_token")
+    
+    if session_token:
+        session = await db.user_sessions.find_one({"session_token": session_token}, {"_id": 0})
+        if session:
+            expires_at = session.get("expires_at")
+            if isinstance(expires_at, str):
+                expires_at = datetime.fromisoformat(expires_at)
+            if expires_at.tzinfo is None:
+                expires_at = expires_at.replace(tzinfo=timezone.utc)
+            
+            if expires_at > datetime.now(timezone.utc):
+                user = await db.users.find_one({"id": session["user_id"]}, {"_id": 0})
+                if user:
+                    return user
+    
+    # Fallback to JWT token from Authorization header
+    if credentials:
+        try:
+            payload = jwt.decode(credentials.credentials, JWT_SECRET, algorithms=[JWT_ALGORITHM])
+            user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
+            if user:
+                return user
+        except jwt.ExpiredSignatureError:
+            pass
+        except jwt.InvalidTokenError:
+            pass
+    
+    raise HTTPException(status_code=401, detail="Not authenticated")
 
 async def get_admin_user(user: dict = Depends(get_current_user)):
     if user.get("role") != "admin":
         raise HTTPException(status_code=403, detail="Admin access required")
     return user
 
-# ==================== AUTH ENDPOINTS ====================
+# Gamification helper
+async def add_points(user_id: str, points: int, reason: str):
+    await db.users.update_one({"id": user_id}, {"$inc": {"points": points}})
+    await db.point_history.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "points": points,
+        "reason": reason,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+# Notification helper
+async def create_notification(user_id: str, title: str, message: str, notification_type: str):
+    await db.notifications.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "title": title,
+        "message": message,
+        "notification_type": notification_type,
+        "read": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+# ==================== GOOGLE AUTH ENDPOINTS ====================
+
+@api_router.post("/auth/google/session")
+async def google_session(data: GoogleSessionRequest, response: Response):
+    """Exchange Google session_id for user data and create session"""
+    try:
+        async with httpx.AsyncClient() as client_http:
+            resp = await client_http.get(
+                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+                headers={"X-Session-ID": data.session_id}
+            )
+            
+            if resp.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid session")
+            
+            google_data = resp.json()
+    except Exception as e:
+        logger.error(f"Google auth error: {e}")
+        raise HTTPException(status_code=401, detail="Failed to verify Google session")
+    
+    # Check if user exists
+    existing_user = await db.users.find_one({"email": google_data["email"]}, {"_id": 0})
+    
+    if existing_user:
+        user_id = existing_user["id"]
+        # Update user info if needed
+        await db.users.update_one(
+            {"id": user_id},
+            {"$set": {
+                "name": google_data["name"],
+                "picture": google_data.get("picture")
+            }}
+        )
+    else:
+        # Create new user
+        user_id = str(uuid.uuid4())
+        await db.users.insert_one({
+            "id": user_id,
+            "email": google_data["email"],
+            "name": google_data["name"],
+            "picture": google_data.get("picture"),
+            "role": "user",
+            "points": 0,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        })
+        # Welcome bonus
+        await add_points(user_id, 50, "Bienvenido a PriceHive")
+        await create_notification(user_id, "¡Bienvenido!", "Has ganado 50 puntos por unirte a PriceHive", "welcome")
+    
+    # Create session
+    session_token = google_data.get("session_token", str(uuid.uuid4()))
+    expires_at = datetime.now(timezone.utc) + timedelta(days=SESSION_EXPIRY_DAYS)
+    
+    await db.user_sessions.delete_many({"user_id": user_id})
+    await db.user_sessions.insert_one({
+        "user_id": user_id,
+        "session_token": session_token,
+        "expires_at": expires_at.isoformat(),
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    
+    # Set cookie
+    response.set_cookie(
+        key="session_token",
+        value=session_token,
+        httponly=True,
+        secure=True,
+        samesite="none",
+        path="/",
+        max_age=SESSION_EXPIRY_DAYS * 24 * 60 * 60
+    )
+    
+    user = await db.users.find_one({"id": user_id}, {"_id": 0})
+    
+    return {
+        "user": UserResponse(
+            id=user["id"],
+            email=user["email"],
+            name=user["name"],
+            role=user["role"],
+            picture=user.get("picture"),
+            points=user.get("points", 0),
+            created_at=user["created_at"]
+        )
+    }
+
+@api_router.post("/auth/logout")
+async def logout(request: Request, response: Response):
+    session_token = request.cookies.get("session_token")
+    if session_token:
+        await db.user_sessions.delete_many({"session_token": session_token})
+    
+    response.delete_cookie(key="session_token", path="/", secure=True, samesite="none")
+    return {"message": "Logged out successfully"}
+
+# ==================== LEGACY AUTH ENDPOINTS ====================
 
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate):
@@ -269,9 +451,11 @@ async def register(user_data: UserCreate):
         "password": hash_password(user_data.password),
         "name": user_data.name,
         "role": "user",
+        "points": 0,
         "created_at": datetime.now(timezone.utc).isoformat()
     }
     await db.users.insert_one(user_doc)
+    await add_points(user_id, 50, "Bienvenido a PriceHive")
     
     token = create_token(user_id, user_data.email, "user")
     return TokenResponse(
@@ -282,6 +466,7 @@ async def register(user_data: UserCreate):
             email=user_data.email,
             name=user_data.name,
             role="user",
+            points=50,
             created_at=user_doc["created_at"]
         )
     )
@@ -289,7 +474,7 @@ async def register(user_data: UserCreate):
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
     user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
-    if not user or not verify_password(credentials.password, user["password"]):
+    if not user or not user.get("password") or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Invalid credentials")
     
     token = create_token(user["id"], user["email"], user["role"])
@@ -301,6 +486,8 @@ async def login(credentials: UserLogin):
             email=user["email"],
             name=user["name"],
             role=user["role"],
+            picture=user.get("picture"),
+            points=user.get("points", 0),
             created_at=user["created_at"]
         )
     )
@@ -312,6 +499,8 @@ async def get_me(user: dict = Depends(get_current_user)):
         email=user["email"],
         name=user["name"],
         role=user["role"],
+        picture=user.get("picture"),
+        points=user.get("points", 0),
         created_at=user["created_at"]
     )
 
@@ -505,6 +694,13 @@ async def delete_product(prod_id: str, user: dict = Depends(get_admin_user)):
 
 @api_router.post("/prices", response_model=PriceResponse)
 async def create_price(data: PriceCreate, user: dict = Depends(get_current_user)):
+    # Check for previous price to detect changes
+    previous_price = await db.prices.find_one(
+        {"product_id": data.product_id, "supermarket_id": data.supermarket_id},
+        {"_id": 0},
+        sort=[("created_at", -1)]
+    )
+    
     price_id = str(uuid.uuid4())
     created_at = datetime.now(timezone.utc).isoformat()
     doc = {
@@ -517,6 +713,45 @@ async def create_price(data: PriceCreate, user: dict = Depends(get_current_user)
         "created_at": created_at
     }
     await db.prices.insert_one(doc)
+    
+    # Award points for contributing
+    await add_points(user["id"], 10, f"Precio registrado")
+    
+    # Check alerts and create notifications
+    if previous_price:
+        price_change = data.price - previous_price["price"]
+        if abs(price_change) > 0.01:
+            # Check user alerts
+            alerts = await db.alerts.find({
+                "product_id": data.product_id,
+                "$or": [
+                    {"supermarket_id": data.supermarket_id},
+                    {"supermarket_id": None}
+                ],
+                "triggered": False
+            }, {"_id": 0}).to_list(1000)
+            
+            product = await db.products.find_one({"id": data.product_id}, {"_id": 0})
+            supermarket = await db.supermarkets.find_one({"id": data.supermarket_id}, {"_id": 0})
+            
+            for alert in alerts:
+                should_trigger = False
+                if alert["alert_type"] == "below" and data.price <= alert["target_price"]:
+                    should_trigger = True
+                elif alert["alert_type"] == "above" and data.price >= alert["target_price"]:
+                    should_trigger = True
+                elif alert["alert_type"] == "any_change":
+                    should_trigger = True
+                
+                if should_trigger:
+                    await db.alerts.update_one({"id": alert["id"]}, {"$set": {"triggered": True}})
+                    change_text = f"+{price_change:.2f}€" if price_change > 0 else f"{price_change:.2f}€"
+                    await create_notification(
+                        alert["user_id"],
+                        "Alerta de Precio",
+                        f"{product['name'] if product else 'Producto'} en {supermarket['name'] if supermarket else 'Supermercado'}: {data.price:.2f}€ ({change_text})",
+                        "price_alert"
+                    )
     
     product = await db.products.find_one({"id": data.product_id}, {"_id": 0})
     supermarket = await db.supermarkets.find_one({"id": data.supermarket_id}, {"_id": 0})
@@ -778,7 +1013,11 @@ async def submit_prices_from_list(list_id: str, user: dict = Depends(get_current
             await db.prices.insert_one(price_doc)
             prices_created += 1
     
-    return {"message": f"{prices_created} prices submitted successfully"}
+    # Award bonus points for submitting prices
+    if prices_created > 0:
+        await add_points(user["id"], prices_created * 10, f"Precios subidos desde lista de compra")
+    
+    return {"message": f"{prices_created} precios subidos correctamente", "points_earned": prices_created * 10}
 
 # ==================== SOCIAL ENDPOINTS ====================
 
@@ -797,7 +1036,8 @@ async def create_post(data: PostCreate, user: dict = Depends(get_current_user)):
     }
     await db.posts.insert_one(doc)
     
-    comments_count = await db.comments.count_documents({"post_id": post_id})
+    # Award points for posting
+    await add_points(user["id"], 5, "Publicación creada")
     
     return PostResponse(
         id=post_id,
@@ -806,7 +1046,7 @@ async def create_post(data: PostCreate, user: dict = Depends(get_current_user)):
         user_id=user["id"],
         user_name=user["name"],
         reactions=doc["reactions"],
-        comments_count=comments_count,
+        comments_count=0,
         created_at=now
     )
 
@@ -869,6 +1109,9 @@ async def create_comment(post_id: str, data: CommentCreate, user: dict = Depends
     }
     await db.comments.insert_one(doc)
     
+    # Award points for commenting
+    await add_points(user["id"], 2, "Comentario añadido")
+    
     return CommentResponse(
         id=comment_id,
         post_id=post_id,
@@ -891,6 +1134,109 @@ async def get_comments(post_id: str, user: dict = Depends(get_current_user)):
         user_name=users.get(c["user_id"], "Unknown"),
         created_at=c["created_at"]
     ) for c in comments]
+
+# ==================== ALERTS ENDPOINTS ====================
+
+@api_router.post("/alerts", response_model=AlertResponse)
+async def create_alert(data: AlertCreate, user: dict = Depends(get_current_user)):
+    alert_id = str(uuid.uuid4())
+    doc = {
+        "id": alert_id,
+        "user_id": user["id"],
+        "product_id": data.product_id,
+        "supermarket_id": data.supermarket_id,
+        "target_price": data.target_price,
+        "alert_type": data.alert_type,
+        "triggered": False,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    await db.alerts.insert_one(doc)
+    
+    product = await db.products.find_one({"id": data.product_id}, {"_id": 0})
+    supermarket = await db.supermarkets.find_one({"id": data.supermarket_id}, {"_id": 0}) if data.supermarket_id else None
+    
+    return AlertResponse(
+        **doc,
+        product_name=product["name"] if product else None,
+        supermarket_name=supermarket["name"] if supermarket else None
+    )
+
+@api_router.get("/alerts", response_model=List[AlertResponse])
+async def get_alerts(user: dict = Depends(get_current_user)):
+    alerts = await db.alerts.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(100)
+    
+    products = {p["id"]: p["name"] for p in await db.products.find({}, {"_id": 0}).to_list(1000)}
+    supermarkets = {s["id"]: s["name"] for s in await db.supermarkets.find({}, {"_id": 0}).to_list(1000)}
+    
+    return [AlertResponse(
+        **a,
+        product_name=products.get(a.get("product_id")),
+        supermarket_name=supermarkets.get(a.get("supermarket_id"))
+    ) for a in alerts]
+
+@api_router.delete("/alerts/{alert_id}")
+async def delete_alert(alert_id: str, user: dict = Depends(get_current_user)):
+    result = await db.alerts.delete_one({"id": alert_id, "user_id": user["id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Alert not found")
+    return {"message": "Alert deleted"}
+
+# ==================== NOTIFICATIONS ENDPOINTS ====================
+
+@api_router.get("/notifications", response_model=List[NotificationResponse])
+async def get_notifications(user: dict = Depends(get_current_user)):
+    notifications = await db.notifications.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(50)
+    return [NotificationResponse(**n) for n in notifications]
+
+@api_router.get("/notifications/unread-count")
+async def get_unread_count(user: dict = Depends(get_current_user)):
+    count = await db.notifications.count_documents({"user_id": user["id"], "read": False})
+    return {"count": count}
+
+@api_router.put("/notifications/{notification_id}/read")
+async def mark_notification_read(notification_id: str, user: dict = Depends(get_current_user)):
+    result = await db.notifications.update_one(
+        {"id": notification_id, "user_id": user["id"]},
+        {"$set": {"read": True}}
+    )
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Notification not found")
+    return {"message": "Notification marked as read"}
+
+@api_router.put("/notifications/read-all")
+async def mark_all_notifications_read(user: dict = Depends(get_current_user)):
+    await db.notifications.update_many(
+        {"user_id": user["id"], "read": False},
+        {"$set": {"read": True}}
+    )
+    return {"message": "All notifications marked as read"}
+
+# ==================== GAMIFICATION ENDPOINTS ====================
+
+@api_router.get("/leaderboard", response_model=List[LeaderboardEntry])
+async def get_leaderboard(limit: int = 10, user: dict = Depends(get_current_user)):
+    users = await db.users.find({}, {"_id": 0, "id": 1, "name": 1, "points": 1}).sort("points", -1).to_list(limit)
+    
+    return [LeaderboardEntry(
+        user_id=u["id"],
+        user_name=u["name"],
+        points=u.get("points", 0),
+        rank=i + 1
+    ) for i, u in enumerate(users)]
+
+@api_router.get("/my-points")
+async def get_my_points(user: dict = Depends(get_current_user)):
+    # Get rank
+    users_above = await db.users.count_documents({"points": {"$gt": user.get("points", 0)}})
+    
+    # Get recent point history
+    history = await db.point_history.find({"user_id": user["id"]}, {"_id": 0}).sort("created_at", -1).to_list(10)
+    
+    return {
+        "points": user.get("points", 0),
+        "rank": users_above + 1,
+        "history": history
+    }
 
 # ==================== ANALYTICS ENDPOINTS ====================
 
@@ -986,6 +1332,43 @@ async def get_general_stats(user: dict = Depends(get_current_user)):
         "total_supermarkets": total_supermarkets,
         "recent_activity": recent_activity
     }
+
+# ==================== SEARCH ENDPOINTS ====================
+
+@api_router.get("/search/products")
+async def search_products(
+    q: str = "",
+    category_id: Optional[str] = None,
+    brand_id: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    query = {}
+    if q:
+        query["name"] = {"$regex": q, "$options": "i"}
+    if category_id:
+        query["category_id"] = category_id
+    if brand_id:
+        query["brand_id"] = brand_id
+    
+    products = await db.products.find(query, {"_id": 0}).to_list(100)
+    brands = {b["id"]: b["name"] for b in await db.brands.find({}, {"_id": 0}).to_list(1000)}
+    categories = {c["id"]: c["name"] for c in await db.categories.find({}, {"_id": 0}).to_list(1000)}
+    units = {u["id"]: u["name"] for u in await db.units.find({}, {"_id": 0}).to_list(1000)}
+    
+    result = []
+    for p in products:
+        # Get latest price
+        latest_price = await db.prices.find_one({"product_id": p["id"]}, {"_id": 0}, sort=[("created_at", -1)])
+        
+        result.append({
+            **p,
+            "brand_name": brands.get(p.get("brand_id")),
+            "category_name": categories.get(p.get("category_id")),
+            "unit_name": units.get(p.get("unit_id")),
+            "latest_price": latest_price["price"] if latest_price else None
+        })
+    
+    return result
 
 # ==================== PUBLIC DATA ENDPOINTS ====================
 
