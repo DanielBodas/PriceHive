@@ -42,16 +42,30 @@ export const AuthProvider = ({ children }) => {
     // Google OAuth login
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     const loginWithGoogle = () => {
-        const redirectUrl = window.location.origin + '/dashboard';
-        window.location.href = `https://auth.emergentagent.com/?redirect=${encodeURIComponent(redirectUrl)}`;
+    // Esto redirige a tu backend de Python que configuramos en el puerto 10000
+    window.location.href = `${process.env.REACT_APP_BACKEND_URL}/api/auth/google`;
     };
 
     // Process Google session
     const processGoogleSession = async (sessionId) => {
         try {
+            // 1. Canjeamos el session_id por los datos reales
             const response = await axios.post(`${API}/auth/google/session`, { session_id: sessionId });
-            setUser(response.data.user);
-            return response.data.user;
+            
+            // Extraemos el usuario y el nuevo token que genera tu backend
+            const { user: userData, access_token } = response.data;
+
+            // 2. ¡CRÍTICO!: Guardar el token en el navegador
+            localStorage.setItem('token', access_token);
+            
+            // 3. Configurar axios para que todas las futuras peticiones lleven el token
+            axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
+
+            // 4. Actualizar el estado de React
+            setToken(access_token);
+            setUser(userData);
+            
+            return userData;
         } catch (error) {
             console.error('Error processing Google session:', error);
             throw error;
