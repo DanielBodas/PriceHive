@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react';
 import axios from 'axios';
 
 const AuthContext = createContext(null);
@@ -7,13 +7,21 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(() => localStorage.getItem('token'));
+    const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
+    const initialized = useRef(false);
 
-    const fetchUser = useCallback(async () => {
+    const fetchUser = useCallback(async (currentToken) => {
+        if (!currentToken) {
+            setLoading(false);
+            return;
+        }
+        
         try {
+            axios.defaults.headers.common['Authorization'] = `Bearer ${currentToken}`;
             const response = await axios.get(`${API}/auth/me`);
             setUser(response.data);
+            setToken(currentToken);
         } catch (error) {
             console.error('Error fetching user:', error);
             localStorage.removeItem('token');
@@ -25,12 +33,17 @@ export const AuthProvider = ({ children }) => {
         }
     }, []);
 
+    // Initialize auth state from localStorage on mount
     useEffect(() => {
+        if (initialized.current) return;
+        initialized.current = true;
+        
         const storedToken = localStorage.getItem('token');
         if (storedToken) {
+            // Set the header immediately
             axios.defaults.headers.common['Authorization'] = `Bearer ${storedToken}`;
             setToken(storedToken);
-            fetchUser();
+            fetchUser(storedToken);
         } else {
             setLoading(false);
         }
