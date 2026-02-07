@@ -36,20 +36,22 @@ app = FastAPI(title="PriceHive API")
 api_router = APIRouter(prefix="/api")
 security = HTTPBearer(auto_error=False)
 
-# --- CONFIGURACIÓN CORS ACTUALIZADA ---
-# Esto permite que tu frontend en Render hable con este backend
+# --- CONFIGURACIÓN CORS CORREGIDA ---
+# En producción, NO podemos usar "*" con allow_credentials=True
+frontend_url = os.environ.get("FRONTEND_URL", "http://localhost:3000")
 origins = [
-    "http://localhost:3000",  # Para cuando pruebas en tu PC
-    os.environ.get("FRONTEND_URL", "") # La URL que te dará Render luego
+    "http://localhost:3000",
+    frontend_url.rstrip('/'),
 ]
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # TRUCO: Por ahora permitimos todo para que no te falle el primer despliegue
+    allow_origins=origins,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+# --------------------------------------
 # --------------------------------------
 
 # Configure logging
@@ -287,10 +289,19 @@ class LeaderboardEntry(BaseModel):
 # ==================== AUTH HELPERS ====================
 
 def hash_password(password: str) -> str:
-    return bcrypt.hashpw(password.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+    # Aseguramos que trabajamos con bytes para el hashing
+    password_bytes = password.encode('utf-8')
+    salt = bcrypt.gensalt()
+    hashed = bcrypt.hashpw(password_bytes, salt)
+    return hashed.decode('utf-8')
 
 def verify_password(password: str, hashed: str) -> bool:
-    return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+    try:
+        # Convertimos ambos a bytes para que bcrypt pueda comparar
+        return bcrypt.checkpw(password.encode('utf-8'), hashed.encode('utf-8'))
+    except Exception as e:
+        print(f"Error verificando password: {e}")
+        return False
 
 def create_token(user_id: str, email: str, role: str) -> str:
     payload = {
@@ -504,14 +515,15 @@ async def google_session(data: GoogleSessionRequest, response: Response):
 
 @api_router.post("/auth/register", response_model=TokenResponse)
 async def register(user_data: UserCreate):
-    existing = await db.users.find_one({"email": user_data.email})
+    user_email = user_data.email.lower().strip()
+    existing = await db.users.find_one({"email": user_email})
     if existing:
         raise HTTPException(status_code=400, detail="Email already registered")
     
     user_id = str(uuid.uuid4())
     user_doc = {
         "id": user_id,
-        "email": user_data.email,
+        "email": user_email,
         "password": hash_password(user_data.password),
         "name": user_data.name,
         "role": "user",
@@ -537,9 +549,20 @@ async def register(user_data: UserCreate):
 
 @api_router.post("/auth/login", response_model=TokenResponse)
 async def login(credentials: UserLogin):
-    user = await db.users.find_one({"email": credentials.email}, {"_id": 0})
-    if not user or not user.get("password") or not verify_password(credentials.password, user["password"]):
-        raise HTTPException(status_code=401, detail="Invalid credentials")
+    user_email = credentials.email.lower().strip()
+    user = await db.users.find_one({"email": user_email}, {"_id": 0})
+    
+    if not user:
+        logger.warning(f"Login fallido: Usuario no encontrado ({user_email})")
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
+        
+    if not user.get("password"):
+        logger.warning(f"Login fallido: Usuario ({user_email}) no tiene password (posible usuario de Google)")
+        raise HTTPException(status_code=401, detail="Por favor, inicia sesión con Google")
+        
+    if not verify_password(credentials.password, user["password"]):
+        logger.warning(f"Login fallido: Contraseña incorrecta para {user_email}")
+        raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
     
     token = create_token(user["id"], user["email"], user["role"])
     return TokenResponse(
