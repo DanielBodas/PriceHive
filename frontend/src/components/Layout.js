@@ -79,7 +79,7 @@ const Layout = ({ children }) => {
                                     {user?.name?.charAt(0).toUpperCase()}
                                 </div>
                                 <span className="font-medium">{user?.name}</span>
-                                {isAdmin() && (
+                                {user?.role === 'admin' && (
                                     <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
                                         Admin
                                     </span>
