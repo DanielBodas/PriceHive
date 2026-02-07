@@ -96,8 +96,77 @@
 # END - Testing Protocol - DO NOT EDIT OR REMOVE THIS SECTION
 #====================================================================================================
 
-
-
 #====================================================================================================
 # Testing Data - Main Agent and testing sub agent both should log testing data below this section
 #====================================================================================================
+user_problem_statement: "Fix session persistence issues and test the new shopping list functionality (dynamic editing, € symbol)."
+
+backend:
+  - task: "Session Persistence (Cookie)"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Changed samesite to 'none' for cross-site cookie support in preview env."
+
+  - task: "Shopping List API - Dynamic Editing"
+    implemented: true
+    working: "NA"
+    file: "/app/backend/server.py"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Previous agent implemented it. Needs verification of brand/quantity updates."
+
+frontend:
+  - task: "Session Persistence (Direct Navigation)"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/contexts/AuthContext.js"
+    stuck_count: 1
+    priority: "high"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Relies on backend cookie fix."
+
+  - task: "Shopping List UI - Dynamic Editing"
+    implemented: true
+    working: "NA"
+    file: "/app/frontend/src/pages/ShoppingListPage.js"
+    stuck_count: 0
+    priority: "medium"
+    needs_retesting: true
+    status_history:
+      - working: "NA"
+        agent: "main"
+        comment: "Verify adding items, editing brand/quantity in list, price with € symbol."
+
+metadata:
+  created_by: "main_agent"
+  version: "1.0"
+  test_sequence: 1
+  run_ui: true
+
+test_plan:
+  current_focus:
+    - "Session Persistence (Cookie)"
+    - "Shopping List API - Dynamic Editing"
+    - "Shopping List UI - Dynamic Editing"
+  stuck_tasks:
+    - "Session Persistence (Direct Navigation)"
+  test_all: false
+  test_priority: "high_first"
+
+agent_communication:
+  - agent: "main"
+    message: "I have updated server.py to use SameSite=None for cookies. Please verify that logging in and then refreshing the page or navigating to /alerts keeps the user logged in. Also, please exhaustively test the shopping list: create list, add item, edit brand and quantity (inline), save, and check persistence."
