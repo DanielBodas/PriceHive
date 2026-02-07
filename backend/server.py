@@ -831,6 +831,7 @@ async def create_shopping_list(data: ShoppingListCreate, user: dict = Depends(ge
         
         product = await db.products.find_one({"id": item.product_id}, {"_id": 0})
         unit = await db.units.find_one({"id": item.unit_id}, {"_id": 0})
+        brand = await db.brands.find_one({"id": item.brand_id}, {"_id": 0}) if item.brand_id else None
         
         items_with_estimates.append({
             "product_id": item.product_id,
@@ -840,7 +841,9 @@ async def create_shopping_list(data: ShoppingListCreate, user: dict = Depends(ge
             "unit_name": unit["name"] if unit else None,
             "price": item.price,
             "estimated_price": estimated,
-            "purchased": item.purchased
+            "purchased": item.purchased,
+            "brand_id": item.brand_id,
+            "brand_name": brand["name"] if brand else None
         })
     
     doc = {
@@ -876,6 +879,7 @@ async def get_shopping_lists(user: dict = Depends(get_current_user)):
     supermarkets = {s["id"]: s["name"] for s in await db.supermarkets.find({}, {"_id": 0}).to_list(1000)}
     products = {p["id"]: p["name"] for p in await db.products.find({}, {"_id": 0}).to_list(1000)}
     units = {u["id"]: u["name"] for u in await db.units.find({}, {"_id": 0}).to_list(1000)}
+    brands = {b["id"]: b["name"] for b in await db.brands.find({}, {"_id": 0}).to_list(1000)}
     
     result = []
     for lst in lists:
@@ -903,7 +907,9 @@ async def get_shopping_lists(user: dict = Depends(get_current_user)):
                 unit_name=units.get(item["unit_id"]),
                 price=item.get("price"),
                 estimated_price=estimated,
-                purchased=item.get("purchased", False)
+                purchased=item.get("purchased", False),
+                brand_id=item.get("brand_id"),
+                brand_name=brands.get(item.get("brand_id"))
             ))
         
         result.append(ShoppingListResponse(
