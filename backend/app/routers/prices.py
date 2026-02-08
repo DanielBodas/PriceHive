@@ -11,8 +11,15 @@ router = APIRouter(prefix="/prices", tags=["prices"])
 
 @router.post("", response_model=PriceResponse)
 async def create_price(data: PriceCreate, user: dict = Depends(get_current_user)):
+    query = {}
+    if data.sellable_product_id:
+        query["sellable_product_id"] = data.sellable_product_id
+    else:
+        query["product_id"] = data.product_id
+        query["supermarket_id"] = data.supermarket_id
+
     previous_price = await db.prices.find_one(
-        {"sellable_product_id": data.sellable_product_id},
+        query,
         {"_id": 0},
         sort=[("created_at", -1)]
     )
@@ -21,12 +28,17 @@ async def create_price(data: PriceCreate, user: dict = Depends(get_current_user)
     created_at = datetime.now(timezone.utc).isoformat()
     doc = {
         "id": price_id,
-        "sellable_product_id": data.sellable_product_id,
         "price": data.price,
         "quantity": data.quantity,
         "user_id": user["id"],
         "created_at": created_at
     }
+
+    if data.sellable_product_id:
+        doc["sellable_product_id"] = data.sellable_product_id
+    else:
+        doc["product_id"] = data.product_id
+        doc["supermarket_id"] = data.supermarket_id
     await db.prices.insert_one(doc)
 
     sp = await db.sellable_products.find_one({"id": data.sellable_product_id})
@@ -68,7 +80,14 @@ async def create_price(data: PriceCreate, user: dict = Depends(get_current_user)
                     )
 
     return PriceResponse(
-        **doc,
+        id=price_id,
+        sellable_product_id=doc.get("sellable_product_id"),
+        product_id=doc.get("product_id"),
+        supermarket_id=doc.get("supermarket_id"),
+        price=data.price,
+        quantity=data.quantity,
+        user_id=user["id"],
+        created_at=created_at,
         product_name=product["name"] if product else None,
         supermarket_name=supermarket["name"] if supermarket else None,
         brand_name=brand["name"] if brand else None,
@@ -94,13 +113,29 @@ async def get_prices(
     sellable_products_data = await db.sellable_products.find({}, {"_id": 0}).to_list(10000)
     sellable_map = {sp["id"]: sp for sp in sellable_products_data}
 
-    return [PriceResponse(
-        **p,
-        product_name=products.get(sellable_map[p["sellable_product_id"]]["product_id"]) if p["sellable_product_id"] in sellable_map else None,
-        supermarket_name=supermarkets.get(sellable_map[p["sellable_product_id"]]["supermarket_id"]) if p["sellable_product_id"] in sellable_map else None,
-        brand_name=brands.get(sellable_map[p["sellable_product_id"]]["brand_id"]) if p["sellable_product_id"] in sellable_map else None,
-        user_name=users.get(p.get("user_id"))
-    ) for p in prices]
+    result = []
+    for p in prices:
+        p_name = None
+        s_name = None
+        b_name = None
+
+        if "sellable_product_id" in p and p["sellable_product_id"] in sellable_map:
+            sp = sellable_map[p["sellable_product_id"]]
+            p_name = products.get(sp["product_id"])
+            s_name = supermarkets.get(sp["supermarket_id"])
+            b_name = brands.get(sp["brand_id"])
+        elif "product_id" in p:
+            p_name = products.get(p["product_id"])
+            s_name = supermarkets.get(p.get("supermarket_id"))
+
+        result.append(PriceResponse(
+            **p,
+            product_name=p_name,
+            supermarket_name=s_name,
+            brand_name=b_name,
+            user_name=users.get(p.get("user_id"))
+        ))
+    return result
 
 @router.get("/latest/{product_id}")
 async def get_latest_price(product_id: str, supermarket_id: Optional[str] = None, user: dict = Depends(get_current_user)):

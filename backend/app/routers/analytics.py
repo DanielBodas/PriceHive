@@ -84,8 +84,13 @@ async def compare_product_prices(product_id: str, user: dict = Depends(get_curre
         "best_price": comparison[0] if comparison else None
     }
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 @router.get("/analytics/stats")
 async def get_general_stats(user: dict = Depends(get_current_user)):
+    logger.info(f"Fetching stats for user: {user.get('email')}")
     total_products = await db.products.count_documents({})
     total_prices = await db.prices.count_documents({})
     total_users = await db.users.count_documents({})
@@ -97,12 +102,26 @@ async def get_general_stats(user: dict = Depends(get_current_user)):
     sellable_map = {sp["id"]: sp for sp in sellable_products_data}
     supermarkets = {s["id"]: s["name"] for s in await db.supermarkets.find({}, {"_id": 0}).to_list(1000)}
 
-    recent_activity = [{
-        "product_name": products.get(sellable_map[p["sellable_product_id"]]["product_id"]) if p["sellable_product_id"] in sellable_map else "Unknown",
-        "supermarket_name": supermarkets.get(sellable_map[p["sellable_product_id"]]["supermarket_id"]) if p["sellable_product_id"] in sellable_map else "Unknown",
-        "price": p["price"],
-        "created_at": p["created_at"]
-    } for p in recent_prices]
+    recent_activity = []
+    for p in recent_prices:
+        p_name = "Unknown"
+        s_name = "Unknown"
+
+        if "sellable_product_id" in p and p["sellable_product_id"] in sellable_map:
+            sp = sellable_map[p["sellable_product_id"]]
+            p_name = products.get(sp["product_id"], "Unknown")
+            s_name = supermarkets.get(sp["supermarket_id"], "Unknown")
+        elif "product_id" in p:
+            # Legacy support
+            p_name = products.get(p["product_id"], "Unknown")
+            s_name = supermarkets.get(p.get("supermarket_id"), "Unknown")
+
+        recent_activity.append({
+            "product_name": p_name,
+            "supermarket_name": s_name,
+            "price": p["price"],
+            "created_at": p["created_at"]
+        })
 
     return {
         "total_products": total_products,

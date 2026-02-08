@@ -1,14 +1,17 @@
 from fastapi import APIRouter
-from typing import Optional
-from typing import List
+from typing import Optional, List
+import logging
 from ..core.database import db
 from ..models.product import SupermarketResponse, CategoryResponse, ProductResponse
 
 router = APIRouter(prefix="/public", tags=["public"])
+logger = logging.getLogger(__name__)
 
 @router.get("/supermarkets", response_model=List[SupermarketResponse])
 async def get_public_supermarkets():
+    logger.info("Fetching public supermarkets")
     sms = await db.supermarkets.find({}, {"_id": 0}).to_list(1000)
+    logger.info(f"Found {len(sms)} supermarkets")
     return [SupermarketResponse(**s) for s in sms]
 
 @router.get("/categories", response_model=List[CategoryResponse])
