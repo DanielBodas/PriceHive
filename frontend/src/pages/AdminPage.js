@@ -20,7 +20,8 @@ import {
     Layers,
     Scale,
     Settings,
-    LayoutGrid
+    LayoutGrid,
+    BookOpen
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -88,105 +89,99 @@ const AdminPage = () => {
         }
     };
 
-    // CRUD functions (omitted for brevity in this thought, but I'll include them in the final write_file)
-    // ... I'll include the full logic to ensure it works ...
-
     const handleSaveCategory = async () => {
         try {
-            if (editingItem) {
-                await axios.put(`${API}/admin/categories/${editingItem.id}`, categoryForm);
-                toast.success("Categoría actualizada");
-            } else {
-                await axios.post(`${API}/admin/categories`, categoryForm);
-                toast.success("Categoría creada");
-            }
-            fetchAllData();
-            setCategoryDialog(false);
-            setCategoryForm({ name: "", description: "" });
-            setEditingItem(null);
+            if (editingItem) await axios.put(`${API}/admin/categories/${editingItem.id}`, categoryForm);
+            else await axios.post(`${API}/admin/categories`, categoryForm);
+            fetchAllData(); setCategoryDialog(false); setCategoryForm({ name: "", description: "" }); setEditingItem(null);
+            toast.success("Categoría guardada");
         } catch (error) { toast.error("Error al guardar"); }
     };
 
     const handleDeleteCategory = async (id) => {
         if (!window.confirm("¿Eliminar?")) return;
-        try { await axios.delete(`${API}/admin/categories/${id}`); fetchAllData(); } catch (e) { toast.error("Error"); }
+        try { await axios.delete(`${API}/admin/categories/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
     const handleSaveBrand = async () => {
         try {
-            if (editingItem) { await axios.put(`${API}/admin/brands/${editingItem.id}`, brandForm); }
-            else { await axios.post(`${API}/admin/brands`, brandForm); }
+            if (editingItem) await axios.put(`${API}/admin/brands/${editingItem.id}`, brandForm);
+            else await axios.post(`${API}/admin/brands`, brandForm);
             fetchAllData(); setBrandDialog(false); setBrandForm({ name: "", logo_url: "" }); setEditingItem(null);
+            toast.success("Marca guardada");
         } catch (e) { toast.error("Error"); }
     };
 
     const handleDeleteBrand = async (id) => {
         if (!window.confirm("¿Eliminar?")) return;
-        try { await axios.delete(`${API}/admin/brands/${id}`); fetchAllData(); } catch (e) { toast.error("Error"); }
+        try { await axios.delete(`${API}/admin/brands/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
     const handleSaveSupermarket = async () => {
         try {
-            if (editingItem) { await axios.put(`${API}/admin/supermarkets/${editingItem.id}`, supermarketForm); }
-            else { await axios.post(`${API}/admin/supermarkets`, supermarketForm); }
+            if (editingItem) await axios.put(`${API}/admin/supermarkets/${editingItem.id}`, supermarketForm);
+            else await axios.post(`${API}/admin/supermarkets`, supermarketForm);
             fetchAllData(); setSupermarketDialog(false); setSupermarketForm({ name: "", logo_url: "" }); setEditingItem(null);
+            toast.success("Supermercado guardado");
         } catch (e) { toast.error("Error"); }
     };
 
     const handleDeleteSupermarket = async (id) => {
         if (!window.confirm("¿Eliminar?")) return;
-        try { await axios.delete(`${API}/admin/supermarkets/${id}`); fetchAllData(); } catch (e) { toast.error("Error"); }
+        try { await axios.delete(`${API}/admin/supermarkets/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
     const handleSaveUnit = async () => {
         try {
-            if (editingItem) { await axios.put(`${API}/admin/units/${editingItem.id}`, unitForm); }
-            else { await axios.post(`${API}/admin/units`, unitForm); }
+            if (editingItem) await axios.put(`${API}/admin/units/${editingItem.id}`, unitForm);
+            else await axios.post(`${API}/admin/units`, unitForm);
             fetchAllData(); setUnitDialog(false); setUnitForm({ name: "", abbreviation: "" }); setEditingItem(null);
+            toast.success("Unidad guardada");
         } catch (e) { toast.error("Error"); }
     };
 
     const handleDeleteUnit = async (id) => {
         if (!window.confirm("¿Eliminar?")) return;
-        try { await axios.delete(`${API}/admin/units/${id}`); fetchAllData(); } catch (e) { toast.error("Error"); }
+        try { await axios.delete(`${API}/admin/units/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
     const handleSaveProduct = async () => {
         try {
-            if (editingItem) { await axios.put(`${API}/admin/products/${editingItem.id}`, productForm); }
-            else { await axios.post(`${API}/admin/products`, productForm); }
+            if (editingItem) await axios.put(`${API}/admin/products/${editingItem.id}`, productForm);
+            else await axios.post(`${API}/admin/products`, productForm);
             fetchAllData(); setProductDialog(false); setEditingItem(null);
+            toast.success("Producto guardado");
         } catch (e) { toast.error("Error"); }
     };
 
     const handleDeleteProduct = async (id) => {
         if (!window.confirm("¿Eliminar?")) return;
-        try { await axios.delete(`${API}/admin/products/${id}`); fetchAllData(); } catch (e) { toast.error("Error"); }
+        try { await axios.delete(`${API}/admin/products/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
     const handleSaveSellable = async () => {
         try {
             const res = await axios.post(`${API}/admin/sellable-products`, sellableForm);
-            if (res.data.warning) toast.warning(res.data.warning);
-            else toast.success("Añadido");
+            if (res.data.warning) toast.warning(res.data.warning, { duration: 5000 });
+            else toast.success("Producto vinculado correctamente");
             fetchAllData(); setSellableDialog(false); setSellableForm({ supermarket_id: "", product_id: "", brand_id: "" });
-        } catch (e) { toast.error("Error"); }
+        } catch (e) { toast.error("Error al vincular"); }
     };
 
     const handleDeleteSellable = async (id) => {
-        if (!window.confirm("¿Eliminar?")) return;
-        try { await axios.delete(`${API}/admin/sellable-products/${id}`); fetchAllData(); } catch (e) { toast.error("Error"); }
+        if (!window.confirm("¿Eliminar este producto del supermercado?")) return;
+        try { await axios.delete(`${API}/admin/sellable-products/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
     const handleSaveCatalog = async () => {
         try {
             await axios.post(`${API}/admin/brand-catalog`, catalogForm);
-            toast.success("Actualizado");
-            fetchAllData(); setCatalogDialog(false);
-        } catch (e) { toast.error("Error"); }
+            toast.success("Catálogo de marca actualizado");
+            fetchAllData(); setCatalogDialog(false); setCatalogForm({ brand_id: "", product_id: "", status: "active" });
+        } catch (e) { toast.error("Error al actualizar catálogo"); }
     };
 
-    if (loading) return <Layout><div className="flex items-center justify-center min-h-[400px]">Cargando...</div></Layout>;
+    if (loading) return <Layout><div className="flex items-center justify-center min-h-[400px]">Cargando panel de administración...</div></Layout>;
 
     return (
         <Layout>
@@ -195,46 +190,46 @@ const AdminPage = () => {
                     <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
                         Panel de Administración
                     </h1>
-                    <p className="text-slate-500 mt-1">Gestiona datos base y catálogos operativos</p>
+                    <p className="text-slate-500 mt-1">Gestión avanzada del sistema</p>
                 </div>
 
-                <Tabs defaultValue="base" className="space-y-6">
+                <Tabs defaultValue="unitarias" className="space-y-6">
                     <TabsList className="bg-slate-100 p-1">
-                        <TabsTrigger value="base" className="gap-2 data-[state=active]:bg-white">
-                            <Settings className="w-4 h-4" /> Configuración Base
+                        <TabsTrigger value="unitarias" className="gap-2 data-[state=active]:bg-white">
+                            <Package className="w-4 h-4" /> Cosas Unitarias
                         </TabsTrigger>
                         <TabsTrigger value="catalogos" className="gap-2 data-[state=active]:bg-white">
-                            <LayoutGrid className="w-4 h-4" /> Gestión de Catálogos
+                            <BookOpen className="w-4 h-4" /> Catálogos
                         </TabsTrigger>
                     </TabsList>
 
-                    {/* SECCIÓN CONFIGURACIÓN BASE */}
-                    <TabsContent value="base" className="space-y-6">
+                    {/* SECCIÓN COSAS UNITARIAS */}
+                    <TabsContent value="unitarias" className="space-y-6">
                         <Tabs defaultValue="products">
                             <TabsList className="bg-slate-50 border p-1 mb-4 flex-wrap h-auto">
-                                <TabsTrigger value="products" className="gap-2"><Package className="w-4 h-4" /> Productos</TabsTrigger>
-                                <TabsTrigger value="brands" className="gap-2"><Tag className="w-4 h-4" /> Marcas</TabsTrigger>
-                                <TabsTrigger value="supermarkets" className="gap-2"><Store className="w-4 h-4" /> Supermercados</TabsTrigger>
-                                <TabsTrigger value="units" className="gap-2"><Scale className="w-4 h-4" /> Unidades</TabsTrigger>
-                                <TabsTrigger value="categories" className="gap-2"><Layers className="w-4 h-4" /> Categorías</TabsTrigger>
+                                <TabsTrigger value="products" className="gap-2" data-testid="tab-products"><Package className="w-4 h-4" /> Productos</TabsTrigger>
+                                <TabsTrigger value="brands" className="gap-2" data-testid="tab-brands"><Tag className="w-4 h-4" /> Marcas</TabsTrigger>
+                                <TabsTrigger value="supermarkets" className="gap-2" data-testid="tab-supermarkets"><Store className="w-4 h-4" /> Supermercados</TabsTrigger>
+                                <TabsTrigger value="units" className="gap-2" data-testid="tab-units"><Scale className="w-4 h-4" /> Unidades</TabsTrigger>
+                                <TabsTrigger value="categories" className="gap-2" data-testid="tab-categories"><Layers className="w-4 h-4" /> Categorías</TabsTrigger>
                             </TabsList>
 
-                            {/* Sub-tab: Products */}
+                            {/* Contenidos de Cosas Unitarias */}
                             <TabsContent value="products">
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between">
                                         <CardTitle className="text-lg">Productos Genéricos</CardTitle>
-                                        <Button onClick={() => { setEditingItem(null); setProductForm({ name: "", brand_id: "", category_id: "", unit_id: "", barcode: "", image_url: "" }); setProductDialog(true); }} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Nuevo Producto</Button>
+                                        <Button onClick={() => { setEditingItem(null); setProductForm({ name: "", brand_id: "", category_id: "", unit_id: "", barcode: "", image_url: "" }); setProductDialog(true); }} className="bg-emerald-500" data-testid="new-product-btn"><Plus className="w-4 h-4 mr-2" /> Nuevo Producto</Button>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Categoría</TableHead><TableHead className="w-24">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Categoría</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {products.map(p => (
                                                     <TableRow key={p.id}>
                                                         <TableCell className="font-medium">{p.name}</TableCell>
                                                         <TableCell>{p.category_name}</TableCell>
-                                                        <TableCell className="flex gap-1">
+                                                        <TableCell className="flex justify-end gap-1 pr-4">
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingItem(p); setProductForm(p); setProductDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(p.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
@@ -246,7 +241,6 @@ const AdminPage = () => {
                                 </Card>
                             </TabsContent>
 
-                            {/* Sub-tab: Brands */}
                             <TabsContent value="brands">
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between">
@@ -255,12 +249,12 @@ const AdminPage = () => {
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {brands.map(b => (
                                                     <TableRow key={b.id}>
                                                         <TableCell className="font-medium">{b.name}</TableCell>
-                                                        <TableCell className="flex gap-1">
+                                                        <TableCell className="flex justify-end gap-1 pr-4">
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingItem(b); setBrandForm(b); setBrandDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteBrand(b.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
@@ -272,7 +266,6 @@ const AdminPage = () => {
                                 </Card>
                             </TabsContent>
 
-                            {/* Sub-tab: Supermarkets */}
                             <TabsContent value="supermarkets">
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between">
@@ -281,12 +274,12 @@ const AdminPage = () => {
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {supermarkets.map(s => (
                                                     <TableRow key={s.id}>
                                                         <TableCell className="font-medium">{s.name}</TableCell>
-                                                        <TableCell className="flex gap-1">
+                                                        <TableCell className="flex justify-end gap-1 pr-4">
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingItem(s); setSupermarketForm(s); setSupermarketDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteSupermarket(s.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
@@ -298,22 +291,21 @@ const AdminPage = () => {
                                 </Card>
                             </TabsContent>
 
-                            {/* Sub-tab: Units */}
                             <TabsContent value="units">
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between">
-                                        <CardTitle className="text-lg">Unidades</CardTitle>
+                                        <CardTitle className="text-lg">Unidades de Medida</CardTitle>
                                         <Button onClick={() => { setEditingItem(null); setUnitForm({ name: "", abbreviation: "" }); setUnitDialog(true); }} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Nueva Unidad</Button>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Abrev.</TableHead><TableHead className="w-24">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Abreviatura</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {units.map(u => (
                                                     <TableRow key={u.id}>
                                                         <TableCell className="font-medium">{u.name}</TableCell>
-                                                        <TableCell>{u.abbreviation}</TableCell>
-                                                        <TableCell className="flex gap-1">
+                                                        <TableCell className="font-mono">{u.abbreviation}</TableCell>
+                                                        <TableCell className="flex justify-end gap-1 pr-4">
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingItem(u); setUnitForm(u); setUnitDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteUnit(u.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
@@ -325,7 +317,6 @@ const AdminPage = () => {
                                 </Card>
                             </TabsContent>
 
-                            {/* Sub-tab: Categories */}
                             <TabsContent value="categories">
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between">
@@ -334,12 +325,12 @@ const AdminPage = () => {
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {categories.map(c => (
                                                     <TableRow key={c.id}>
                                                         <TableCell className="font-medium">{c.name}</TableCell>
-                                                        <TableCell className="flex gap-1">
+                                                        <TableCell className="flex justify-end gap-1 pr-4">
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingItem(c); setCategoryForm(c); setCategoryDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteCategory(c.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
@@ -353,31 +344,30 @@ const AdminPage = () => {
                         </Tabs>
                     </TabsContent>
 
-                    {/* SECCIÓN GESTIÓN DE CATÁLOGOS */}
+                    {/* SECCIÓN CATÁLOGOS */}
                     <TabsContent value="catalogos" className="space-y-6">
                         <Tabs defaultValue="sellable">
-                            <TabsList className="bg-slate-50 border p-1 mb-4">
-                                <TabsTrigger value="sellable" className="gap-2"><Store className="w-4 h-4" /> Catálogo Supermercado</TabsTrigger>
-                                <TabsTrigger value="brand-cat" className="gap-2"><Tag className="w-4 h-4" /> Catálogo Marca</TabsTrigger>
+                            <TabsList className="bg-slate-50 border p-1 mb-4 h-auto">
+                                <TabsTrigger value="sellable" className="gap-2" data-testid="tab-sellable"><Store className="w-4 h-4" /> Catálogo Supermercado</TabsTrigger>
+                                <TabsTrigger value="brand-cat" className="gap-2" data-testid="tab-brand-catalog"><Tag className="w-4 h-4" /> Catálogo Marca</TabsTrigger>
                             </TabsList>
 
-                            {/* Sub-tab: Sellable Products */}
                             <TabsContent value="sellable">
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between">
                                         <CardTitle className="text-lg">Productos por Supermercado (Operativo)</CardTitle>
-                                        <Button onClick={() => setSellableDialog(true)} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Vincular a Super</Button>
+                                        <Button onClick={() => setSellableDialog(true)} className="bg-emerald-500" data-testid="new-sellable-btn"><Plus className="w-4 h-4 mr-2" /> Vincular Producto</Button>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Supermercado</TableHead><TableHead>Producto</TableHead><TableHead>Marca</TableHead><TableHead className="w-24">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>Supermercado</TableHead><TableHead>Producto</TableHead><TableHead>Marca</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {sellableProducts.map(sp => (
                                                     <TableRow key={sp.id}>
                                                         <TableCell className="font-medium">{sp.supermarket_name}</TableCell>
                                                         <TableCell>{sp.product_name}</TableCell>
                                                         <TableCell>{sp.brand_name}</TableCell>
-                                                        <TableCell>
+                                                        <TableCell className="text-right pr-4">
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteSellable(sp.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
                                                     </TableRow>
@@ -388,12 +378,11 @@ const AdminPage = () => {
                                 </Card>
                             </TabsContent>
 
-                            {/* Sub-tab: Brand Catalog */}
                             <TabsContent value="brand-cat">
                                 <Card>
                                     <CardHeader className="flex flex-row items-center justify-between">
-                                        <CardTitle className="text-lg">Catálogo conceptual de Marca</CardTitle>
-                                        <Button onClick={() => setCatalogDialog(true)} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Añadir/Actualizar</Button>
+                                        <CardTitle className="text-lg">Catálogo Conceptual de Marca</CardTitle>
+                                        <Button onClick={() => setCatalogDialog(true)} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Actualizar Estado</Button>
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
@@ -421,48 +410,53 @@ const AdminPage = () => {
                 </Tabs>
             </div>
 
-            {/* Dialogs */}
+            {/* Diálogos */}
             <Dialog open={productDialog} onOpenChange={setProductDialog}>
                 <DialogContent>
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Producto</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <Label>Nombre</Label><Input value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} />
-                        <Label>Categoría</Label>
-                        <Select value={productForm.category_id} onValueChange={v => setProductForm({...productForm, category_id: v})}>
-                            <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                            <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Button onClick={handleSaveProduct} className="w-full bg-emerald-500">Guardar</Button>
+                        <div className="space-y-2">
+                            <Label>Nombre</Label>
+                            <Input value={productForm.name} onChange={e => setProductForm({...productForm, name: e.target.value})} placeholder="Nombre del producto" />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Categoría</Label>
+                            <Select value={productForm.category_id} onValueChange={v => setProductForm({...productForm, category_id: v})}>
+                                <SelectTrigger data-testid="select-category"><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+                                <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <Button onClick={handleSaveProduct} className="w-full bg-emerald-500" data-testid="save-product-btn">Guardar Producto</Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={brandDialog} onOpenChange={setBrandDialog}>
                 <DialogContent>
-                    <DialogHeader><DialogTitle>Marca</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nueva"} Marca</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <Label>Nombre</Label><Input value={brandForm.name} onChange={e => setBrandForm({...brandForm, name: e.target.value})} />
-                        <Button onClick={handleSaveBrand} className="w-full bg-emerald-500">Guardar</Button>
+                        <Label>Nombre</Label><Input value={brandForm.name} onChange={e => setBrandForm({...brandForm, name: e.target.value})} placeholder="Nombre de la marca" data-testid="brand-name-input" />
+                        <Button onClick={handleSaveBrand} className="w-full bg-emerald-500" data-testid="save-brand-btn">Guardar</Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={supermarketDialog} onOpenChange={setSupermarketDialog}>
                 <DialogContent>
-                    <DialogHeader><DialogTitle>Supermercado</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Supermercado</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <Label>Nombre</Label><Input value={supermarketForm.name} onChange={e => setSupermarketForm({...supermarketForm, name: e.target.value})} />
-                        <Button onClick={handleSaveSupermarket} className="w-full bg-emerald-500">Guardar</Button>
+                        <Label>Nombre</Label><Input value={supermarketForm.name} onChange={e => setSupermarketForm({...supermarketForm, name: e.target.value})} placeholder="Nombre del supermercado" data-testid="supermarket-name-input" />
+                        <Button onClick={handleSaveSupermarket} className="w-full bg-emerald-500" data-testid="save-supermarket-btn">Guardar</Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={unitDialog} onOpenChange={setUnitDialog}>
                 <DialogContent>
-                    <DialogHeader><DialogTitle>Unidad</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nueva"} Unidad</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <Label>Nombre</Label><Input value={unitForm.name} onChange={e => setUnitForm({...unitForm, name: e.target.value})} />
-                        <Label>Abreviatura</Label><Input value={unitForm.abbreviation} onChange={e => setUnitForm({...unitForm, abbreviation: e.target.value})} />
+                        <Label>Nombre</Label><Input value={unitForm.name} onChange={e => setUnitForm({...unitForm, name: e.target.value})} placeholder="Ej: Litro" />
+                        <Label>Abreviatura</Label><Input value={unitForm.abbreviation} onChange={e => setUnitForm({...unitForm, abbreviation: e.target.value})} placeholder="Ej: L" />
                         <Button onClick={handleSaveUnit} className="w-full bg-emerald-500">Guardar</Button>
                     </div>
                 </DialogContent>
@@ -470,9 +464,9 @@ const AdminPage = () => {
 
             <Dialog open={categoryDialog} onOpenChange={setCategoryDialog}>
                 <DialogContent>
-                    <DialogHeader><DialogTitle>Categoría</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nueva"} Categoría</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <Label>Nombre</Label><Input value={categoryForm.name} onChange={e => setCategoryForm({...categoryForm, name: e.target.value})} />
+                        <Label>Nombre</Label><Input value={categoryForm.name} onChange={e => setCategoryForm({...categoryForm, name: e.target.value})} placeholder="Nombre de la categoría" />
                         <Button onClick={handleSaveCategory} className="w-full bg-emerald-500">Guardar</Button>
                     </div>
                 </DialogContent>
@@ -480,57 +474,69 @@ const AdminPage = () => {
 
             <Dialog open={sellableDialog} onOpenChange={setSellableDialog}>
                 <DialogContent>
-                    <DialogHeader><DialogTitle>Vincular a Supermercado</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>Vincular Producto a Supermercado</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <Label>Supermercado</Label>
-                        <Select value={sellableForm.supermarket_id} onValueChange={v => setSellableForm({...sellableForm, supermarket_id: v})}>
-                            <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                            <SelectContent>{supermarkets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Label>Producto</Label>
-                        <Select value={sellableForm.product_id} onValueChange={v => setSellableForm({...sellableForm, product_id: v})}>
-                            <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                            <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Label>Marca</Label>
-                        <Select value={sellableForm.brand_id} onValueChange={v => setSellableForm({...sellableForm, brand_id: v})}>
-                            <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                            <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                        </Select>
+                        <div className="space-y-2">
+                            <Label>Supermercado</Label>
+                            <Select value={sellableForm.supermarket_id} onValueChange={v => setSellableForm({...sellableForm, supermarket_id: v})}>
+                                <SelectTrigger data-testid="select-sellable-supermarket"><SelectValue placeholder="Seleccionar supermercado" /></SelectTrigger>
+                                <SelectContent>{supermarkets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Producto</Label>
+                            <Select value={sellableForm.product_id} onValueChange={v => setSellableForm({...sellableForm, product_id: v})}>
+                                <SelectTrigger data-testid="select-sellable-product"><SelectValue placeholder="Seleccionar producto genérico" /></SelectTrigger>
+                                <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Marca</Label>
+                            <Select value={sellableForm.brand_id} onValueChange={v => setSellableForm({...sellableForm, brand_id: v})}>
+                                <SelectTrigger data-testid="select-sellable-brand"><SelectValue placeholder="Seleccionar marca" /></SelectTrigger>
+                                <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
                         {sellableForm.brand_id && sellableForm.product_id && (
-                            <div className={`p-2 rounded text-xs ${brandCatalog.find(bc => bc.brand_id === sellableForm.brand_id && bc.product_id === sellableForm.product_id)?.status === 'active' ? 'bg-emerald-50 text-emerald-700 border border-emerald-200' : 'bg-amber-50 text-amber-700 border border-amber-200'}`}>
-                                Catálogo: {brandCatalog.find(bc => bc.brand_id === sellableForm.brand_id && bc.product_id === sellableForm.product_id)?.status || "No listado"}
+                            <div className={`p-2 rounded text-xs border ${brandCatalog.find(bc => bc.brand_id === sellableForm.brand_id && bc.product_id === sellableForm.product_id)?.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
+                                Estado en catálogo de marca: {brandCatalog.find(bc => bc.brand_id === sellableForm.brand_id && bc.product_id === sellableForm.product_id)?.status || "No listado"}
                             </div>
                         )}
-                        <Button onClick={handleSaveSellable} className="w-full bg-emerald-500">Guardar</Button>
+                        <Button onClick={handleSaveSellable} className="w-full bg-emerald-500 mt-4" data-testid="save-sellable-btn">Guardar Vinculación</Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
             <Dialog open={catalogDialog} onOpenChange={setCatalogDialog}>
                 <DialogContent>
-                    <DialogHeader><DialogTitle>Catálogo de Marca</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>Gestionar Catálogo de Marca</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <Label>Marca</Label>
-                        <Select value={catalogForm.brand_id} onValueChange={v => setCatalogForm({...catalogForm, brand_id: v})}>
-                            <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                            <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Label>Producto</Label>
-                        <Select value={catalogForm.product_id} onValueChange={v => setCatalogForm({...catalogForm, product_id: v})}>
-                            <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                            <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                        </Select>
-                        <Label>Estado</Label>
-                        <Select value={catalogForm.status} onValueChange={v => setCatalogForm({...catalogForm, status: v})}>
-                            <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
-                            <SelectContent>
-                                <SelectItem value="planned">Planned</SelectItem>
-                                <SelectItem value="active">Active</SelectItem>
-                                <SelectItem value="discontinued">Discontinued</SelectItem>
-                            </SelectContent>
-                        </Select>
-                        <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500">Actualizar</Button>
+                        <div className="space-y-2">
+                            <Label>Marca</Label>
+                            <Select value={catalogForm.brand_id} onValueChange={v => setCatalogForm({...catalogForm, brand_id: v})}>
+                                <SelectTrigger><SelectValue placeholder="Seleccionar marca" /></SelectTrigger>
+                                <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Producto</Label>
+                            <Select value={catalogForm.product_id} onValueChange={v => setCatalogForm({...catalogForm, product_id: v})}>
+                                <SelectTrigger><SelectValue placeholder="Seleccionar producto" /></SelectTrigger>
+                                <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
+                            </Select>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Estado Conceptual</Label>
+                            <Select value={catalogForm.status} onValueChange={v => setCatalogForm({...catalogForm, status: v})}>
+                                <SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
+                                <SelectContent>
+                                    <SelectItem value="planned">Planned (Planeado)</SelectItem>
+                                    <SelectItem value="active">Active (Activo)</SelectItem>
+                                    <SelectItem value="discontinued">Discontinued (Descatalogado)</SelectItem>
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500 mt-4">Actualizar Catálogo</Button>
                     </div>
                 </DialogContent>
             </Dialog>

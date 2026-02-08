@@ -17,7 +17,7 @@ async def get_product_analytics(product_id: str, supermarket_id: Optional[str] =
     if supermarket_id:
         sp_query["supermarket_id"] = supermarket_id
     sps = await db.sellable_products.find(sp_query).to_list(1000)
-    sp_ids = [sp["id"] for sp in sps]
+    sp_ids = [sp.get("id") or str(sp.get("_id")) for sp in sps]
 
     if not sp_ids:
         return ProductAnalyticsResponse(
@@ -59,12 +59,13 @@ async def compare_product_prices(product_id: str, user: dict = Depends(get_curre
         raise HTTPException(status_code=404, detail="Product not found")
 
     sps = await db.sellable_products.find({"product_id": product_id}).to_list(1000)
-    supermarkets = {s["id"]: s["name"] for s in await db.supermarkets.find({}, {"_id": 0}).to_list(1000)}
+    supermarkets = {s.get("id") or str(s.get("_id")): s["name"] for s in await db.supermarkets.find({}).to_list(1000)}
 
     comparison = []
     for sp in sps:
+        sp_id = sp.get("id") or str(sp.get("_id"))
         latest = await db.prices.find_one(
-            {"sellable_product_id": sp["id"]},
+            {"sellable_product_id": sp_id},
             {"_id": 0},
             sort=[("created_at", -1)]
         )
@@ -91,45 +92,67 @@ logger = logging.getLogger(__name__)
 @router.get("/analytics/stats")
 async def get_general_stats(user: dict = Depends(get_current_user)):
     logger.info(f"Fetching stats for user: {user.get('email')}")
-    total_products = await db.products.count_documents({})
-    total_prices = await db.prices.count_documents({})
-    total_users = await db.users.count_documents({})
-    total_supermarkets = await db.supermarkets.count_documents({})
+    try:
+        total_products = await db.products.count_documents({})
+        total_prices = await db.prices.count_documents({})
+        total_users = await db.users.count_documents({})
+        total_supermarkets = await db.supermarkets.count_documents({})
 
-    recent_prices = await db.prices.find({}, {"_id": 0}).sort("created_at", -1).to_list(10)
-    products = {p["id"]: p["name"] for p in await db.products.find({}, {"_id": 0}).to_list(1000)}
-    sellable_products_data = await db.sellable_products.find({}, {"_id": 0}).to_list(10000)
-    sellable_map = {sp["id"]: sp for sp in sellable_products_data}
-    supermarkets = {s["id"]: s["name"] for s in await db.supermarkets.find({}, {"_id": 0}).to_list(1000)}
+        # Mapping helpers for id
+        def map_id(doc):
+            if doc and "id" not in doc and "_id" in doc:
+                doc["id"] = str(doc["_id"])
+            return doc
 
-    recent_activity = []
-    for p in recent_prices:
-        p_name = "Unknown"
-        s_name = "Unknown"
+        recent_prices = await db.prices.find({}).sort("created_at", -1).to_list(10)
+        recent_prices = [map_id(p) for p in recent_prices]
 
-        if "sellable_product_id" in p and p["sellable_product_id"] in sellable_map:
-            sp = sellable_map[p["sellable_product_id"]]
-            p_name = products.get(sp["product_id"], "Unknown")
-            s_name = supermarkets.get(sp["supermarket_id"], "Unknown")
-        elif "product_id" in p:
-            # Legacy support
-            p_name = products.get(p["product_id"], "Unknown")
-            s_name = supermarkets.get(p.get("supermarket_id"), "Unknown")
+        all_prods = await db.products.find({}).to_list(1000)
+        products = {p.get("id") or str(p.get("_id")): p["name"] for p in all_prods}
 
-        recent_activity.append({
-            "product_name": p_name,
-            "supermarket_name": s_name,
-            "price": p["price"],
-            "created_at": p["created_at"]
-        })
+        all_sps = await db.sellable_products.find({}).to_list(10000)
+        sellable_map = {sp.get("id") or str(sp.get("_id")): sp for sp in all_sps}
 
-    return {
-        "total_products": total_products,
-        "total_prices": total_prices,
-        "total_users": total_users,
-        "total_supermarkets": total_supermarkets,
-        "recent_activity": recent_activity
-    }
+        all_sms = await db.supermarkets.find({}).to_list(1000)
+        supermarkets = {s.get("id") or str(s.get("_id")): s["name"] for s in all_sms}
+
+        recent_activity = []
+        for p in recent_prices:
+            p_name = "Unknown"
+            s_name = "Unknown"
+
+            if "sellable_product_id" in p and p["sellable_product_id"] in sellable_map:
+                sp = sellable_map[p["sellable_product_id"]]
+                p_name = products.get(sp["product_id"], "Unknown")
+                s_name = supermarkets.get(sp["supermarket_id"], "Unknown")
+            elif "product_id" in p:
+                # Legacy support
+                p_name = products.get(p["product_id"], "Unknown")
+                s_name = supermarkets.get(p.get("supermarket_id"), "Unknown")
+
+            recent_activity.append({
+                "product_name": p_name,
+                "supermarket_name": s_name,
+                "price": p["price"],
+                "created_at": p["created_at"]
+            })
+
+        return {
+            "total_products": total_products,
+            "total_prices": total_prices,
+            "total_users": total_users,
+            "total_supermarkets": total_supermarkets,
+            "recent_activity": recent_activity
+        }
+    except Exception as e:
+        logger.error(f"Error in get_general_stats: {e}")
+        return {
+            "total_products": 0,
+            "total_prices": 0,
+            "total_users": 0,
+            "total_supermarkets": 0,
+            "recent_activity": []
+        }
 
 @router.get("/leaderboard", response_model=List[LeaderboardEntry])
 async def get_leaderboard(limit: int = 10, user: dict = Depends(get_current_user)):

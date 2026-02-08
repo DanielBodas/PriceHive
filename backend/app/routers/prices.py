@@ -104,17 +104,18 @@ async def get_prices(
     if sellable_product_id:
         query["sellable_product_id"] = sellable_product_id
 
-    prices = await db.prices.find(query, {"_id": 0}).sort("created_at", -1).to_list(limit)
+    prices = await db.prices.find(query).sort("created_at", -1).to_list(limit)
 
-    supermarkets = {s["id"]: s["name"] for s in await db.supermarkets.find({}, {"_id": 0}).to_list(1000)}
-    products = {p["id"]: p["name"] for p in await db.products.find({}, {"_id": 0}).to_list(1000)}
-    brands = {b["id"]: b["name"] for b in await db.brands.find({}, {"_id": 0}).to_list(1000)}
-    users = {u["id"]: u["name"] for u in await db.users.find({}, {"_id": 0, "id": 1, "name": 1}).to_list(1000)}
-    sellable_products_data = await db.sellable_products.find({}, {"_id": 0}).to_list(10000)
-    sellable_map = {sp["id"]: sp for sp in sellable_products_data}
+    supermarkets = {s.get("id") or str(s.get("_id")): s["name"] for s in await db.supermarkets.find({}).to_list(1000)}
+    products = {p.get("id") or str(p.get("_id")): p["name"] for p in await db.products.find({}).to_list(1000)}
+    brands = {b.get("id") or str(b.get("_id")): b["name"] for b in await db.brands.find({}).to_list(1000)}
+    users = {u.get("id") or str(u.get("_id")): u["name"] for u in await db.users.find({}, {"id": 1, "name": 1}).to_list(1000)}
+    sellable_products_data = await db.sellable_products.find({}).to_list(10000)
+    sellable_map = {sp.get("id") or str(sp.get("_id")): sp for sp in sellable_products_data}
 
     result = []
     for p in prices:
+        if "id" not in p: p["id"] = str(p.get("_id"))
         p_name = None
         s_name = None
         b_name = None

@@ -428,9 +428,12 @@ const ShoppingListPage = () => {
                                                                     <SelectValue placeholder="Selecciona producto" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
-                                                                    {products.map((p) => (
-                                                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                                                    ))}
+                                                                    {products
+                                                                        .filter(p => sellableProducts.some(sp => sp.product_id === p.id && sp.supermarket_id === selectedList.supermarket_id))
+                                                                        .map((p) => (
+                                                                            <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
+                                                                        ))
+                                                                    }
                                                                 </SelectContent>
                                                             </Select>
                                                         </div>
@@ -439,7 +442,7 @@ const ShoppingListPage = () => {
                                                             <div className="space-y-2">
                                                                 <Label>2. Marca *</Label>
                                                                 <Select value={newItemBrand} onValueChange={setNewItemBrand}>
-                                                                    <SelectTrigger>
+                                                                    <SelectTrigger data-testid="add-item-brand-select">
                                                                         <SelectValue placeholder="Selecciona marca" />
                                                                     </SelectTrigger>
                                                                     <SelectContent>
@@ -458,7 +461,7 @@ const ShoppingListPage = () => {
                                                                 <div className="space-y-2">
                                                                     <Label>3. Unidad *</Label>
                                                                     <Select value={newItemUnit} onValueChange={setNewItemUnit}>
-                                                                        <SelectTrigger>
+                                                                        <SelectTrigger data-testid="add-item-unit-select">
                                                                             <SelectValue placeholder="Unidad" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
@@ -487,6 +490,7 @@ const ShoppingListPage = () => {
                                                             onClick={handleAddItem}
                                                             disabled={!newItemUnit}
                                                             className="w-full bg-emerald-500 hover:bg-emerald-600"
+                                                            data-testid="confirm-add-item-btn"
                                                         >
                                                             Añadir a la lista
                                                         </Button>

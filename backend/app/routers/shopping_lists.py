@@ -84,14 +84,28 @@ async def create_shopping_list(data: ShoppingListCreate, user: dict = Depends(ge
 
 @router.get("", response_model=List[ShoppingListResponse])
 async def get_shopping_lists(user: dict = Depends(get_current_user)):
-    lists = await db.shopping_lists.find({"user_id": user["id"]}, {"_id": 0}).sort("updated_at", -1).to_list(100)
+    def map_id(doc):
+        if doc and "id" not in doc and "_id" in doc:
+            doc["id"] = str(doc["_id"])
+        return doc
 
-    supermarkets = {s["id"]: s["name"] for s in await db.supermarkets.find({}, {"_id": 0}).to_list(1000)}
-    products = {p["id"]: p["name"] for p in await db.products.find({}, {"_id": 0}).to_list(1000)}
-    units = {u["id"]: u["name"] for u in await db.units.find({}, {"_id": 0}).to_list(1000)}
-    brands = {b["id"]: b["name"] for b in await db.brands.find({}, {"_id": 0}).to_list(1000)}
-    sellable_products_data = await db.sellable_products.find({}, {"_id": 0}).to_list(10000)
-    sellable_map = {sp["id"]: sp for sp in sellable_products_data}
+    lists_raw = await db.shopping_lists.find({"user_id": user["id"]}).sort("updated_at", -1).to_list(100)
+    lists = [map_id(l) for l in lists_raw]
+
+    all_sms = await db.supermarkets.find({}).to_list(1000)
+    supermarkets = {s.get("id") or str(s.get("_id")): s["name"] for s in all_sms}
+
+    all_prods = await db.products.find({}).to_list(1000)
+    products = {p.get("id") or str(p.get("_id")): p["name"] for p in all_prods}
+
+    all_units = await db.units.find({}).to_list(1000)
+    units = {u.get("id") or str(u.get("_id")): u["name"] for u in all_units}
+
+    all_brands = await db.brands.find({}).to_list(1000)
+    brands = {b.get("id") or str(b.get("_id")): b["name"] for b in all_brands}
+
+    sellable_products_data = await db.sellable_products.find({}).to_list(10000)
+    sellable_map = {sp.get("id") or str(sp.get("_id")): sp for sp in sellable_products_data}
 
     result = []
     for lst in lists:
@@ -150,14 +164,35 @@ async def get_shopping_lists(user: dict = Depends(get_current_user)):
 
 @router.get("/{list_id}", response_model=ShoppingListResponse)
 async def get_shopping_list(list_id: str, user: dict = Depends(get_current_user)):
-    lst = await db.shopping_lists.find_one({"id": list_id, "user_id": user["id"]}, {"_id": 0})
-    if not lst:
+    def map_id(doc):
+        if doc and "id" not in doc and "_id" in doc:
+            doc["id"] = str(doc["_id"])
+        return doc
+
+    lst_raw = await db.shopping_lists.find_one({"id": list_id, "user_id": user["id"]})
+    if not lst_raw:
+        # try _id
+        try:
+            from bson import ObjectId
+            lst_raw = await db.shopping_lists.find_one({"_id": ObjectId(list_id), "user_id": user["id"]})
+        except: pass
+
+    if not lst_raw:
         raise HTTPException(status_code=404, detail="Shopping list not found")
 
-    supermarket = await db.supermarkets.find_one({"id": lst["supermarket_id"]}, {"_id": 0})
-    products = {p["id"]: p["name"] for p in await db.products.find({}, {"_id": 0}).to_list(1000)}
-    units = {u["id"]: u["name"] for u in await db.units.find({}, {"_id": 0}).to_list(1000)}
-    brands = {b["id"]: b["name"] for b in await db.brands.find({}, {"_id": 0}).to_list(1000)}
+    lst = map_id(lst_raw)
+
+    sm_raw = await db.supermarkets.find_one({"id": lst["supermarket_id"]})
+    supermarket = map_id(sm_raw)
+
+    all_prods = await db.products.find({}).to_list(1000)
+    products = {p.get("id") or str(p.get("_id")): p["name"] for p in all_prods}
+
+    all_units = await db.units.find({}).to_list(1000)
+    units = {u.get("id") or str(u.get("_id")): u["name"] for u in all_units}
+
+    all_brands = await db.brands.find({}).to_list(1000)
+    brands = {b.get("id") or str(b.get("_id")): b["name"] for b in all_brands}
 
     items_with_info = []
     total_estimated = 0

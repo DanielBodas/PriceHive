@@ -21,16 +21,25 @@ async def search_products(
     if brand_id:
         query["brand_id"] = brand_id
 
-    products = await db.products.find(query, {"_id": 0}).to_list(100)
-    brands = {b["id"]: b["name"] for b in await db.brands.find({}, {"_id": 0}).to_list(1000)}
-    categories = {c["id"]: c["name"] for c in await db.categories.find({}, {"_id": 0}).to_list(1000)}
-    units = {u["id"]: u["name"] for u in await db.units.find({}, {"_id": 0}).to_list(1000)}
+    products_raw = await db.products.find(query).to_list(100)
+
+    brands_raw = await db.brands.find({}).to_list(1000)
+    brands = {b.get("id") or str(b.get("_id")): b["name"] for b in brands_raw}
+
+    categories_raw = await db.categories.find({}).to_list(1000)
+    categories = {c.get("id") or str(c.get("_id")): c["name"] for c in categories_raw}
+
+    units_raw = await db.units.find({}).to_list(1000)
+    units = {u.get("id") or str(u.get("_id")): u["name"] for u in units_raw}
 
     result = []
-    for p in products:
+    for p in products_raw:
+        pid = p.get("id") or str(p.get("_id"))
+        p["id"] = pid
+
         # Get latest price across all sellable variants
-        sps = await db.sellable_products.find({"product_id": p["id"]}).to_list(1000)
-        sp_ids = [sp["id"] for sp in sps]
+        sps = await db.sellable_products.find({"product_id": pid}).to_list(1000)
+        sp_ids = [sp.get("id") or str(sp.get("_id")) for sp in sps]
         latest_price = await db.prices.find_one({"sellable_product_id": {"$in": sp_ids}}, {"_id": 0}, sort=[("created_at", -1)]) if sp_ids else None
 
         result.append({
