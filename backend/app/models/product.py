@@ -64,6 +64,11 @@ class SellableProductCreate(BaseModel):
     product_id: str
     brand_id: str
 
+class SellableProductBulkCreate(BaseModel):
+    supermarket_id: str
+    brand_id: str
+    product_ids: List[str]
+
 class SellableProductResponse(BaseModel):
     id: str
     supermarket_id: str
@@ -97,6 +102,11 @@ class SellableProductUnitResponse(BaseModel):
 class BrandProductCatalogCreate(BaseModel):
     brand_id: str
     product_id: str
+    status: str = "active"
+
+class BrandProductCatalogBulkCreate(BaseModel):
+    brand_id: str
+    product_ids: List[str]
     status: str = "active"
 
 class BrandProductCatalogResponse(BaseModel):

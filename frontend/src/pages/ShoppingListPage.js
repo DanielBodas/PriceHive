@@ -102,28 +102,22 @@ const ShoppingListPage = () => {
     };
 
     const fetchData = async () => {
+        setLoading(true);
         try {
-            const [listsRes, productsRes, supermarketsRes, unitsRes, brandsRes, sellableRes] = await Promise.all([
-                axios.get(`${API}/shopping-lists`),
-                axios.get(`${API}/public/products`),
-                axios.get(`${API}/public/supermarkets`),
-                axios.get(`${API}/admin/units`),
-                axios.get(`${API}/admin/brands`),
-                axios.get(`${API}/admin/sellable-products`)
-            ]);
-            setLists(listsRes.data);
-            setProducts(productsRes.data);
-            setSupermarkets(supermarketsRes.data);
-            setUnits(unitsRes.data);
-            setBrands(brandsRes.data);
-            setSellableProducts(sellableRes.data);
+            // Fetch everything but individually to be more robust
+            const fetchLists = axios.get(`${API}/shopping-lists`).then(r => setLists(r.data)).catch(e => console.error("Lists fetch error", e));
+            const fetchProducts = axios.get(`${API}/public/products`).then(r => setProducts(r.data)).catch(e => console.error("Products fetch error", e));
+            const fetchSupermarkets = axios.get(`${API}/admin/supermarkets`).then(r => setSupermarkets(r.data)).catch(e => console.error("Supermarkets fetch error", e));
+            const fetchUnits = axios.get(`${API}/admin/units`).then(r => {
+                setUnits(r.data);
+                if (r.data.length > 0) setNewItemUnit(r.data[0].id);
+            }).catch(e => console.error("Units fetch error", e));
+            const fetchBrands = axios.get(`${API}/admin/brands`).then(r => setBrands(r.data)).catch(e => console.error("Brands fetch error", e));
+            const fetchSellable = axios.get(`${API}/admin/sellable-products`).then(r => setSellableProducts(r.data)).catch(e => console.error("Sellable fetch error", e));
 
-            // Set default unit if available
-            if (unitsRes.data.length > 0) {
-                setNewItemUnit(unitsRes.data[0].id);
-            }
+            await Promise.allSettled([fetchLists, fetchProducts, fetchSupermarkets, fetchUnits, fetchBrands, fetchSellable]);
         } catch (error) {
-            console.error("Error fetching data:", error);
+            console.error("General error in fetchData:", error);
         } finally {
             setLoading(false);
         }

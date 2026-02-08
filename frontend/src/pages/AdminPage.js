@@ -9,6 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "../components/ui/table";
+import { Checkbox } from "../components/ui/checkbox";
 import { toast } from "sonner";
 import { 
     Plus, 
@@ -56,8 +57,9 @@ const AdminPage = () => {
     const [productForm, setProductForm] = useState({
         name: "", brand_id: "", category_id: "", unit_id: "", barcode: "", image_url: ""
     });
-    const [sellableForm, setSellableForm] = useState({ supermarket_id: "", product_id: "", brand_id: "" });
-    const [catalogForm, setCatalogForm] = useState({ brand_id: "", product_id: "", status: "active" });
+    const [sellableForm, setSellableForm] = useState({ supermarket_id: "", brand_id: "", product_ids: [] });
+    const [catalogForm, setCatalogForm] = useState({ brand_id: "", product_ids: [], status: "active" });
+    const [productSearch, setProductSearch] = useState("");
 
     useEffect(() => {
         fetchAllData();
@@ -161,10 +163,16 @@ const AdminPage = () => {
 
     const handleSaveSellable = async () => {
         try {
-            const res = await axios.post(`${API}/admin/sellable-products`, sellableForm);
-            if (res.data.warning) toast.warning(res.data.warning, { duration: 5000 });
-            else toast.success("Producto vinculado correctamente");
-            fetchAllData(); setSellableDialog(false); setSellableForm({ supermarket_id: "", product_id: "", brand_id: "" });
+            if (sellableForm.product_ids.length === 0) {
+                toast.error("Selecciona al menos un producto");
+                return;
+            }
+            const res = await axios.post(`${API}/admin/sellable-products/bulk`, sellableForm);
+            toast.success(res.data.message);
+            fetchAllData();
+            setSellableDialog(false);
+            setSellableForm({ supermarket_id: "", brand_id: "", product_ids: [] });
+            setProductSearch("");
         } catch (e) { toast.error("Error al vincular"); }
     };
 
@@ -175,9 +183,16 @@ const AdminPage = () => {
 
     const handleSaveCatalog = async () => {
         try {
-            await axios.post(`${API}/admin/brand-catalog`, catalogForm);
-            toast.success("Catálogo de marca actualizado");
-            fetchAllData(); setCatalogDialog(false); setCatalogForm({ brand_id: "", product_id: "", status: "active" });
+            if (catalogForm.product_ids.length === 0) {
+                toast.error("Selecciona al menos un producto");
+                return;
+            }
+            const res = await axios.post(`${API}/admin/brand-catalog/bulk`, catalogForm);
+            toast.success(res.data.message);
+            fetchAllData();
+            setCatalogDialog(false);
+            setCatalogForm({ brand_id: "", product_ids: [], status: "active" });
+            setProductSearch("");
         } catch (e) { toast.error("Error al actualizar catálogo"); }
     };
 
@@ -472,71 +487,136 @@ const AdminPage = () => {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={sellableDialog} onOpenChange={setSellableDialog}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Vincular Producto a Supermercado</DialogTitle></DialogHeader>
+            <Dialog open={sellableDialog} onOpenChange={(val) => { setSellableDialog(val); if(!val) setProductSearch(""); }}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader><DialogTitle>Vincular Productos a Supermercado</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                            <Label>Supermercado</Label>
-                            <Select value={sellableForm.supermarket_id} onValueChange={v => setSellableForm({...sellableForm, supermarket_id: v})}>
-                                <SelectTrigger data-testid="select-sellable-supermarket"><SelectValue placeholder="Seleccionar supermercado" /></SelectTrigger>
-                                <SelectContent>{supermarkets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                            </Select>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Supermercado</Label>
+                                <Select value={sellableForm.supermarket_id} onValueChange={v => setSellableForm({...sellableForm, supermarket_id: v})}>
+                                    <SelectTrigger data-testid="select-sellable-supermarket"><SelectValue placeholder="Seleccionar supermercado" /></SelectTrigger>
+                                    <SelectContent>{supermarkets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Marca</Label>
+                                <Select value={sellableForm.brand_id} onValueChange={v => setSellableForm({...sellableForm, brand_id: v})}>
+                                    <SelectTrigger data-testid="select-sellable-brand"><SelectValue placeholder="Seleccionar marca" /></SelectTrigger>
+                                    <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Producto</Label>
-                            <Select value={sellableForm.product_id} onValueChange={v => setSellableForm({...sellableForm, product_id: v})}>
-                                <SelectTrigger data-testid="select-sellable-product"><SelectValue placeholder="Seleccionar producto genérico" /></SelectTrigger>
-                                <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Marca</Label>
-                            <Select value={sellableForm.brand_id} onValueChange={v => setSellableForm({...sellableForm, brand_id: v})}>
-                                <SelectTrigger data-testid="select-sellable-brand"><SelectValue placeholder="Seleccionar marca" /></SelectTrigger>
-                                <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                        {sellableForm.brand_id && sellableForm.product_id && (
-                            <div className={`p-2 rounded text-xs border ${brandCatalog.find(bc => bc.brand_id === sellableForm.brand_id && bc.product_id === sellableForm.product_id)?.status === 'active' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
-                                Estado en catálogo de marca: {brandCatalog.find(bc => bc.brand_id === sellableForm.brand_id && bc.product_id === sellableForm.product_id)?.status || "No listado"}
+
+                        {sellableForm.brand_id && (
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <Label>Productos (Multiselección)</Label>
+                                    <Input
+                                        placeholder="Filtrar productos..."
+                                        className="w-1/2 h-8"
+                                        value={productSearch}
+                                        onChange={e => setProductSearch(e.target.value)}
+                                    />
+                                </div>
+                                <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto bg-slate-50">
+                                    {products
+                                        .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                                        .map(p => {
+                                            const isInCatalog = brandCatalog.find(bc => bc.brand_id === sellableForm.brand_id && bc.product_id === p.id);
+                                            return (
+                                                <div key={p.id} className="flex items-center space-x-2 p-1 hover:bg-white rounded transition-colors">
+                                                    <Checkbox
+                                                        id={`sp-${p.id}`}
+                                                        checked={sellableForm.product_ids.includes(p.id)}
+                                                        onCheckedChange={(checked) => {
+                                                            if (checked) setSellableForm({...sellableForm, product_ids: [...sellableForm.product_ids, p.id]});
+                                                            else setSellableForm({...sellableForm, product_ids: sellableForm.product_ids.filter(id => id !== p.id)});
+                                                        }}
+                                                    />
+                                                    <label htmlFor={`sp-${p.id}`} className="text-sm cursor-pointer flex-1">
+                                                        {p.name}
+                                                        {isInCatalog && <span className="ml-1 text-[10px] text-emerald-600 font-bold">(Catálogo)</span>}
+                                                    </label>
+                                                </div>
+                                            );
+                                        })
+                                    }
+                                </div>
+                                <p className="text-xs text-slate-500">{sellableForm.product_ids.length} productos seleccionados</p>
                             </div>
                         )}
-                        <Button onClick={handleSaveSellable} className="w-full bg-emerald-500 mt-4" data-testid="save-sellable-btn">Guardar Vinculación</Button>
+
+                        <Button onClick={handleSaveSellable} className="w-full bg-emerald-500 mt-4" data-testid="save-sellable-btn">Guardar Vinculación Masiva</Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={catalogDialog} onOpenChange={setCatalogDialog}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Gestionar Catálogo de Marca</DialogTitle></DialogHeader>
+            <Dialog open={catalogDialog} onOpenChange={(val) => { setCatalogDialog(val); if(!val) setProductSearch(""); }}>
+                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader><DialogTitle>Gestionar Catálogo de Marca (Bulk)</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                            <Label>Marca</Label>
-                            <Select value={catalogForm.brand_id} onValueChange={v => setCatalogForm({...catalogForm, brand_id: v})}>
-                                <SelectTrigger><SelectValue placeholder="Seleccionar marca" /></SelectTrigger>
-                                <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                            </Select>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label>Marca</Label>
+                                <Select value={catalogForm.brand_id} onValueChange={v => setCatalogForm({...catalogForm, brand_id: v})}>
+                                    <SelectTrigger><SelectValue placeholder="Seleccionar marca" /></SelectTrigger>
+                                    <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
+                                </Select>
+                            </div>
+                            <div className="space-y-2">
+                                <Label>Estado Conceptual</Label>
+                                <Select value={catalogForm.status} onValueChange={v => setCatalogForm({...catalogForm, status: v})}>
+                                    <SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="planned">Planned (Planeado)</SelectItem>
+                                        <SelectItem value="active">Active (Activo)</SelectItem>
+                                        <SelectItem value="discontinued">Discontinued (Descatalogado)</SelectItem>
+                                    </SelectContent>
+                                </Select>
+                            </div>
                         </div>
-                        <div className="space-y-2">
-                            <Label>Producto</Label>
-                            <Select value={catalogForm.product_id} onValueChange={v => setCatalogForm({...catalogForm, product_id: v})}>
-                                <SelectTrigger><SelectValue placeholder="Seleccionar producto" /></SelectTrigger>
-                                <SelectContent>{products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Estado Conceptual</Label>
-                            <Select value={catalogForm.status} onValueChange={v => setCatalogForm({...catalogForm, status: v})}>
-                                <SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
-                                <SelectContent>
-                                    <SelectItem value="planned">Planned (Planeado)</SelectItem>
-                                    <SelectItem value="active">Active (Activo)</SelectItem>
-                                    <SelectItem value="discontinued">Discontinued (Descatalogado)</SelectItem>
-                                </SelectContent>
-                            </Select>
-                        </div>
-                        <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500 mt-4">Actualizar Catálogo</Button>
+
+                        {catalogForm.brand_id && (
+                            <div className="space-y-3">
+                                <div className="flex items-center justify-between">
+                                    <Label>Productos para añadir al catálogo</Label>
+                                    <Input
+                                        placeholder="Filtrar productos..."
+                                        className="w-1/2 h-8"
+                                        value={productSearch}
+                                        onChange={e => setProductSearch(e.target.value)}
+                                    />
+                                </div>
+                                <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto bg-slate-50">
+                                    {products
+                                        .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                                        .map(p => {
+                                            const currentEntry = brandCatalog.find(bc => bc.brand_id === catalogForm.brand_id && bc.product_id === p.id);
+                                            return (
+                                                <div key={p.id} className="flex items-center space-x-2 p-1 hover:bg-white rounded transition-colors">
+                                                    <Checkbox
+                                                        id={`cat-${p.id}`}
+                                                        checked={catalogForm.product_ids.includes(p.id)}
+                                                        onCheckedChange={(checked) => {
+                                                            if (checked) setCatalogForm({...catalogForm, product_ids: [...catalogForm.product_ids, p.id]});
+                                                            else setCatalogForm({...catalogForm, product_ids: catalogForm.product_ids.filter(id => id !== p.id)});
+                                                        }}
+                                                    />
+                                                    <label htmlFor={`cat-${p.id}`} className="text-sm cursor-pointer flex-1">
+                                                        {p.name}
+                                                        {currentEntry && <span className="ml-1 text-[10px] text-blue-600 font-bold">({currentEntry.status})</span>}
+                                                    </label>
+                                                </div>
+                                            );
+                                        })
+                                    }
+                                </div>
+                                <p className="text-xs text-slate-500">{catalogForm.product_ids.length} productos seleccionados</p>
+                            </div>
+                        )}
+
+                        <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500 mt-4">Actualizar Catálogo Masivo</Button>
                     </div>
                 </DialogContent>
             </Dialog>

@@ -11,10 +11,13 @@ logger = logging.getLogger(__name__)
 async def get_public_supermarkets():
     logger.info("Fetching public supermarkets")
     sms = await db.supermarkets.find({}).to_list(1000)
-    result = []
-    for s in sms:
-        s["id"] = s.get("id") or str(s.get("_id"))
-        result.append(SupermarketResponse(**s))
+
+    def map_id(doc):
+        if doc and "id" not in doc and "_id" in doc:
+            doc["id"] = str(doc["_id"])
+        return doc
+
+    result = [SupermarketResponse(**map_id(s)) for s in sms]
     logger.info(f"Found {len(result)} supermarkets")
     return result
 

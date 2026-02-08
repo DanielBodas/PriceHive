@@ -7,8 +7,9 @@ from ..models.product import (
     CategoryCreate, CategoryResponse, BrandCreate, BrandResponse,
     SupermarketCreate, SupermarketResponse, UnitCreate, UnitResponse,
     ProductCreate, ProductResponse, SellableProductCreate, SellableProductResponse,
-    ProductUnitCreate, ProductUnitResponse, SellableProductUnitCreate, SellableProductUnitResponse,
-    BrandProductCatalogCreate, BrandProductCatalogResponse
+    SellableProductBulkCreate, ProductUnitCreate, ProductUnitResponse,
+    SellableProductUnitCreate, SellableProductUnitResponse,
+    BrandProductCatalogCreate, BrandProductCatalogBulkCreate, BrandProductCatalogResponse
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -257,6 +258,28 @@ async def delete_product(prod_id: str, user: dict = Depends(get_admin_user)):
     return {"message": "Product deleted"}
 
 # Sellable Products
+@router.post("/sellable-products/bulk")
+async def create_sellable_products_bulk(data: SellableProductBulkCreate, user: dict = Depends(get_admin_user)):
+    results = []
+    for pid in data.product_ids:
+        # Check if already exists
+        existing = await db.sellable_products.find_one({
+            "supermarket_id": data.supermarket_id,
+            "product_id": pid,
+            "brand_id": data.brand_id
+        })
+        if not existing:
+            sp_id = str(uuid.uuid4())
+            doc = {
+                "id": sp_id,
+                "supermarket_id": data.supermarket_id,
+                "product_id": pid,
+                "brand_id": data.brand_id
+            }
+            await db.sellable_products.insert_one(doc)
+            results.append(pid)
+    return {"message": f"{len(results)} productos vinculados correctamente", "product_ids": results}
+
 @router.post("/sellable-products", response_model=SellableProductResponse)
 async def create_sellable_product(data: SellableProductCreate, user: dict = Depends(get_admin_user)):
     sp_id = str(uuid.uuid4())
@@ -370,6 +393,23 @@ async def delete_sellable_product_unit(spu_id: str, user: dict = Depends(get_adm
     return {"message": "Sellable product unit deleted"}
 
 # Brand Product Catalog
+@router.post("/brand-catalog/bulk")
+async def create_brand_catalog_bulk(data: BrandProductCatalogBulkCreate, user: dict = Depends(get_admin_user)):
+    results = []
+    for pid in data.product_ids:
+        existing = await db.brand_product_catalog.find_one({"brand_id": data.brand_id, "product_id": pid})
+        if existing:
+            await db.brand_product_catalog.update_one(
+                {"brand_id": data.brand_id, "product_id": pid},
+                {"$set": {"status": data.status}}
+            )
+        else:
+            bc_id = str(uuid.uuid4())
+            doc = {"id": bc_id, "brand_id": data.brand_id, "product_id": pid, "status": data.status}
+            await db.brand_product_catalog.insert_one(doc)
+        results.append(pid)
+    return {"message": f"{len(results)} productos actualizados en el catálogo", "product_ids": results}
+
 @router.post("/brand-catalog", response_model=BrandProductCatalogResponse)
 async def create_brand_catalog_entry(data: BrandProductCatalogCreate, user: dict = Depends(get_admin_user)):
     existing = await db.brand_product_catalog.find_one({"brand_id": data.brand_id, "product_id": data.product_id})
