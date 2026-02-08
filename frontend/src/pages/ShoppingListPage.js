@@ -27,6 +27,7 @@ const ShoppingListPage = () => {
     const [supermarkets, setSupermarkets] = useState([]);
     const [units, setUnits] = useState([]);
     const [brands, setBrands] = useState([]);
+    const [sellableProducts, setSellableProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedList, setSelectedList] = useState(null);
     const [dialogOpen, setDialogOpen] = useState(false);
@@ -36,29 +37,86 @@ const ShoppingListPage = () => {
     const [newListName, setNewListName] = useState("");
     const [newListSupermarket, setNewListSupermarket] = useState("");
 
-    // New item form - solo producto obligatorio inicialmente
+    // New item form
     const [newItemProduct, setNewItemProduct] = useState("");
+    const [newItemBrand, setNewItemBrand] = useState("");
     const [newItemQuantity, setNewItemQuantity] = useState("1");
     const [newItemUnit, setNewItemUnit] = useState("");
+
+    // Filtered selection states
+    const [availableBrands, setAvailableBrands] = useState([]);
+    const [availableUnits, setAvailableUnits] = useState([]);
 
     useEffect(() => {
         fetchData();
     }, []);
 
+    // Selection logic for 4-step flow
+    useEffect(() => {
+        if (newItemProduct && selectedList) {
+            const filtered = sellableProducts.filter(sp =>
+                sp.product_id === newItemProduct && sp.supermarket_id === selectedList.supermarket_id
+            );
+            setAvailableBrands(filtered);
+            if (filtered.length === 1) {
+                setNewItemBrand(filtered[0].brand_id);
+            }
+        } else {
+            setAvailableBrands([]);
+            setNewItemBrand("");
+        }
+    }, [newItemProduct, selectedList, sellableProducts]);
+
+    useEffect(() => {
+        const fetchUnits = async () => {
+            if (newItemProduct && newItemBrand && selectedList) {
+                const sp = sellableProducts.find(sp =>
+                    sp.product_id === newItemProduct &&
+                    sp.supermarket_id === selectedList.supermarket_id &&
+                    sp.brand_id === newItemBrand
+                );
+                if (sp) {
+                    try {
+                        const res = await axios.get(`${API}/admin/sellable-product-units/${sp.id}`);
+                        setAvailableUnits(res.data);
+                        if (res.data.length === 1) {
+                            setNewItemUnit(res.data[0].unit_id);
+                        }
+                    } catch (e) {
+                        console.error("Error fetching units", e);
+                    }
+                }
+            } else {
+                setAvailableUnits([]);
+                setNewItemUnit("");
+            }
+        };
+        fetchUnits();
+    }, [newItemBrand, newItemProduct, selectedList, sellableProducts]);
+
+    const resetNewItemForm = () => {
+        setNewItemProduct("");
+        setNewItemBrand("");
+        setNewItemQuantity("1");
+        setNewItemUnit("");
+    };
+
     const fetchData = async () => {
         try {
-            const [listsRes, productsRes, supermarketsRes, unitsRes, brandsRes] = await Promise.all([
+            const [listsRes, productsRes, supermarketsRes, unitsRes, brandsRes, sellableRes] = await Promise.all([
                 axios.get(`${API}/shopping-lists`),
                 axios.get(`${API}/public/products`),
                 axios.get(`${API}/public/supermarkets`),
                 axios.get(`${API}/admin/units`),
-                axios.get(`${API}/admin/brands`)
+                axios.get(`${API}/admin/brands`),
+                axios.get(`${API}/admin/sellable-products`)
             ]);
             setLists(listsRes.data);
             setProducts(productsRes.data);
             setSupermarkets(supermarketsRes.data);
             setUnits(unitsRes.data);
             setBrands(brandsRes.data);
+            setSellableProducts(sellableRes.data);
 
             // Set default unit if available
             if (unitsRes.data.length > 0) {
@@ -93,32 +151,37 @@ const ShoppingListPage = () => {
     };
 
     const handleAddItem = async () => {
-        if (!newItemProduct) {
-            toast.error("Selecciona un producto");
+        if (!newItemProduct || !newItemBrand || !newItemUnit) {
+            toast.error("Completa todos los campos");
             return;
         }
 
-        // Get product info for default values
-        const product = products.find(p => p.id === newItemProduct);
-        const defaultUnit = newItemUnit || (units.length > 0 ? units[0].id : "");
+        const sp = sellableProducts.find(sp =>
+            sp.product_id === newItemProduct &&
+            sp.supermarket_id === selectedList.supermarket_id &&
+            sp.brand_id === newItemBrand
+        );
+
+        if (!sp) {
+            toast.error("Producto no disponible en este supermercado");
+            return;
+        }
 
         try {
             const currentItems = selectedList.items.map(item => ({
-                product_id: item.product_id,
+                sellable_product_id: item.sellable_product_id,
                 quantity: item.quantity,
                 unit_id: item.unit_id,
                 price: item.price,
-                purchased: item.purchased,
-                brand_id: item.brand_id
+                purchased: item.purchased
             }));
 
             const newItem = {
-                product_id: newItemProduct,
+                sellable_product_id: sp.id,
                 quantity: parseFloat(newItemQuantity) || 1,
-                unit_id: defaultUnit,
+                unit_id: newItemUnit,
                 price: null,
-                purchased: false,
-                brand_id: product?.brand_id || null
+                purchased: false
             };
 
             const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
@@ -127,8 +190,7 @@ const ShoppingListPage = () => {
 
             setSelectedList(response.data);
             setLists(lists.map(l => l.id === selectedList.id ? response.data : l));
-            setNewItemProduct("");
-            setNewItemQuantity("1");
+            resetNewItemForm();
             setAddItemDialogOpen(false);
             toast.success("Producto añadido");
         } catch (error) {
@@ -145,22 +207,19 @@ const ShoppingListPage = () => {
 
     const saveList = async (itemsToSave) => {
         try {
-            // Map items to the format expected by the backend (stripping extra fields)
+            // Map items to the format expected by the backend
             const cleanedItems = itemsToSave.map(item => ({
-                product_id: item.product_id,
+                sellable_product_id: item.sellable_product_id,
                 quantity: item.quantity,
                 unit_id: item.unit_id,
                 price: item.price,
-                purchased: item.purchased,
-                brand_id: item.brand_id
+                purchased: item.purchased
             }));
 
             const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
                 items: cleanedItems
             });
 
-            // Only update backend metadata, keep local items to avoid input jumping
-            // or update everything if we want to sync
             setSelectedList(response.data);
             setLists(lists.map(l => l.id === selectedList.id ? response.data : l));
         } catch (error) {
@@ -177,12 +236,11 @@ const ShoppingListPage = () => {
         const updatedItems = selectedList.items
             .filter((_, i) => i !== index)
             .map(item => ({
-                product_id: item.product_id,
+                sellable_product_id: item.sellable_product_id,
                 quantity: item.quantity,
                 unit_id: item.unit_id,
                 price: item.price,
-                purchased: item.purchased,
-                brand_id: item.brand_id
+                purchased: item.purchased
             }));
 
         try {
@@ -364,51 +422,73 @@ const ShoppingListPage = () => {
                                                     </DialogHeader>
                                                     <div className="space-y-4 pt-4">
                                                         <div className="space-y-2">
-                                                            <Label>Producto *</Label>
+                                                            <Label>1. Producto *</Label>
                                                             <Select value={newItemProduct} onValueChange={setNewItemProduct}>
                                                                 <SelectTrigger data-testid="add-item-product-select">
                                                                     <SelectValue placeholder="Selecciona producto" />
                                                                 </SelectTrigger>
                                                                 <SelectContent>
                                                                     {products.map((p) => (
-                                                                        <SelectItem key={p.id} value={p.id}>
-                                                                            {p.name}
-                                                                        </SelectItem>
+                                                                        <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
                                                                     ))}
                                                                 </SelectContent>
                                                             </Select>
-                                                            <p className="text-xs text-slate-400">
-                                                                Puedes cambiar marca, cantidad y precio en la lista
-                                                            </p>
                                                         </div>
-                                                        <div className="grid grid-cols-2 gap-4">
+
+                                                        {newItemProduct && (
                                                             <div className="space-y-2">
-                                                                <Label>Cantidad inicial</Label>
-                                                                <Input
-                                                                    type="number"
-                                                                    min="0.1"
-                                                                    step="0.1"
-                                                                    value={newItemQuantity}
-                                                                    onChange={(e) => setNewItemQuantity(e.target.value)}
-                                                                    data-testid="add-item-quantity-input"
-                                                                />
-                                                            </div>
-                                                            <div className="space-y-2">
-                                                                <Label>Unidad</Label>
-                                                                <Select value={newItemUnit} onValueChange={setNewItemUnit}>
-                                                                    <SelectTrigger data-testid="add-item-unit-select">
-                                                                        <SelectValue placeholder="Unidad" />
+                                                                <Label>2. Marca *</Label>
+                                                                <Select value={newItemBrand} onValueChange={setNewItemBrand}>
+                                                                    <SelectTrigger>
+                                                                        <SelectValue placeholder="Selecciona marca" />
                                                                     </SelectTrigger>
                                                                     <SelectContent>
-                                                                        {units.map((u) => (
-                                                                            <SelectItem key={u.id} value={u.id}>{u.name}</SelectItem>
+                                                                        {availableBrands.map((sp) => (
+                                                                            <SelectItem key={sp.brand_id} value={sp.brand_id}>
+                                                                                {sp.brand_name}
+                                                                            </SelectItem>
                                                                         ))}
                                                                     </SelectContent>
                                                                 </Select>
                                                             </div>
-                                                        </div>
-                                                        <Button onClick={handleAddItem} className="w-full bg-emerald-500 hover:bg-emerald-600" data-testid="confirm-add-item-btn">
-                                                            Añadir Producto
+                                                        )}
+
+                                                        {newItemBrand && (
+                                                            <div className="grid grid-cols-2 gap-4">
+                                                                <div className="space-y-2">
+                                                                    <Label>3. Unidad *</Label>
+                                                                    <Select value={newItemUnit} onValueChange={setNewItemUnit}>
+                                                                        <SelectTrigger>
+                                                                            <SelectValue placeholder="Unidad" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {availableUnits.map((u) => (
+                                                                                <SelectItem key={u.unit_id} value={u.unit_id}>
+                                                                                    {u.unit_name}
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
+                                                                </div>
+                                                                <div className="space-y-2">
+                                                                    <Label>4. Cantidad</Label>
+                                                                    <Input
+                                                                        type="number"
+                                                                        min="0.1"
+                                                                        step="0.1"
+                                                                        value={newItemQuantity}
+                                                                        onChange={(e) => setNewItemQuantity(e.target.value)}
+                                                                    />
+                                                                </div>
+                                                            </div>
+                                                        )}
+
+                                                        <Button
+                                                            onClick={handleAddItem}
+                                                            disabled={!newItemUnit}
+                                                            className="w-full bg-emerald-500 hover:bg-emerald-600"
+                                                        >
+                                                            Añadir a la lista
                                                         </Button>
                                                     </div>
                                                 </DialogContent>
@@ -433,8 +513,8 @@ const ShoppingListPage = () => {
                                         </div>
                                     ) : (
                                         <>
-                                            {/* Table Header */}
-                                            <div className="grid grid-cols-12 gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500 uppercase">
+                                            {/* Table Header - hidden on small screens */}
+                                            <div className="hidden md:grid grid-cols-12 gap-2 px-4 py-3 bg-slate-50 border-b border-slate-200 text-xs font-medium text-slate-500 uppercase">
                                                 <div className="col-span-1"></div>
                                                 <div className="col-span-2">Producto</div>
                                                 <div className="col-span-2">Marca</div>
@@ -449,7 +529,7 @@ const ShoppingListPage = () => {
                                                 {selectedList.items?.map((item, index) => (
                                                     <div
                                                         key={index}
-                                                        className="grid grid-cols-12 gap-2 px-4 py-3 items-center hover:bg-slate-50 transition-colors"
+                                                        className="grid grid-cols-4 md:grid-cols-12 gap-2 px-4 py-4 md:py-3 items-center hover:bg-slate-50 transition-colors"
                                                         data-testid={`list-item-${index}`}
                                                     >
                                                         {/* Checkbox */}
@@ -462,27 +542,16 @@ const ShoppingListPage = () => {
                                                         </div>
 
                                                         {/* Producto (solo lectura) */}
-                                                        <div className="col-span-2">
-                                                            <p className={`font-medium text-xs ${item.purchased ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                                                        <div className="col-span-2 md:col-span-2">
+                                                            <p className={`font-medium text-xs md:text-sm ${item.purchased ? 'line-through text-slate-400' : 'text-slate-900'}`}>
                                                                 {item.product_name}
                                                             </p>
+                                                            <p className="text-[10px] text-slate-500 md:hidden">{item.brand_name}</p>
                                                         </div>
 
-                                                        {/* Marca (editable) */}
-                                                        <div className="col-span-2">
-                                                            <Select
-                                                                value={item.brand_id || ""}
-                                                                onValueChange={(value) => handleUpdateItem(index, { brand_id: value || null })}
-                                                            >
-                                                                <SelectTrigger className="h-8 text-[10px]" data-testid={`item-brand-select-${index}`}>
-                                                                    <SelectValue placeholder="-" />
-                                                                </SelectTrigger>
-                                                                <SelectContent>
-                                                                    {brands.map((b) => (
-                                                                        <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                                                                    ))}
-                                                                </SelectContent>
-                                                            </Select>
+                                                        {/* Marca (visible on desktop) */}
+                                                        <div className="hidden md:block col-span-2 text-xs text-slate-600">
+                                                            {item.brand_name}
                                                         </div>
 
                                                         {/* Cantidad (editable) */}
@@ -500,22 +569,22 @@ const ShoppingListPage = () => {
                                                             <span className="text-[9px] text-slate-400 truncate w-full">{item.unit_name}</span>
                                                         </div>
 
-                                                        {/* Precio Unitario (calculado) */}
-                                                        <div className="col-span-2 text-center">
+                                                        {/* Precio Unitario (desktop only or specific mobile placement) */}
+                                                        <div className="hidden md:flex col-span-2 flex-col items-center">
                                                             {item.unit_price ? (
-                                                                <div className="flex flex-col items-center">
+                                                                <>
                                                                     <span className="font-mono text-xs text-emerald-600 font-medium">
                                                                         {item.unit_price.toFixed(3)}€
                                                                     </span>
                                                                     <span className="text-[9px] text-slate-400">por {item.unit_name}</span>
-                                                                </div>
+                                                                </>
                                                             ) : (
                                                                 <span className="text-xs text-slate-300">-</span>
                                                             )}
                                                         </div>
 
-                                                        {/* Precio Estimado */}
-                                                        <div className="col-span-1 text-center">
+                                                        {/* Precio Estimado (desktop only) */}
+                                                        <div className="hidden md:block col-span-1 text-center">
                                                             {item.estimated_price ? (
                                                                 <span className="font-mono text-[10px] text-slate-500">
                                                                     {item.estimated_price.toFixed(2)}€
@@ -526,7 +595,7 @@ const ShoppingListPage = () => {
                                                         </div>
 
                                                         {/* Precio Real (editable) */}
-                                                        <div className="col-span-2">
+                                                        <div className="col-span-3 md:col-span-2">
                                                             <div className="relative">
                                                                 <Input
                                                                     type="number"
@@ -566,16 +635,16 @@ const ShoppingListPage = () => {
                                                         <Calculator className="w-5 h-5" />
                                                         <span className="font-medium">Totales</span>
                                                     </div>
-                                                    <div className="flex items-center gap-8">
+                                                    <div className="flex items-center gap-4 md:gap-8">
                                                         <div className="text-right">
-                                                            <p className="text-xs text-slate-400">Estimado</p>
-                                                            <p className="font-mono font-semibold text-slate-600">
+                                                            <p className="text-[10px] md:text-xs text-slate-400">Estimado</p>
+                                                            <p className="font-mono font-semibold text-sm md:text-base text-slate-600">
                                                                 {selectedList.total_estimated?.toFixed(2) || '0.00'} €
                                                             </p>
                                                         </div>
                                                         <div className="text-right">
-                                                            <p className="text-xs text-slate-400">Real</p>
-                                                            <p className="font-mono font-semibold text-lg text-emerald-600">
+                                                            <p className="text-[10px] md:text-xs text-slate-400">Real</p>
+                                                            <p className="font-mono font-semibold text-base md:text-lg text-emerald-600">
                                                                 {selectedList.total_actual?.toFixed(2) || '0.00'} €
                                                             </p>
                                                         </div>

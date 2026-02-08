@@ -30,6 +30,8 @@ const AdminPage = () => {
     const [supermarkets, setSupermarkets] = useState([]);
     const [units, setUnits] = useState([]);
     const [products, setProducts] = useState([]);
+    const [sellableProducts, setSellableProducts] = useState([]);
+    const [brandCatalog, setBrandCatalog] = useState([]);
     const [loading, setLoading] = useState(true);
 
     // Dialog states
@@ -38,6 +40,8 @@ const AdminPage = () => {
     const [supermarketDialog, setSupermarketDialog] = useState(false);
     const [unitDialog, setUnitDialog] = useState(false);
     const [productDialog, setProductDialog] = useState(false);
+    const [sellableDialog, setSellableDialog] = useState(false);
+    const [catalogDialog, setCatalogDialog] = useState(false);
 
     // Edit states
     const [editingItem, setEditingItem] = useState(null);
@@ -50,6 +54,8 @@ const AdminPage = () => {
     const [productForm, setProductForm] = useState({
         name: "", brand_id: "", category_id: "", unit_id: "", barcode: "", image_url: ""
     });
+    const [sellableForm, setSellableForm] = useState({ supermarket_id: "", product_id: "", brand_id: "" });
+    const [catalogForm, setCatalogForm] = useState({ brand_id: "", product_id: "", status: "active" });
 
     useEffect(() => {
         fetchAllData();
@@ -57,18 +63,22 @@ const AdminPage = () => {
 
     const fetchAllData = async () => {
         try {
-            const [catsRes, brandsRes, smsRes, unitsRes, prodsRes] = await Promise.all([
+            const [catsRes, brandsRes, smsRes, unitsRes, prodsRes, sellableRes, catalogRes] = await Promise.all([
                 axios.get(`${API}/admin/categories`),
                 axios.get(`${API}/admin/brands`),
                 axios.get(`${API}/admin/supermarkets`),
                 axios.get(`${API}/admin/units`),
-                axios.get(`${API}/admin/products`)
+                axios.get(`${API}/admin/products`),
+                axios.get(`${API}/admin/sellable-products`),
+                axios.get(`${API}/admin/brand-catalog`)
             ]);
             setCategories(catsRes.data);
             setBrands(brandsRes.data);
             setSupermarkets(smsRes.data);
             setUnits(unitsRes.data);
             setProducts(prodsRes.data);
+            setSellableProducts(sellableRes.data);
+            setBrandCatalog(catalogRes.data);
         } catch (error) {
             console.error("Error fetching data:", error);
             toast.error("Error al cargar datos");
@@ -104,6 +114,47 @@ const AdminPage = () => {
             fetchAllData();
         } catch (error) {
             toast.error("Error al eliminar");
+        }
+    };
+
+    // Sellable Product CRUD
+    const handleSaveSellable = async () => {
+        try {
+            const response = await axios.post(`${API}/admin/sellable-products`, sellableForm);
+            if (response.data.warning) {
+                toast.warning(response.data.warning, { duration: 5000 });
+            } else {
+                toast.success("Producto operativo añadido");
+            }
+            fetchAllData();
+            setSellableDialog(false);
+            setSellableForm({ supermarket_id: "", product_id: "", brand_id: "" });
+        } catch (error) {
+            toast.error("Error al guardar producto operativo");
+        }
+    };
+
+    const handleDeleteSellable = async (id) => {
+        if (!window.confirm("¿Eliminar este producto del supermercado?")) return;
+        try {
+            await axios.delete(`${API}/admin/sellable-products/${id}`);
+            toast.success("Producto eliminado del supermercado");
+            fetchAllData();
+        } catch (error) {
+            toast.error("Error al eliminar");
+        }
+    };
+
+    // Brand Catalog CRUD
+    const handleSaveCatalog = async () => {
+        try {
+            await axios.post(`${API}/admin/brand-catalog`, catalogForm);
+            toast.success("Catálogo de marca actualizado");
+            fetchAllData();
+            setCatalogDialog(false);
+            setCatalogForm({ brand_id: "", product_id: "", status: "active" });
+        } catch (error) {
+            toast.error("Error al actualizar catálogo");
         }
     };
 
@@ -248,8 +299,14 @@ const AdminPage = () => {
                     <p className="text-slate-500 mt-1">Gestiona los datos base del sistema</p>
                 </div>
 
-                <Tabs defaultValue="products" className="space-y-6">
+                <Tabs defaultValue="sellable" className="space-y-6">
                     <TabsList className="bg-slate-100 p-1">
+                        <TabsTrigger value="sellable" className="gap-2 data-[state=active]:bg-white">
+                            <Store className="w-4 h-4" /> Catálogo Supermercado
+                        </TabsTrigger>
+                        <TabsTrigger value="catalog" className="gap-2 data-[state=active]:bg-white">
+                            <Tag className="w-4 h-4" /> Catálogo Marca
+                        </TabsTrigger>
                         <TabsTrigger value="products" className="gap-2 data-[state=active]:bg-white">
                             <Package className="w-4 h-4" /> Productos
                         </TabsTrigger>
@@ -266,6 +323,173 @@ const AdminPage = () => {
                             <Scale className="w-4 h-4" /> Unidades
                         </TabsTrigger>
                     </TabsList>
+
+                    {/* Sellable Products Tab */}
+                    <TabsContent value="sellable">
+                        <Card className="border-slate-200">
+                            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100">
+                                <CardTitle style={{ fontFamily: 'Manrope, sans-serif' }}>Catálogo por Supermercado</CardTitle>
+                                <Dialog open={sellableDialog} onOpenChange={setSellableDialog}>
+                                    <DialogTrigger asChild>
+                                        <Button className="bg-emerald-500 hover:bg-emerald-600 gap-2">
+                                            <Plus className="w-4 h-4" /> Añadir Producto a Supermercado
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Vincular Producto</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-4 pt-4">
+                                            <div className="space-y-2">
+                                                <Label>Supermercado</Label>
+                                                <Select value={sellableForm.supermarket_id} onValueChange={(v) => setSellableForm({...sellableForm, supermarket_id: v})}>
+                                                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {supermarkets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Producto (Genérico)</Label>
+                                                <Select value={sellableForm.product_id} onValueChange={(v) => setSellableForm({...sellableForm, product_id: v})}>
+                                                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Marca</Label>
+                                                <Select value={sellableForm.brand_id} onValueChange={(v) => setSellableForm({...sellableForm, brand_id: v})}>
+                                                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            {sellableForm.brand_id && sellableForm.product_id && (
+                                                <div className={`p-2 rounded text-xs ${
+                                                    brandCatalog.find(bc => bc.brand_id === sellableForm.brand_id && bc.product_id === sellableForm.product_id)?.status === 'active'
+                                                    ? 'bg-emerald-50 text-emerald-700 border border-emerald-200'
+                                                    : 'bg-amber-50 text-amber-700 border border-amber-200'
+                                                }`}>
+                                                    Catálogo: {brandCatalog.find(bc => bc.brand_id === sellableForm.brand_id && bc.product_id === sellableForm.product_id)?.status || "No listado (Se permitirá crear igualmente)"}
+                                                </div>
+                                            )}
+                                            <Button onClick={handleSaveSellable} className="w-full bg-emerald-500">Guardar</Button>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Supermercado</TableHead>
+                                            <TableHead>Producto</TableHead>
+                                            <TableHead>Marca</TableHead>
+                                            <TableHead className="w-24">Acciones</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {sellableProducts.map((sp) => (
+                                            <TableRow key={sp.id}>
+                                                <TableCell className="font-medium">{sp.supermarket_name}</TableCell>
+                                                <TableCell>{sp.product_name}</TableCell>
+                                                <TableCell>{sp.brand_name}</TableCell>
+                                                <TableCell>
+                                                    <Button variant="ghost" size="icon" onClick={() => handleDeleteSellable(sp.id)} className="text-rose-600">
+                                                        <Trash2 className="w-4 h-4" />
+                                                    </Button>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
+
+                    {/* Brand Catalog Tab */}
+                    <TabsContent value="catalog">
+                        <Card className="border-slate-200">
+                            <CardHeader className="flex flex-row items-center justify-between border-b border-slate-100">
+                                <CardTitle style={{ fontFamily: 'Manrope, sans-serif' }}>Catálogo Conceptual por Marca</CardTitle>
+                                <Dialog open={catalogDialog} onOpenChange={setCatalogDialog}>
+                                    <DialogTrigger asChild>
+                                        <Button className="bg-emerald-500 hover:bg-emerald-600 gap-2">
+                                            <Plus className="w-4 h-4" /> Añadir/Actualizar Catálogo
+                                        </Button>
+                                    </DialogTrigger>
+                                    <DialogContent>
+                                        <DialogHeader>
+                                            <DialogTitle>Estado de Producto por Marca</DialogTitle>
+                                        </DialogHeader>
+                                        <div className="space-y-4 pt-4">
+                                            <div className="space-y-2">
+                                                <Label>Marca</Label>
+                                                <Select value={catalogForm.brand_id} onValueChange={(v) => setCatalogForm({...catalogForm, brand_id: v})}>
+                                                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Producto</Label>
+                                                <Select value={catalogForm.product_id} onValueChange={(v) => setCatalogForm({...catalogForm, product_id: v})}>
+                                                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        {products.map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <div className="space-y-2">
+                                                <Label>Estado</Label>
+                                                <Select value={catalogForm.status} onValueChange={(v) => setCatalogForm({...catalogForm, status: v})}>
+                                                    <SelectTrigger><SelectValue placeholder="Seleccionar" /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="planned">Planned</SelectItem>
+                                                        <SelectItem value="active">Active</SelectItem>
+                                                        <SelectItem value="discontinued">Discontinued</SelectItem>
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500">Actualizar</Button>
+                                        </div>
+                                    </DialogContent>
+                                </Dialog>
+                            </CardHeader>
+                            <CardContent className="p-0">
+                                <Table>
+                                    <TableHeader>
+                                        <TableRow>
+                                            <TableHead>Marca</TableHead>
+                                            <TableHead>Producto</TableHead>
+                                            <TableHead>Estado</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {brandCatalog.map((bc) => (
+                                            <TableRow key={bc.id}>
+                                                <TableCell className="font-medium">{bc.brand_name}</TableCell>
+                                                <TableCell>{bc.product_name}</TableCell>
+                                                <TableCell>
+                                                    <span className={`px-2 py-1 rounded-full text-xs font-medium ${
+                                                        bc.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
+                                                        bc.status === 'planned' ? 'bg-blue-100 text-blue-700' :
+                                                        'bg-rose-100 text-rose-700'
+                                                    }`}>
+                                                        {bc.status}
+                                                    </span>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                    </TableBody>
+                                </Table>
+                            </CardContent>
+                        </Card>
+                    </TabsContent>
 
                     {/* Products Tab */}
                     <TabsContent value="products">
