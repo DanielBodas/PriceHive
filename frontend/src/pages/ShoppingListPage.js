@@ -107,7 +107,7 @@ const ShoppingListPage = () => {
             // Fetch everything but individually to be more robust
             const fetchLists = axios.get(`${API}/shopping-lists`).then(r => setLists(r.data)).catch(e => console.error("Lists fetch error", e));
             const fetchProducts = axios.get(`${API}/public/products`).then(r => setProducts(r.data)).catch(e => console.error("Products fetch error", e));
-            const fetchSupermarkets = axios.get(`${API}/admin/supermarkets`).then(r => setSupermarkets(r.data)).catch(e => console.error("Supermarkets fetch error", e));
+            const fetchSupermarkets = axios.get(`${API}/public/supermarkets`).then(r => setSupermarkets(r.data)).catch(e => console.error("Supermarkets fetch error", e));
             const fetchUnits = axios.get(`${API}/admin/units`).then(r => {
                 setUnits(r.data);
                 if (r.data.length > 0) setNewItemUnit(r.data[0].id);

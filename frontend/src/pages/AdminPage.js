@@ -45,6 +45,7 @@ const AdminPage = () => {
     const [productDialog, setProductDialog] = useState(false);
     const [sellableDialog, setSellableDialog] = useState(false);
     const [catalogDialog, setCatalogDialog] = useState(false);
+    const [unitMgmtDialog, setUnitMgmtDialog] = useState(false);
 
     // Edit states
     const [editingItem, setEditingItem] = useState(null);
@@ -59,6 +60,7 @@ const AdminPage = () => {
     });
     const [sellableForm, setSellableForm] = useState({ supermarket_id: "", brand_id: "", product_ids: [] });
     const [catalogForm, setCatalogForm] = useState({ brand_id: "", product_ids: [], status: "active" });
+    const [unitMgmtForm, setUnitMgmtForm] = useState({ sellable_product_id: "", product_name: "", units: [] });
     const [productSearch, setProductSearch] = useState("");
 
     useEffect(() => {
@@ -194,6 +196,38 @@ const AdminPage = () => {
             setCatalogForm({ brand_id: "", product_ids: [], status: "active" });
             setProductSearch("");
         } catch (e) { toast.error("Error al actualizar catálogo"); }
+    };
+
+    const handleOpenUnitMgmt = async (sp) => {
+        try {
+            const res = await axios.get(`${API}/admin/sellable-product-units/${sp.id}`);
+            setUnitMgmtForm({
+                sellable_product_id: sp.id,
+                product_name: sp.product_name,
+                units: res.data.map(u => u.unit_id)
+            });
+            setUnitMgmtDialog(true);
+        } catch (e) { toast.error("Error al cargar unidades"); }
+    };
+
+    const handleSaveUnits = async () => {
+        try {
+            // This is a bit simplified, ideally we have a bulk update for units too
+            // For now, we just add the ones that are not there.
+            // But better implement a simple loop or a new endpoint if needed.
+            // Let's assume we want to sync them.
+
+            // To keep it simple without adding too many backend endpoints:
+            // We'll just post each selected unit.
+            for (const unitId of unitMgmtForm.units) {
+                await axios.post(`${API}/admin/sellable-product-units`, {
+                    sellable_product_id: unitMgmtForm.sellable_product_id,
+                    unit_id: unitId
+                }).catch(() => {}); // Ignore duplicates
+            }
+            toast.success("Unidades actualizadas");
+            setUnitMgmtDialog(false);
+        } catch (e) { toast.error("Error al guardar unidades"); }
     };
 
     if (loading) return <Layout><div className="flex items-center justify-center min-h-[400px]">Cargando panel de administración...</div></Layout>;
@@ -368,57 +402,147 @@ const AdminPage = () => {
                             </TabsList>
 
                             <TabsContent value="sellable">
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between">
-                                        <CardTitle className="text-lg">Productos por Supermercado (Operativo)</CardTitle>
-                                        <Button onClick={() => setSellableDialog(true)} className="bg-emerald-500" data-testid="new-sellable-btn"><Plus className="w-4 h-4 mr-2" /> Vincular Producto</Button>
-                                    </CardHeader>
-                                    <CardContent className="p-0">
-                                        <Table>
-                                            <TableHeader><TableRow><TableHead>Supermercado</TableHead><TableHead>Producto</TableHead><TableHead>Marca</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {sellableProducts.map(sp => (
-                                                    <TableRow key={sp.id}>
-                                                        <TableCell className="font-medium">{sp.supermarket_name}</TableCell>
-                                                        <TableCell>{sp.product_name}</TableCell>
-                                                        <TableCell>{sp.brand_name}</TableCell>
-                                                        <TableCell className="text-right pr-4">
-                                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteSellable(sp.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </CardContent>
-                                </Card>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                    {supermarkets.map(sm => {
+                                        const smProducts = sellableProducts.filter(sp => sp.supermarket_id === sm.id);
+                                        return (
+                                            <Card key={sm.id} className="border-slate-200 hover:border-emerald-200 transition-all flex flex-col">
+                                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                                    <div className="flex items-center gap-2">
+                                                        <Store className="w-5 h-5 text-emerald-500" />
+                                                        <CardTitle className="text-md font-bold text-slate-800">{sm.name}</CardTitle>
+                                                    </div>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 px-2"
+                                                        onClick={() => {
+                                                            setSellableForm({
+                                                                supermarket_id: sm.id,
+                                                                brand_id: "",
+                                                                product_ids: []
+                                                            });
+                                                            setSellableDialog(true);
+                                                        }}
+                                                    >
+                                                        <Plus className="w-4 h-4 mr-1" /> Vincular
+                                                    </Button>
+                                                </CardHeader>
+                                                <CardContent className="flex-1">
+                                                    {smProducts.length === 0 ? (
+                                                        <p className="text-xs text-slate-400 italic py-8 text-center">Sin productos vinculados</p>
+                                                    ) : (
+                                                        <div className="space-y-4 py-2">
+                                                            {/* Group by brand for better visual */}
+                                                            {Array.from(new Set(smProducts.map(p => p.brand_id))).map(brandId => {
+                                                                const brandName = smProducts.find(p => p.brand_id === brandId)?.brand_name;
+                                                                const productsForBrand = smProducts.filter(p => p.brand_id === brandId);
+                                                                return (
+                                                                    <div key={brandId} className="space-y-1">
+                                                                        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">{brandName}</h4>
+                                                                        <div className="flex flex-wrap gap-1.5">
+                                                                            {productsForBrand.map(p => (
+                                                                                <div
+                                                                                    key={p.id}
+                                                                                    className="group relative flex items-center bg-white border border-slate-100 rounded px-2 py-1 text-xs text-slate-600 hover:border-emerald-200 pr-7 transition-colors shadow-sm cursor-pointer"
+                                                                                    onClick={() => handleOpenUnitMgmt(p)}
+                                                                                >
+                                                                                    {p.product_name}
+                                                                                    <button
+                                                                                        onClick={(e) => { e.stopPropagation(); handleDeleteSellable(p.id); }}
+                                                                                        className="absolute right-1 opacity-0 group-hover:opacity-100 text-rose-400 hover:text-rose-600 transition-opacity"
+                                                                                    >
+                                                                                        <Trash2 className="w-3 h-3" />
+                                                                                    </button>
+                                                                                </div>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                );
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </CardContent>
+                                                <div className="px-6 py-3 bg-slate-50 border-t text-[10px] text-slate-500 flex justify-between">
+                                                    <span>{smProducts.length} productos vendibles</span>
+                                                    <span>Operativo</span>
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
+                                    <Card
+                                        className="flex items-center justify-center border-dashed border-2 bg-slate-50/50 cursor-pointer hover:bg-slate-50 transition-colors py-12"
+                                        onClick={() => { setEditingItem(null); setSupermarketForm({ name: "", logo_url: "" }); setSupermarketDialog(true); }}
+                                    >
+                                        <div className="text-center">
+                                            <Store className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                            <p className="text-sm font-medium text-slate-400">Nuevo Supermercado</p>
+                                        </div>
+                                    </Card>
+                                </div>
                             </TabsContent>
 
                             <TabsContent value="brand-cat">
-                                <Card>
-                                    <CardHeader className="flex flex-row items-center justify-between">
-                                        <CardTitle className="text-lg">Catálogo Conceptual de Marca</CardTitle>
-                                        <Button onClick={() => setCatalogDialog(true)} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Actualizar Estado</Button>
-                                    </CardHeader>
-                                    <CardContent className="p-0">
-                                        <Table>
-                                            <TableHeader><TableRow><TableHead>Marca</TableHead><TableHead>Producto</TableHead><TableHead>Estado</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {brandCatalog.map(bc => (
-                                                    <TableRow key={bc.id}>
-                                                        <TableCell className="font-medium">{bc.brand_name}</TableCell>
-                                                        <TableCell>{bc.product_name}</TableCell>
-                                                        <TableCell>
-                                                            <span className={`px-2 py-1 rounded-full text-xs font-medium ${
-                                                                bc.status === 'active' ? 'bg-emerald-100 text-emerald-700' :
-                                                                bc.status === 'planned' ? 'bg-blue-100 text-blue-700' : 'bg-rose-100 text-rose-700'
-                                                            }`}>{bc.status}</span>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
-                                    </CardContent>
-                                </Card>
+                                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                                    {brands.map(brand => {
+                                        const brandProducts = brandCatalog.filter(bc => bc.brand_id === brand.id);
+                                        return (
+                                            <Card key={brand.id} className="flex flex-col border-slate-200 hover:border-emerald-200 transition-all">
+                                                <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+                                                    <CardTitle className="text-md font-bold text-slate-800">{brand.name}</CardTitle>
+                                                    <Button
+                                                        variant="ghost"
+                                                        size="sm"
+                                                        className="text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50 h-8 px-2"
+                                                        onClick={() => {
+                                                            setCatalogForm({
+                                                                brand_id: brand.id,
+                                                                product_ids: brandProducts.map(bp => bp.product_id),
+                                                                status: "active"
+                                                            });
+                                                            setCatalogDialog(true);
+                                                        }}
+                                                    >
+                                                        <Plus className="w-4 h-4 mr-1" /> Gestionar
+                                                    </Button>
+                                                </CardHeader>
+                                                <CardContent className="flex-1">
+                                                    {brandProducts.length === 0 ? (
+                                                        <p className="text-xs text-slate-400 italic py-4">Sin productos en catálogo</p>
+                                                    ) : (
+                                                        <div className="flex flex-wrap gap-2 py-2">
+                                                            {brandProducts.map(bp => (
+                                                                <div
+                                                                    key={bp.id}
+                                                                    className={`text-[10px] px-2 py-1 rounded border ${
+                                                                        bp.status === 'active' ? 'bg-emerald-50 border-emerald-100 text-emerald-700' :
+                                                                        bp.status === 'planned' ? 'bg-blue-50 border-blue-100 text-blue-700' :
+                                                                        'bg-rose-50 border-rose-100 text-rose-700'
+                                                                    }`}
+                                                                >
+                                                                    {bp.product_name}
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    )}
+                                                </CardContent>
+                                                <div className="px-6 py-3 bg-slate-50 border-t text-[10px] text-slate-500 flex justify-between">
+                                                    <span>{brandProducts.length} productos</span>
+                                                    <span>Conceptual</span>
+                                                </div>
+                                            </Card>
+                                        );
+                                    })}
+                                    <Card
+                                        className="flex items-center justify-center border-dashed border-2 bg-slate-50/50 cursor-pointer hover:bg-slate-50 transition-colors py-12"
+                                        onClick={() => { setEditingItem(null); setBrandForm({ name: "", logo_url: "" }); setBrandDialog(true); }}
+                                    >
+                                        <div className="text-center">
+                                            <Tag className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+                                            <p className="text-sm font-medium text-slate-400">Nueva Marca</p>
+                                        </div>
+                                    </Card>
+                                </div>
                             </TabsContent>
                         </Tabs>
                     </TabsContent>
@@ -511,10 +635,31 @@ const AdminPage = () => {
                         {sellableForm.brand_id && (
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <Label>Productos (Multiselección)</Label>
+                                    <div className="flex items-center gap-4">
+                                        <Label>Productos (Multiselección)</Label>
+                                        <div className="flex gap-2">
+                                            <button
+                                                className="text-[10px] text-emerald-600 hover:underline"
+                                                onClick={() => {
+                                                    const filteredIds = products
+                                                        .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                                                        .map(p => p.id);
+                                                    setSellableForm({...sellableForm, product_ids: Array.from(new Set([...sellableForm.product_ids, ...filteredIds]))});
+                                                }}
+                                            >
+                                                Seleccionar filtrados
+                                            </button>
+                                            <button
+                                                className="text-[10px] text-rose-600 hover:underline"
+                                                onClick={() => setSellableForm({...sellableForm, product_ids: []})}
+                                            >
+                                                Limpiar todo
+                                            </button>
+                                        </div>
+                                    </div>
                                     <Input
                                         placeholder="Filtrar productos..."
-                                        className="w-1/2 h-8"
+                                        className="w-1/3 h-8 text-xs"
                                         value={productSearch}
                                         onChange={e => setProductSearch(e.target.value)}
                                     />
@@ -552,6 +697,31 @@ const AdminPage = () => {
                 </DialogContent>
             </Dialog>
 
+            <Dialog open={unitMgmtDialog} onOpenChange={setUnitMgmtDialog}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Unidades para: {unitMgmtForm.product_name}</DialogTitle></DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <Label>Selecciona unidades disponibles en este súper:</Label>
+                        <div className="grid grid-cols-2 gap-2 border rounded p-3 bg-slate-50">
+                            {units.map(u => (
+                                <div key={u.id} className="flex items-center space-x-2">
+                                    <Checkbox
+                                        id={`unit-${u.id}`}
+                                        checked={unitMgmtForm.units.includes(u.id)}
+                                        onCheckedChange={(checked) => {
+                                            if (checked) setUnitMgmtForm({...unitMgmtForm, units: [...unitMgmtForm.units, u.id]});
+                                            else setUnitMgmtForm({...unitMgmtForm, units: unitMgmtForm.units.filter(id => id !== u.id)});
+                                        }}
+                                    />
+                                    <label htmlFor={`unit-${u.id}`} className="text-sm cursor-pointer">{u.name} ({u.abbreviation})</label>
+                                </div>
+                            ))}
+                        </div>
+                        <Button onClick={handleSaveUnits} className="w-full bg-emerald-500">Guardar Unidades</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={catalogDialog} onOpenChange={(val) => { setCatalogDialog(val); if(!val) setProductSearch(""); }}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>Gestionar Catálogo de Marca (Bulk)</DialogTitle></DialogHeader>
@@ -580,10 +750,31 @@ const AdminPage = () => {
                         {catalogForm.brand_id && (
                             <div className="space-y-3">
                                 <div className="flex items-center justify-between">
-                                    <Label>Productos para añadir al catálogo</Label>
+                                    <div className="flex items-center gap-4">
+                                        <Label>Productos para añadir al catálogo</Label>
+                                        <div className="flex gap-2">
+                                            <button
+                                                className="text-[10px] text-emerald-600 hover:underline"
+                                                onClick={() => {
+                                                    const filteredIds = products
+                                                        .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                                                        .map(p => p.id);
+                                                    setCatalogForm({...catalogForm, product_ids: Array.from(new Set([...catalogForm.product_ids, ...filteredIds]))});
+                                                }}
+                                            >
+                                                Seleccionar filtrados
+                                            </button>
+                                            <button
+                                                className="text-[10px] text-rose-600 hover:underline"
+                                                onClick={() => setCatalogForm({...catalogForm, product_ids: []})}
+                                            >
+                                                Limpiar todo
+                                            </button>
+                                        </div>
+                                    </div>
                                     <Input
                                         placeholder="Filtrar productos..."
-                                        className="w-1/2 h-8"
+                                        className="w-1/3 h-8 text-xs"
                                         value={productSearch}
                                         onChange={e => setProductSearch(e.target.value)}
                                     />
