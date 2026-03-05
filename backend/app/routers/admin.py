@@ -292,17 +292,30 @@ async def get_products(user: dict = Depends(get_current_user)):
     brands = {b.get("id") or str(b.get("_id")): b["name"] for b in await db.brands.find({}).to_list(1000)}
     categories = {c.get("id") or str(c.get("_id")): c["name"] for c in await db.categories.find({}).to_list(1000)}
     units = {u.get("id") or str(u.get("_id")): u["name"] for u in await db.units.find({}).to_list(1000)}
-    base_names = {p.get("id") or str(p.get("_id")): p["name"] for p in products_raw if p.get("is_base")}
+
+    # Pre-map base products for inheritance
+    base_prods = {p.get("id") or str(p.get("_id")): p for p in products_raw if p.get("is_base")}
 
     result = []
     for p in products_raw:
         p = map_id(p)
+        base_id = p.get("base_product_id")
+        base_p = base_prods.get(base_id) if base_id else None
+
+        # Inherit Brand and Category if not set on variant
+        brand_id = p.get("brand_id") or (base_p.get("brand_id") if base_p else None)
+        category_id = p.get("category_id") or (base_p.get("category_id") if base_p else None)
+        unit_id = p.get("unit_id") or (base_p.get("unit_id") if base_p else None)
+
         result.append(ProductResponse(
             **p,
-            brand_name=brands.get(p.get("brand_id")),
-            category_name=categories.get(p.get("category_id")),
-            unit_name=units.get(p.get("unit_id")),
-            base_product_name=base_names.get(p.get("base_product_id"))
+            brand_id=brand_id,
+            brand_name=brands.get(brand_id),
+            category_id=category_id or "",
+            category_name=categories.get(category_id),
+            unit_id=unit_id,
+            unit_name=units.get(unit_id),
+            base_product_name=base_p.get("name") if base_p else None
         ))
     return result
 

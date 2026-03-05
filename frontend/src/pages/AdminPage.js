@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
 import { Badge } from "../components/ui/badge";
 import { Checkbox } from "../components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { toast } from "sonner";
 import {
     Plus,
@@ -48,6 +49,7 @@ const AdminPage = () => {
     const [unitDialog, setUnitDialog] = useState(false);
     const [productDialog, setProductDialog] = useState(false);
     const [sellableDialog, setSellableDialog] = useState(false);
+    const [supermarketBrandDialog, setSupermarketBrandDialog] = useState(false);
     const [catalogDialog, setCatalogDialog] = useState(false);
 
     // Edit states
@@ -204,6 +206,7 @@ const AdminPage = () => {
     }, {});
 
     const filteredRelationProducts = getFilteredProducts(relationProductSearch)
+        .filter(p => !p.is_base) // Bases don't have units
         .map((p) => ({
             ...p,
             allowed_units_count: productUnitCountByProduct[p.id] || 0,
@@ -658,7 +661,20 @@ const AdminPage = () => {
             setCatalogDialog(false);
             setCatalogForm({ brand_id: "", product_ids: [], status: "active" });
             setProductSearch("");
-        } catch (e) { toast.error("Error al actualizar catÃƒÆ’Ã‚Â¡logo"); }
+        } catch (e) { toast.error("Error al actualizar catálogo"); }
+    };
+
+    const handleDeleteCatalogEntry = async (brand_id, product_id) => {
+        if (!window.confirm("¿Quitar este producto del catálogo de la marca?")) return;
+        try {
+            await axios.post(`${API}/admin/brand-catalog`, {
+                brand_id,
+                product_id,
+                status: "discontinued"
+            });
+            toast.success("Estado actualizado a descatalogado");
+            fetchAllData();
+        } catch (e) { toast.error("Error"); }
     };
 
 
@@ -964,6 +980,7 @@ const AdminPage = () => {
                             <TabsList className="bg-slate-50 border p-1 mb-4 h-auto flex-wrap">
                                 <TabsTrigger value="sellable" className="gap-2" data-testid="tab-sellable"><Store className="w-4 h-4" /> Catalogo Supermercado</TabsTrigger>
                                 <TabsTrigger value="brand-cat" className="gap-2" data-testid="tab-brand-catalog"><Tag className="w-4 h-4" /> Catalogo Marca</TabsTrigger>
+                                <TabsTrigger value="attr-cat" className="gap-2"><Tag className="w-4 h-4" /> Catalogo Atributos</TabsTrigger>
                                 <TabsTrigger value="units-catalog" className="gap-2"><Link2 className="w-4 h-4" /> Unidades</TabsTrigger>
                             </TabsList>
 
@@ -987,20 +1004,30 @@ const AdminPage = () => {
                                             {supermarketCatalogTree.map((supermarket) => (
                                                 <AccordionItem key={supermarket.id} value={`sm-${supermarket.id}`}>
                                                     <AccordionTrigger className="hover:no-underline">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="font-semibold text-slate-800">{supermarket.name}</span>
-                                                            <Badge variant="secondary">{supermarket.brands_count} marcas</Badge>
-                                                            <Badge variant="secondary">{supermarket.products_count} productos</Badge>
+                                                        <div className="flex items-center justify-between w-full pr-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="font-semibold text-slate-800">{supermarket.name}</span>
+                                                                <Badge variant="secondary">{supermarket.brands_count} marcas</Badge>
+                                                                <Badge variant="secondary">{supermarket.products_count} productos</Badge>
+                                                            </div>
+                                                            <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); setSellableForm({ ...sellableForm, supermarket_id: supermarket.id, brand_id: "", product_ids: [] }); setSupermarketBrandDialog(true); }}>
+                                                                <Plus className="w-3 h-3 mr-1" /> Gestionar Marcas
+                                                            </Button>
                                                         </div>
                                                     </AccordionTrigger>
-                                                    <AccordionContent>
+                                                    <AccordionContent className="pt-2">
                                                         <Accordion type="multiple" className="w-full space-y-2">
                                                             {supermarket.brands.map((brand) => (
-                                                                <AccordionItem key={`${supermarket.id}-${brand.id}`} value={`sm-${supermarket.id}-brand-${brand.id}`} className="rounded-lg border bg-white px-0">
+                                                                <AccordionItem key={`${supermarket.id}-${brand.id}`} value={`sm-${supermarket.id}-brand-${brand.id}`} className="rounded-lg border bg-white px-0 shadow-sm">
                                                                     <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                                                                        <div className="flex items-center gap-3">
-                                                                            <p className="font-medium text-slate-800">{brand.name}</p>
-                                                                            <Badge variant="outline">{brand.products.length} productos</Badge>
+                                                                        <div className="flex items-center justify-between w-full pr-4">
+                                                                            <div className="flex items-center gap-3">
+                                                                                <p className="font-medium text-slate-800">{brand.name}</p>
+                                                                                <Badge variant="outline">{brand.products.length} productos</Badge>
+                                                                            </div>
+                                                                            <Button size="sm" variant="ghost" className="h-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={(e) => { e.stopPropagation(); setSellableForm({ ...sellableForm, supermarket_id: supermarket.id, brand_id: brand.id, product_ids: [] }); setSellableDialog(true); }}>
+                                                                                <Plus className="w-3 h-3 mr-1" /> Vincular Productos
+                                                                            </Button>
                                                                         </div>
                                                                     </AccordionTrigger>
                                                                     <AccordionContent className="px-0 pb-0">
@@ -1075,7 +1102,10 @@ const AdminPage = () => {
                                                                                 {product.supermarkets.length > 0 ? product.supermarkets.map((name) => <Badge key={`${brand.id}-${product.id}-${name}`} variant="outline" className="text-xs">{name}</Badge>) : <Badge variant="outline" className="text-xs">Sin supermercados</Badge>}
                                                                             </div>
                                                                         </div>
-                                                                        <Button variant="outline" size="sm" onClick={() => openCatalogStatusEditor(product)}><Pencil className="w-4 h-4 mr-2" /> Editar estado</Button>
+                                                                        <div className="flex gap-2">
+                                                                            <Button variant="outline" size="sm" onClick={() => openCatalogStatusEditor(product)}><Pencil className="w-4 h-4 mr-2" /> Estado</Button>
+                                                                            <Button variant="ghost" size="sm" className="text-rose-600" onClick={() => handleDeleteCatalogEntry(brand.id, product.product_id)}><Trash2 className="w-4 h-4" /></Button>
+                                                                        </div>
                                                                     </div>
                                                                 );
                                                             })}
@@ -1084,6 +1114,77 @@ const AdminPage = () => {
                                                 </AccordionItem>
                                             ))}
                                         </Accordion>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="attr-cat">
+                                <Card>
+                                    <CardHeader>
+                                        <CardTitle className="text-lg">Configuración de Atributos por Producto Base</CardTitle>
+                                        <p className="text-sm text-slate-500 mt-1">Define qué atributos están disponibles para las variantes de cada concepto base.</p>
+                                    </CardHeader>
+                                    <CardContent className="space-y-4">
+                                        <div className="grid gap-4">
+                                            {products.filter(p => p.is_base).sort((a, b) => a.name.localeCompare(b.name)).map(baseProd => (
+                                                <div key={baseProd.id} className="border rounded-lg p-4 space-y-3 bg-white shadow-sm">
+                                                    <div className="flex items-center justify-between border-b pb-2">
+                                                        <div className="flex items-center gap-2">
+                                                            <span className="font-bold text-slate-800">{baseProd.name}</span>
+                                                            <Badge variant="outline">{baseProd.category_name}</Badge>
+                                                        </div>
+                                                        <Badge className="bg-blue-50 text-blue-700">Base</Badge>
+                                                    </div>
+                                                    <div className="space-y-2">
+                                                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Atributos Permitidos</Label>
+                                                        <div className="flex flex-wrap gap-x-6 gap-y-3 p-3 rounded-md bg-slate-50 border border-dashed">
+                                                            {attributes.map(attr => (
+                                                                <div key={attr.id} className="flex items-center space-x-2">
+                                                                    <Checkbox
+                                                                        id={`base-${baseProd.id}-attr-${attr.id}`}
+                                                                        checked={baseProd.allowed_attribute_ids?.includes(attr.id)}
+                                                                        onCheckedChange={async (checked) => {
+                                                                            const current = baseProd.allowed_attribute_ids || [];
+                                                                            const next = checked
+                                                                                ? [...current, attr.id]
+                                                                                : current.filter(id => id !== attr.id);
+
+                                                                            try {
+                                                                                await axios.put(`${API}/admin/products/${baseProd.id}`, {
+                                                                                    ...baseProd,
+                                                                                    allowed_attribute_ids: next
+                                                                                });
+                                                                                toast.success(`Atributo ${attr.name} ${checked ? 'añadido' : 'quitado'} de ${baseProd.name}`);
+                                                                                fetchAllData();
+                                                                            } catch (e) {
+                                                                                toast.error("Error al actualizar atributos");
+                                                                            }
+                                                                        }}
+                                                                    />
+                                                                    <label
+                                                                        htmlFor={`base-${baseProd.id}-attr-${attr.id}`}
+                                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
+                                                                    >
+                                                                        {attr.name}
+                                                                    </label>
+                                                                </div>
+                                                            ))}
+                                                            {attributes.length === 0 && <p className="text-xs text-slate-400 italic text-center w-full">Crea atributos en la pestaña "Datos Base" primero.</p>}
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-center justify-end text-xs text-slate-500">
+                                                        <span>{baseProd.allowed_attribute_ids?.length || 0} atributos configurados</span>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                            {products.filter(p => p.is_base).length === 0 && (
+                                                <div className="text-center py-10 border-2 border-dashed rounded-xl bg-slate-50">
+                                                    <Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                                                    <p className="text-slate-500">No hay productos base definidos.</p>
+                                                    <p className="text-xs text-slate-400 mt-1">Crea productos marcados como "Producto Base" para configurar sus atributos aquí.</p>
+                                                </div>
+                                            )}
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -1195,106 +1296,151 @@ const AdminPage = () => {
             <Dialog open={productDialog} onOpenChange={setProductDialog}>
                 <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Producto</DialogTitle></DialogHeader>
-                    <div className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                            <Label>Nombre</Label>
-                            <Input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} placeholder="Nombre del producto" />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Categoría</Label>
-                            <Select value={productForm.category_id} onValueChange={v => setProductForm({ ...productForm, category_id: v })}>
-                                <SelectTrigger data-testid="select-category"><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
-                                <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-
-                        <div className="flex items-center space-x-2 pt-2">
-                            <Checkbox
-                                id="is_base"
-                                checked={productForm.is_base}
-                                onCheckedChange={(checked) => setProductForm({ ...productForm, is_base: checked === true })}
-                            />
-                            <Label htmlFor="is_base" className="cursor-pointer">¿Es un Producto Base? (Tendrá variantes)</Label>
-                        </div>
-
-                        {productForm.is_base && (
-                            <div className="space-y-2 border p-3 rounded-md bg-slate-50">
-                                <Label>Atributos Permitidos para Variantes</Label>
-                                <div className="grid grid-cols-2 gap-2 mt-2">
-                                    {attributes.map(attr => (
-                                        <div key={attr.id} className="flex items-center space-x-2">
-                                            <Checkbox
-                                                id={`attr-${attr.id}`}
-                                                checked={productForm.allowed_attribute_ids?.includes(attr.id)}
-                                                onCheckedChange={(checked) => {
-                                                    const current = productForm.allowed_attribute_ids || [];
-                                                    if (checked) setProductForm({ ...productForm, allowed_attribute_ids: [...current, attr.id] });
-                                                    else setProductForm({ ...productForm, allowed_attribute_ids: current.filter(id => id !== attr.id) });
-                                                }}
-                                            />
-                                            <Label htmlFor={`attr-${attr.id}`} className="text-xs cursor-pointer">{attr.name}</Label>
-                                        </div>
-                                    ))}
-                                </div>
-                            </div>
-                        )}
-
-                        {!productForm.is_base && (
-                            <div className="space-y-4 border p-3 rounded-md bg-slate-50">
-                                <div className="space-y-2">
-                                    <Label>Producto Base (Opcional)</Label>
-                                    <Select value={productForm.base_product_id || "none"} onValueChange={v => {
-                                        const baseProductId = v === "none" ? "" : v;
-                                        setProductForm({ ...productForm, base_product_id: baseProductId, attribute_values: {} });
-                                    }}>
-                                        <SelectTrigger><SelectValue placeholder="Ninguno (Producto Independiente)" /></SelectTrigger>
-                                        <SelectContent>
-                                            <SelectItem value="none">Ninguno</SelectItem>
-                                            {products.filter(p => p.is_base).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
-                                        </SelectContent>
-                                    </Select>
-                                </div>
-
-                                {productForm.base_product_id && (
-                                    <div className="space-y-3">
-                                        <Label className="text-sm font-semibold">Valores de Atributos</Label>
-                                        {products.find(p => p.id === productForm.base_product_id)?.allowed_attribute_ids?.map(attrId => {
-                                            const attr = attributes.find(a => a.id === attrId);
-                                            return (
-                                                <div key={attrId} className="space-y-1">
-                                                    <Label className="text-xs">{attr?.name}</Label>
-                                                    {attr?.values && attr.values.length > 0 ? (
-                                                        <Select
-                                                            value={productForm.attribute_values?.[attrId] || "none"}
-                                                            onValueChange={v => setProductForm({
-                                                                ...productForm,
-                                                                attribute_values: { ...productForm.attribute_values, [attrId]: v === "none" ? "" : v }
-                                                            })}
-                                                        >
-                                                            <SelectTrigger size="sm"><SelectValue placeholder={`Seleccionar ${attr.name}`} /></SelectTrigger>
-                                                            <SelectContent>
-                                                                <SelectItem value="none">Seleccionar...</SelectItem>
-                                                                {attr.values.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
-                                                            </SelectContent>
-                                                        </Select>
-                                                    ) : (
-                                                        <Input
-                                                            size="sm"
-                                                            value={productForm.attribute_values?.[attrId] || ""}
-                                                            onChange={e => setProductForm({
-                                                                ...productForm,
-                                                                attribute_values: { ...productForm.attribute_values, [attrId]: e.target.value }
-                                                            })}
-                                                            placeholder={`Valor de ${attr?.name}`}
-                                                        />
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
+                    <div className="space-y-6 pt-4">
+                        <div className="space-y-3">
+                            <Label className="text-sm font-semibold">Tipo de Producto</Label>
+                            <RadioGroup
+                                value={productForm.is_base ? "base" : (productForm.base_product_id ? "variant" : "independent")}
+                                onValueChange={(val) => {
+                                    if (val === "base") setProductForm({...productForm, is_base: true, base_product_id: ""});
+                                    else if (val === "independent") setProductForm({...productForm, is_base: false, base_product_id: "", attribute_values: {}});
+                                    else setProductForm({...productForm, is_base: false});
+                                }}
+                                className="flex flex-col gap-2"
+                            >
+                                <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-slate-50 transition-colors">
+                                    <RadioGroupItem value="base" id="r-base" />
+                                    <div className="grid gap-1.5 leading-none">
+                                        <Label htmlFor="r-base" className="font-medium cursor-pointer">Producto Base / Conceptual</Label>
+                                        <p className="text-xs text-slate-500 italic">Ej: Yogur, Pan, Arroz. No se compra directamente, sirve para crear variantes.</p>
                                     </div>
-                                )}
+                                </div>
+                                <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-slate-50 transition-colors">
+                                    <RadioGroupItem value="variant" id="r-variant" />
+                                    <div className="grid gap-1.5 leading-none">
+                                        <Label htmlFor="r-variant" className="font-medium cursor-pointer">Variante de un Producto</Label>
+                                        <p className="text-xs text-slate-500 italic">Ej: Yogur de Fresa, Pan de Molde. Hereda marca y categoría del base.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-slate-50 transition-colors">
+                                    <RadioGroupItem value="independent" id="r-independent" />
+                                    <div className="grid gap-1.5 leading-none">
+                                        <Label htmlFor="r-independent" className="font-medium cursor-pointer">Producto Independiente</Label>
+                                        <p className="text-xs text-slate-500 italic">Producto único sin variantes ni base.</p>
+                                    </div>
+                                </div>
+                            </RadioGroup>
+                        </div>
+
+                        <div className="space-y-4 pt-2 border-t">
+                            <div className="space-y-2">
+                                <Label>Nombre del Producto</Label>
+                                <Input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} placeholder="Ej: Yogur Natural" />
                             </div>
-                        )}
+
+                            {!productForm.is_base && !productForm.base_product_id && (
+                                <>
+                                    <div className="space-y-2">
+                                        <Label>Categoría</Label>
+                                        <Select value={productForm.category_id} onValueChange={v => setProductForm({ ...productForm, category_id: v })}>
+                                            <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+                                            <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                    </div>
+                                    <div className="space-y-2">
+                                        <Label>Marca (Opcional)</Label>
+                                        <Select value={productForm.brand_id || "none"} onValueChange={v => setProductForm({ ...productForm, brand_id: v === "none" ? "" : v })}>
+                                            <SelectTrigger><SelectValue placeholder="Sin marca específica" /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">Sin marca</SelectItem>
+                                                {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                </>
+                            )}
+
+                            {productForm.is_base && (
+                                <div className="space-y-4">
+                                    <div className="space-y-2">
+                                        <Label>Categoría Sugerida</Label>
+                                        <Select value={productForm.category_id} onValueChange={v => setProductForm({ ...productForm, category_id: v })}>
+                                            <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+                                            <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                                        </Select>
+                                    </div>
+                                    <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
+                                        Nota: Los atributos se asignan ahora desde la pestaña "Catálogos > Catálogo Atributos".
+                                    </p>
+                                </div>
+                            )}
+
+                            {!productForm.is_base && !editingItem && !productForm.base_product_id && (
+                                <div className="space-y-2">
+                                    <Label className="text-slate-400">¿Era una variante? Selecciona "Variante de un Producto" arriba.</Label>
+                                </div>
+                            )}
+
+                            {!productForm.is_base && (productForm.base_product_id || (!editingItem && !productForm.name && !productForm.category_id)) && (
+                                <div className="space-y-4 border p-3 rounded-md bg-slate-50">
+                                    <div className="space-y-2">
+                                        <Label>Seleccionar Producto Base</Label>
+                                        <Select value={productForm.base_product_id || "none"} onValueChange={v => {
+                                            const baseId = v === "none" ? "" : v;
+                                            setProductForm({ ...productForm, base_product_id: baseId, attribute_values: {} });
+                                        }}>
+                                            <SelectTrigger><SelectValue placeholder="Seleccionar base..." /></SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">Seleccionar...</SelectItem>
+                                                {products.filter(p => p.is_base).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+
+                                    {productForm.base_product_id && (
+                                        <div className="space-y-3">
+                                            <Label className="text-sm font-semibold">Valores de Atributos</Label>
+                                            {products.find(p => p.id === productForm.base_product_id)?.allowed_attribute_ids?.map(attrId => {
+                                                const attr = attributes.find(a => a.id === attrId);
+                                                return (
+                                                    <div key={attrId} className="space-y-1">
+                                                        <Label className="text-xs">{attr?.name}</Label>
+                                                        {attr?.values && attr.values.length > 0 ? (
+                                                            <Select
+                                                                value={productForm.attribute_values?.[attrId] || "none"}
+                                                                onValueChange={v => setProductForm({
+                                                                    ...productForm,
+                                                                    attribute_values: { ...productForm.attribute_values, [attrId]: v === "none" ? "" : v }
+                                                                })}
+                                                            >
+                                                                <SelectTrigger size="sm"><SelectValue placeholder={`Seleccionar ${attr.name}`} /></SelectTrigger>
+                                                                <SelectContent>
+                                                                    <SelectItem value="none">Seleccionar...</SelectItem>
+                                                                    {attr.values.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                                                </SelectContent>
+                                                            </Select>
+                                                        ) : (
+                                                            <Input
+                                                                size="sm"
+                                                                value={productForm.attribute_values?.[attrId] || ""}
+                                                                onChange={e => setProductForm({
+                                                                    ...productForm,
+                                                                    attribute_values: { ...productForm.attribute_values, [attrId]: e.target.value }
+                                                                })}
+                                                                placeholder={`Valor de ${attr?.name}`}
+                                                            />
+                                                        )}
+                                                    </div>
+                                                );
+                                            })}
+                                            {(products.find(p => p.id === productForm.base_product_id)?.allowed_attribute_ids?.length || 0) === 0 && (
+                                                <p className="text-xs text-slate-500 italic">Este producto base no tiene atributos asignados en el catálogo.</p>
+                                            )}
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+                        </div>
 
                         <Button onClick={handleSaveProduct} className="w-full bg-emerald-500" data-testid="save-product-btn">Guardar Producto</Button>
                     </div>
@@ -1402,67 +1548,105 @@ const AdminPage = () => {
                 </DialogContent>
             </Dialog>
 
+            <Dialog open={supermarketBrandDialog} onOpenChange={setSupermarketBrandDialog}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader><DialogTitle>Gestionar Marcas en {supermarkets.find(s => s.id === sellableForm.supermarket_id)?.name}</DialogTitle></DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="relative">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Input placeholder="Buscar marca para añadir..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="pl-9" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1">
+                            {brands.filter(b => b.name.toLowerCase().includes(productSearch.toLowerCase())).map(brand => {
+                                const isLinked = sellableProducts.some(sp => sp.supermarket_id === sellableForm.supermarket_id && sp.brand_id === brand.id);
+                                return (
+                                    <Button
+                                        key={brand.id}
+                                        variant={isLinked ? "secondary" : "outline"}
+                                        className={`justify-start h-auto py-2 px-3 ${isLinked ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}`}
+                                        onClick={() => {
+                                            if (isLinked) {
+                                                toast.info("Esta marca ya tiene productos vinculados. Elimina los productos para desvincular la marca.");
+                                            } else {
+                                                setSellableForm({ ...sellableForm, brand_id: brand.id });
+                                                setSupermarketBrandDialog(false);
+                                                setSellableDialog(true);
+                                            }
+                                        }}
+                                    >
+                                        <div className="flex flex-col items-start text-left">
+                                            <span className="font-medium text-sm">{brand.name}</span>
+                                            {isLinked && <span className="text-[10px] uppercase font-bold tracking-tighter">Vinculada</span>}
+                                        </div>
+                                    </Button>
+                                );
+                            })}
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={sellableDialog} onOpenChange={(val) => { setSellableDialog(val); if (!val) setProductSearch(""); }}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle>Vincular Productos a Supermercado</DialogTitle></DialogHeader>
+                    <DialogHeader>
+                        <DialogTitle>Vincular Productos: {brands.find(b => b.id === sellableForm.brand_id)?.name}</DialogTitle>
+                        <p className="text-sm text-slate-500">Supermercado: {supermarkets.find(s => s.id === sellableForm.supermarket_id)?.name}</p>
+                    </DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Supermercado</Label>
-                                <Select value={sellableForm.supermarket_id} onValueChange={v => setSellableForm({ ...sellableForm, supermarket_id: v })}>
-                                    <SelectTrigger data-testid="select-sellable-supermarket"><SelectValue placeholder="Seleccionar supermercado" /></SelectTrigger>
-                                    <SelectContent>{supermarkets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                                </Select>
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <Label className="font-bold">Catálogo de la Marca</Label>
+                                <Input
+                                    placeholder="Filtrar catálogo..."
+                                    className="w-1/2 h-8"
+                                    value={productSearch}
+                                    onChange={e => setProductSearch(e.target.value)}
+                                />
                             </div>
-                            <div className="space-y-2">
-                                <Label>Marca</Label>
-                                <Select value={sellableForm.brand_id} onValueChange={v => setSellableForm({ ...sellableForm, brand_id: v })}>
-                                    <SelectTrigger data-testid="select-sellable-brand"><SelectValue placeholder="Seleccionar marca" /></SelectTrigger>
-                                    <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                                </Select>
+                            <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-80 overflow-y-auto bg-slate-50">
+                                {brandCatalog
+                                    .filter(bc => bc.brand_id === sellableForm.brand_id)
+                                    .filter(bc => bc.product_name.toLowerCase().includes(productSearch.toLowerCase()))
+                                    .map(bc => {
+                                        const alreadyInSM = sellableProducts.some(sp => sp.supermarket_id === sellableForm.supermarket_id && sp.product_id === bc.product_id && sp.brand_id === bc.brand_id);
+                                        return (
+                                            <div key={bc.id} className={`flex items-center space-x-2 p-2 rounded transition-colors border ${alreadyInSM ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white hover:border-emerald-200 shadow-sm'}`}>
+                                                <Checkbox
+                                                    id={`sp-${bc.product_id}`}
+                                                    disabled={alreadyInSM}
+                                                    checked={alreadyInSM || sellableForm.product_ids.includes(bc.product_id)}
+                                                    onCheckedChange={(checked) => {
+                                                        if (checked) setSellableForm({ ...sellableForm, product_ids: [...sellableForm.product_ids, bc.product_id] });
+                                                        else setSellableForm({ ...sellableForm, product_ids: sellableForm.product_ids.filter(id => id !== bc.product_id) });
+                                                    }}
+                                                />
+                                                <div className="flex flex-col flex-1 cursor-default">
+                                                    <label htmlFor={`sp-${bc.product_id}`} className="text-sm font-medium leading-none cursor-pointer">
+                                                        {bc.product_name}
+                                                    </label>
+                                                    {alreadyInSM && <span className="text-[9px] text-slate-500 italic mt-0.5">Ya disponible en este súper</span>}
+                                                    <Badge variant="outline" className="w-fit text-[9px] h-4 mt-1 px-1">{bc.status}</Badge>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                }
+                                {brandCatalog.filter(bc => bc.brand_id === sellableForm.brand_id).length === 0 && (
+                                    <div className="col-span-2 py-8 text-center text-slate-400 italic text-sm">
+                                        No hay productos en el catálogo conceptual de esta marca.<br/>
+                                        <Button variant="link" size="sm" onClick={() => setCatalogDialog(true)}>Gestionar Catálogo de Marca</Button>
+                                    </div>
+                                )}
                             </div>
+                            <p className="text-xs text-emerald-600 font-semibold">{sellableForm.product_ids.length} productos nuevos seleccionados</p>
                         </div>
 
-                        {sellableForm.brand_id && (
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <Label>Productos (MultiselecciÃƒÆ’Ã‚Â³n)</Label>
-                                    <Input
-                                        placeholder="Filtrar productos..."
-                                        className="w-1/2 h-8"
-                                        value={productSearch}
-                                        onChange={e => setProductSearch(e.target.value)}
-                                    />
-                                </div>
-                                <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto bg-slate-50">
-                                    {products
-                                        .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-                                        .map(p => {
-                                            const isInCatalog = brandCatalog.find(bc => bc.brand_id === sellableForm.brand_id && bc.product_id === p.id);
-                                            return (
-                                                <div key={p.id} className="flex items-center space-x-2 p-1 hover:bg-white rounded transition-colors">
-                                                    <Checkbox
-                                                        id={`sp-${p.id}`}
-                                                        checked={sellableForm.product_ids.includes(p.id)}
-                                                        onCheckedChange={(checked) => {
-                                                            if (checked) setSellableForm({ ...sellableForm, product_ids: [...sellableForm.product_ids, p.id] });
-                                                            else setSellableForm({ ...sellableForm, product_ids: sellableForm.product_ids.filter(id => id !== p.id) });
-                                                        }}
-                                                    />
-                                                    <label htmlFor={`sp-${p.id}`} className="text-sm cursor-pointer flex-1">
-                                                        {p.name}
-                                                        {isInCatalog && <span className="ml-1 text-[10px] text-emerald-600 font-bold">(CatÃƒÆ’Ã‚Â¡logo)</span>}
-                                                    </label>
-                                                </div>
-                                            );
-                                        })
-                                    }
-                                </div>
-                                <p className="text-xs text-slate-500">{sellableForm.product_ids.length} productos seleccionados</p>
-                            </div>
-                        )}
-
-                        <Button onClick={handleSaveSellable} className="w-full bg-emerald-500 mt-4" data-testid="save-sellable-btn">Guardar Vinculación Masiva</Button>
+                        <div className="flex gap-3 mt-6">
+                            <Button variant="outline" className="flex-1" onClick={() => setSellableDialog(false)}>Cancelar</Button>
+                            <Button onClick={handleSaveSellable} className="flex-[2] bg-emerald-500" disabled={sellableForm.product_ids.length === 0}>
+                                Confirmar Vinculación ({sellableForm.product_ids.length})
+                            </Button>
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
