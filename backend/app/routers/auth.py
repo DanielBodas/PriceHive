@@ -65,10 +65,13 @@ async def auth_google_callback(code: str, response: Response):
             "picture": google_data.get("picture"),
             "role": "user",
             "points": 50,
+            "credits": 100,
             "created_at": datetime.now(timezone.utc).isoformat()
         }
         await db.users.insert_one(user)
+        from ..core.auth import add_credits
         await add_points(user_id, 50, "Bienvenido a PriceHive")
+        await add_credits(user_id, 100, "Bono de bienvenida")
     else:
         user_id = user["id"]
 
@@ -129,17 +132,20 @@ async def register(user_data: UserCreate):
         "name": user_data.name,
         "role": "user",
         "points": 0,
+        "credits": 0,
         "created_at": now
     }
 
     await db.users.insert_one(user_doc)
+    from ..core.auth import add_credits
     await add_points(user_id, 50, "Bienvenido a PriceHive")
+    await add_credits(user_id, 100, "Bono de bienvenida")
     token = create_token(user_id, user_email, "user")
 
     return TokenResponse(
         access_token=token,
         token_type="bearer",
-        user=UserResponse(id=user_id, email=user_email, name=user_data.name, role="user", points=50, created_at=now)
+        user=UserResponse(id=user_id, email=user_email, name=user_data.name, role="user", points=50, credits=100, created_at=now)
     )
 
 @router.post("/login", response_model=TokenResponse)

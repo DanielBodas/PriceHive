@@ -3,10 +3,52 @@ from typing import List, Optional
 import uuid
 from datetime import datetime, timezone
 from ..core.database import db
-from ..core.auth import get_current_user, add_points
+from ..core.auth import get_current_user, add_points, add_credits, consume_credits
 from ..models.shopping import ShoppingListCreate, ShoppingListResponse, ShoppingListUpdate, ShoppingListItemResponse
 
 router = APIRouter(prefix="/shopping-lists", tags=["shopping-lists"])
+
+
+def _build_sellable_lookup(sellable_products_data: list) -> dict:
+    lookup = {}
+    for sp in sellable_products_data:
+        product_id = sp.get("product_id")
+        supermarket_id = sp.get("supermarket_id")
+        if not product_id or not supermarket_id:
+            continue
+        key = (product_id, supermarket_id)
+        lookup.setdefault(key, []).append(sp)
+    return lookup
+
+
+def _resolve_sellable_product(item: dict, list_supermarket_id: Optional[str], sellable_map: dict, sellable_lookup: dict):
+    sp_id = item.get("sellable_product_id")
+    if sp_id:
+        sp = sellable_map.get(sp_id)
+        if sp:
+            return sp_id, sp
+
+    # Legacy fallback: resolve by product + supermarket (+ optional brand)
+    product_id = item.get("product_id")
+    supermarket_id = item.get("supermarket_id") or list_supermarket_id
+    if not product_id or not supermarket_id:
+        return None, None
+
+    candidates = sellable_lookup.get((product_id, supermarket_id), [])
+    if not candidates:
+        return None, None
+
+    brand_id = item.get("brand_id")
+    if brand_id:
+        for candidate in candidates:
+            if candidate.get("brand_id") == brand_id:
+                candidate_id = candidate.get("id") or str(candidate.get("_id"))
+                if candidate_id:
+                    return candidate_id, candidate
+
+    candidate = candidates[0]
+    candidate_id = candidate.get("id") or str(candidate.get("_id"))
+    return candidate_id, candidate
 
 @router.post("", response_model=ShoppingListResponse)
 async def create_shopping_list(data: ShoppingListCreate, user: dict = Depends(get_current_user)):
@@ -106,6 +148,7 @@ async def get_shopping_lists(user: dict = Depends(get_current_user)):
 
     sellable_products_data = await db.sellable_products.find({}).to_list(10000)
     sellable_map = {sp.get("id") or str(sp.get("_id")): sp for sp in sellable_products_data}
+    sellable_lookup = _build_sellable_lookup(sellable_products_data)
 
     result = []
     for lst in lists:
@@ -114,34 +157,29 @@ async def get_shopping_lists(user: dict = Depends(get_current_user)):
         total_actual = 0
 
         for item in lst.get("items", []):
-            sp = sellable_map.get(item["sellable_product_id"])
-            if not sp: continue
+            sp_id, sp = _resolve_sellable_product(item, lst.get("supermarket_id"), sellable_map, sellable_lookup)
+            if not sp_id or not sp:
+                continue
 
-            latest = await db.prices.find_one(
-                {"sellable_product_id": item["sellable_product_id"]},
-                {"_id": 0},
-                sort=[("created_at", -1)]
-            )
-            estimated = None
-            if latest:
-                latest_price = latest["price"]
-                latest_qty = latest.get("quantity", 1) or 1
-                unit_price_est = latest_price / latest_qty
-                estimated = unit_price_est * item["quantity"]
+            quantity = item.get("quantity", 1) or 1
+            unit_id = item.get("unit_id") or ""
+
+            estimated = item.get("estimated_price")
+            if estimated:
                 total_estimated += estimated
 
             if item.get("price"):
                 total_actual += item["price"]
 
             items_with_info.append(ShoppingListItemResponse(
-                sellable_product_id=item["sellable_product_id"],
+                sellable_product_id=sp_id,
                 product_id=sp["product_id"],
                 product_name=products.get(sp["product_id"]),
-                quantity=item["quantity"],
-                unit_id=item["unit_id"],
-                unit_name=units.get(item["unit_id"]),
+                quantity=quantity,
+                unit_id=unit_id,
+                unit_name=units.get(unit_id),
                 price=item.get("price"),
-                unit_price=item.get("price") / item["quantity"] if item.get("price") and item.get("quantity") else None,
+                unit_price=item.get("price") / quantity if item.get("price") and quantity else None,
                 estimated_price=estimated,
                 purchased=item.get("purchased", False),
                 brand_id=sp["brand_id"],
@@ -194,39 +232,38 @@ async def get_shopping_list(list_id: str, user: dict = Depends(get_current_user)
     all_brands = await db.brands.find({}).to_list(1000)
     brands = {b.get("id") or str(b.get("_id")): b["name"] for b in all_brands}
 
+    sellable_products_data = await db.sellable_products.find({}).to_list(10000)
+    sellable_map = {sp.get("id") or str(sp.get("_id")): sp for sp in sellable_products_data}
+    sellable_lookup = _build_sellable_lookup(sellable_products_data)
+
     items_with_info = []
     total_estimated = 0
     total_actual = 0
 
     for item in lst.get("items", []):
-        sp = await db.sellable_products.find_one({"id": item["sellable_product_id"]})
-        if not sp: continue
+        sp_id, sp = _resolve_sellable_product(item, lst.get("supermarket_id"), sellable_map, sellable_lookup)
+        if not sp_id or not sp:
+            continue
 
-        latest = await db.prices.find_one(
-            {"sellable_product_id": item["sellable_product_id"]},
-            {"_id": 0},
-            sort=[("created_at", -1)]
-        )
-        estimated = None
-        if latest:
-            latest_price = latest["price"]
-            latest_qty = latest.get("quantity", 1) or 1
-            unit_price_est = latest_price / latest_qty
-            estimated = unit_price_est * item["quantity"]
+        quantity = item.get("quantity", 1) or 1
+        unit_id = item.get("unit_id") or ""
+
+        estimated = item.get("estimated_price")
+        if estimated:
             total_estimated += estimated
 
         if item.get("price"):
             total_actual += item["price"]
 
         items_with_info.append(ShoppingListItemResponse(
-            sellable_product_id=item["sellable_product_id"],
+            sellable_product_id=sp_id,
             product_id=sp["product_id"],
             product_name=products.get(sp["product_id"]),
-            quantity=item["quantity"],
-            unit_id=item["unit_id"],
-            unit_name=units.get(item["unit_id"]),
+            quantity=quantity,
+            unit_id=unit_id,
+            unit_name=units.get(unit_id),
             price=item.get("price"),
-            unit_price=item.get("price") / item["quantity"] if item.get("price") and item.get("quantity") else None,
+            unit_price=item.get("price") / quantity if item.get("price") and quantity else None,
             estimated_price=estimated,
             purchased=item.get("purchased", False),
             brand_id=sp["brand_id"],
@@ -276,15 +313,24 @@ async def submit_prices_from_list(list_id: str, user: dict = Depends(get_current
     if not lst:
         raise HTTPException(status_code=404, detail="Shopping list not found")
 
+    sellable_products_data = await db.sellable_products.find({}).to_list(10000)
+    sellable_map = {sp.get("id") or str(sp.get("_id")): sp for sp in sellable_products_data}
+    sellable_lookup = _build_sellable_lookup(sellable_products_data)
+
     prices_created = 0
     for item in lst.get("items", []):
         if item.get("price") and item.get("purchased"):
+            sp_id, _ = _resolve_sellable_product(item, lst.get("supermarket_id"), sellable_map, sellable_lookup)
+            if not sp_id:
+                continue
+
             price_id = str(uuid.uuid4())
+            quantity = item.get("quantity", 1) or 1
             price_doc = {
                 "id": price_id,
-                "sellable_product_id": item["sellable_product_id"],
+                "sellable_product_id": sp_id,
                 "price": item["price"],
-                "quantity": item["quantity"],
+                "quantity": quantity,
                 "user_id": user["id"],
                 "created_at": datetime.now(timezone.utc).isoformat()
             }
@@ -293,5 +339,52 @@ async def submit_prices_from_list(list_id: str, user: dict = Depends(get_current
 
     if prices_created > 0:
         await add_points(user["id"], prices_created * 10, f"Precios subidos desde lista de compra")
+        await add_credits(user["id"], prices_created * 10, f"Precios subidos desde lista de compra")
 
-    return {"message": f"{prices_created} precios subidos correctamente", "points_earned": prices_created * 10}
+    return {"message": f"{prices_created} precios subidos correctamente", "points_earned": prices_created * 10, "credits_earned": prices_created * 10}
+
+@router.post("/{list_id}/estimate")
+async def estimate_list(list_id: str, user: dict = Depends(get_current_user)):
+    lst = await db.shopping_lists.find_one({"id": list_id, "user_id": user["id"]}, {"_id": 0})
+    if not lst:
+        raise HTTPException(status_code=404, detail="Shopping list not found")
+    
+    items = lst.get("items", [])
+    if not items:
+        return await get_shopping_list(list_id, user)
+    
+    # 1 credit per product
+    cost = len(items)
+    if not await consume_credits(user["id"], cost, f"Estimación de lista: {lst['name']}"):
+        raise HTTPException(status_code=402, detail=f"Créditos insuficientes. Necesitas {cost} créditos.")
+
+    # Calculate estimates
+    updated_items = []
+    for item in items:
+        sp_id = item.get("sellable_product_id")
+        if not sp_id:
+            # Try to resolve if missing
+            sp_id, _ = _resolve_sellable_product(item, lst.get("supermarket_id"), {}, {}) # minimal resolve
+            
+        estimated = None
+        if sp_id:
+            latest = await db.prices.find_one(
+                {"sellable_product_id": sp_id},
+                {"_id": 0},
+                sort=[("created_at", -1)]
+            )
+            if latest:
+                latest_price = latest["price"]
+                latest_qty = latest.get("quantity", 1) or 1
+                unit_price_est = latest_price / latest_qty
+                estimated = unit_price_est * (item.get("quantity", 1) or 1)
+        
+        item["estimated_price"] = estimated
+        updated_items.append(item)
+
+    await db.shopping_lists.update_one(
+        {"id": list_id},
+        {"$set": {"items": updated_items, "updated_at": datetime.now(timezone.utc).isoformat()}}
+    )
+    
+    return await get_shopping_list(list_id, user)

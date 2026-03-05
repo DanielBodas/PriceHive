@@ -17,6 +17,7 @@ class UserResponse(BaseModel):
     role: str
     picture: Optional[str] = None
     points: int = 0
+    credits: int = 0
     created_at: str
 
 class TokenResponse(BaseModel):

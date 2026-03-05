@@ -87,3 +87,31 @@ async def create_notification(user_id: str, title: str, message: str, notificati
         "read": False,
         "created_at": datetime.now(timezone.utc).isoformat()
     })
+
+async def add_credits(user_id: str, amount: int, reason: str):
+    await db.users.update_one({"id": user_id}, {"$inc": {"credits": amount}})
+    await db.credit_history.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "amount": amount,
+        "type": "earn",
+        "reason": reason,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+
+async def consume_credits(user_id: str, amount: int, reason: str) -> bool:
+    user = await db.users.find_one({"id": user_id})
+    if not user or user.get("credits", 0) < amount:
+        return False
+    
+    await db.users.update_one({"id": user_id}, {"$inc": {"credits": -amount}})
+    await db.credit_history.insert_one({
+        "id": str(uuid.uuid4()),
+        "user_id": user_id,
+        "amount": amount,
+        "type": "consume",
+        "reason": reason,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    })
+    return True
+

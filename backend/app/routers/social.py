@@ -3,7 +3,7 @@ from typing import List
 import uuid
 from datetime import datetime, timezone
 from ..core.database import db
-from ..core.auth import get_current_user, add_points
+from ..core.auth import get_current_user, add_points, add_credits
 from ..models.extras import PostCreate, PostResponse, CommentCreate, CommentResponse, ReactionCreate
 
 router = APIRouter(prefix="/posts", tags=["social"])
@@ -23,6 +23,7 @@ async def create_post(data: PostCreate, user: dict = Depends(get_current_user)):
     }
     await db.posts.insert_one(doc)
     await add_points(user["id"], 5, "Publicación creada")
+    await add_credits(user["id"], 5, "Publicación creada")
 
     return PostResponse(
         id=post_id,
@@ -94,6 +95,7 @@ async def create_comment(post_id: str, data: CommentCreate, user: dict = Depends
     }
     await db.comments.insert_one(doc)
     await add_points(user["id"], 2, "Comentario añadido")
+    await add_credits(user["id"], 2, "Comentario añadido")
 
     return CommentResponse(
         id=comment_id,
@@ -117,3 +119,18 @@ async def get_comments(post_id: str, user: dict = Depends(get_current_user)):
         user_name=users.get(c["user_id"], "Unknown"),
         created_at=c["created_at"]
     ) for c in comments]
+
+@router.delete("/{post_id}")
+async def delete_post(post_id: str, user: dict = Depends(get_current_user)):
+    post = await db.posts.find_one({"id": post_id})
+    if not post:
+        raise HTTPException(status_code=404, detail="Post not found")
+        
+    if post["user_id"] != user["id"] and user.get("role") != "admin":
+        raise HTTPException(status_code=403, detail="Not authorized to delete this post")
+        
+    await db.posts.delete_one({"id": post_id})
+    # Also delete associated comments to avoid orphans
+    await db.comments.delete_many({"post_id": post_id})
+    
+    return {"message": "Post deleted successfully"}

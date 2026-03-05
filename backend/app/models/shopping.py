@@ -6,6 +6,7 @@ class ShoppingListItemCreate(BaseModel):
     quantity: float
     unit_id: str
     price: Optional[float] = None
+    estimated_price: Optional[float] = None
     purchased: bool = False
 
 class ShoppingListCreate(BaseModel):

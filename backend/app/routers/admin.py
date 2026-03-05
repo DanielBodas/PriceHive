@@ -19,6 +19,51 @@ def map_id(doc):
         doc["id"] = str(doc["_id"])
     return doc
 
+async def _sync_product_units_to_sellable_product(sellable_product_id: str, product_id: str):
+    product_units = await db.product_units.find({"product_id": product_id}).to_list(1000)
+    for pu in product_units:
+        unit_id = pu.get("unit_id")
+        if not unit_id:
+            continue
+        existing_spu = await db.sellable_product_units.find_one({
+            "sellable_product_id": sellable_product_id,
+            "unit_id": unit_id
+        })
+        if not existing_spu:
+            await db.sellable_product_units.insert_one({
+                "id": str(uuid.uuid4()),
+                "sellable_product_id": sellable_product_id,
+                "unit_id": unit_id
+            })
+
+async def _sync_product_unit_to_all_sellables(product_id: str, unit_id: str):
+    sellable_products = await db.sellable_products.find({"product_id": product_id}).to_list(1000)
+    for sp in sellable_products:
+        sellable_product_id = sp.get("id") or str(sp.get("_id"))
+        if not sellable_product_id:
+            continue
+        existing_spu = await db.sellable_product_units.find_one({
+            "sellable_product_id": sellable_product_id,
+            "unit_id": unit_id
+        })
+        if not existing_spu:
+            await db.sellable_product_units.insert_one({
+                "id": str(uuid.uuid4()),
+                "sellable_product_id": sellable_product_id,
+                "unit_id": unit_id
+            })
+
+async def _remove_product_unit_from_sellables(product_id: str, unit_id: str):
+    sellable_products = await db.sellable_products.find({"product_id": product_id}).to_list(1000)
+    sellable_ids = [sp.get("id") or str(sp.get("_id")) for sp in sellable_products]
+    sellable_ids = [sid for sid in sellable_ids if sid]
+    if not sellable_ids:
+        return
+    await db.sellable_product_units.delete_many({
+        "sellable_product_id": {"$in": sellable_ids},
+        "unit_id": unit_id
+    })
+
 # Categories
 @router.post("/categories", response_model=CategoryResponse)
 async def create_category(data: CategoryCreate, user: dict = Depends(get_admin_user)):
@@ -277,7 +322,12 @@ async def create_sellable_products_bulk(data: SellableProductBulkCreate, user: d
                 "brand_id": data.brand_id
             }
             await db.sellable_products.insert_one(doc)
+            await _sync_product_units_to_sellable_product(sp_id, pid)
             results.append(pid)
+        else:
+            existing_sp_id = existing.get("id") or str(existing.get("_id"))
+            if existing_sp_id:
+                await _sync_product_units_to_sellable_product(existing_sp_id, pid)
     return {"message": f"{len(results)} productos vinculados correctamente", "product_ids": results}
 
 @router.post("/sellable-products", response_model=SellableProductResponse)
@@ -302,6 +352,7 @@ async def create_sellable_product(data: SellableProductCreate, user: dict = Depe
         warning = f"El estado de este producto en el catálogo de marca es: {catalog_entry['status']}"
 
     await db.sellable_products.insert_one(doc)
+    await _sync_product_units_to_sellable_product(sp_id, data.product_id)
 
     supermarket = await db.supermarkets.find_one({"id": data.supermarket_id}, {"_id": 0})
     product = await db.products.find_one({"id": data.product_id}, {"_id": 0})
@@ -348,16 +399,32 @@ async def delete_sellable_product(sp_id: str, user: dict = Depends(get_admin_use
         except: pass
     if result.deleted_count == 0:
         raise HTTPException(status_code=404, detail="Sellable product not found")
+    await db.sellable_product_units.delete_many({"sellable_product_id": sp_id})
     return {"message": "Sellable product deleted"}
 
 # Product Units
 @router.post("/product-units", response_model=ProductUnitResponse)
 async def create_product_unit(data: ProductUnitCreate, user: dict = Depends(get_admin_user)):
+    existing = await db.product_units.find_one({"product_id": data.product_id, "unit_id": data.unit_id})
+    if existing:
+        unit = await db.units.find_one({"id": data.unit_id}, {"_id": 0})
+        return ProductUnitResponse(**map_id(existing), unit_name=unit["name"] if unit else None)
+
     pu_id = str(uuid.uuid4())
     doc = {"id": pu_id, "product_id": data.product_id, "unit_id": data.unit_id}
     await db.product_units.insert_one(doc)
+    await _sync_product_unit_to_all_sellables(data.product_id, data.unit_id)
     unit = await db.units.find_one({"id": data.unit_id}, {"_id": 0})
     return ProductUnitResponse(**map_id(doc), unit_name=unit["name"] if unit else None)
+
+@router.get("/product-units", response_model=List[ProductUnitResponse])
+async def get_all_product_units(product_id: Optional[str] = None, user: dict = Depends(get_current_user)):
+    query = {}
+    if product_id:
+        query["product_id"] = product_id
+    items = await db.product_units.find(query).to_list(10000)
+    units = {u.get("id") or str(u.get("_id")): u["name"] for u in await db.units.find({}).to_list(1000)}
+    return [ProductUnitResponse(**map_id(item), unit_name=units.get(item.get("unit_id"))) for item in items]
 
 @router.get("/product-units/{product_id}", response_model=List[ProductUnitResponse])
 async def get_product_units(product_id: str, user: dict = Depends(get_current_user)):
@@ -365,14 +432,80 @@ async def get_product_units(product_id: str, user: dict = Depends(get_current_us
     units = {u.get("id") or str(u.get("_id")): u["name"] for u in await db.units.find({}).to_list(1000)}
     return [ProductUnitResponse(**map_id(item), unit_name=units.get(item.get("unit_id"))) for item in items]
 
+@router.delete("/product-units/{pu_id}")
+async def delete_product_unit(pu_id: str, user: dict = Depends(get_admin_user)):
+    item = await db.product_units.find_one({"id": pu_id})
+    if not item:
+        try:
+            from bson import ObjectId
+            item = await db.product_units.find_one({"_id": ObjectId(pu_id)})
+        except:
+            item = None
+    if not item:
+        raise HTTPException(status_code=404, detail="Product unit not found")
+
+    result = await db.product_units.delete_one({"_id": item["_id"]})
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Product unit not found")
+
+    product_id = item.get("product_id")
+    unit_id = item.get("unit_id")
+    if product_id and unit_id:
+        await _remove_product_unit_from_sellables(product_id, unit_id)
+
+    return {"message": "Product unit deleted"}
+
+@router.post("/product-units/rebuild")
+async def rebuild_product_unit_relationships(user: dict = Depends(get_admin_user)):
+    product_units = await db.product_units.find({}).to_list(20000)
+    processed = 0
+    for pu in product_units:
+        product_id = pu.get("product_id")
+        unit_id = pu.get("unit_id")
+        if not product_id or not unit_id:
+            continue
+        await _sync_product_unit_to_all_sellables(product_id, unit_id)
+        processed += 1
+
+    return {"message": "Relaciones reconstruidas", "product_unit_links_processed": processed}
+
 # Sellable Product Units
 @router.post("/sellable-product-units", response_model=SellableProductUnitResponse)
 async def create_sellable_product_unit(data: SellableProductUnitCreate, user: dict = Depends(get_admin_user)):
+    existing = await db.sellable_product_units.find_one({
+        "sellable_product_id": data.sellable_product_id,
+        "unit_id": data.unit_id
+    })
+    if existing:
+        unit = await db.units.find_one({"id": data.unit_id}, {"_id": 0})
+        return SellableProductUnitResponse(**map_id(existing), unit_name=unit["name"] if unit else None)
+
     spu_id = str(uuid.uuid4())
     doc = {"id": spu_id, "sellable_product_id": data.sellable_product_id, "unit_id": data.unit_id}
     await db.sellable_product_units.insert_one(doc)
     unit = await db.units.find_one({"id": data.unit_id}, {"_id": 0})
     return SellableProductUnitResponse(**map_id(doc), unit_name=unit["name"] if unit else None)
+
+@router.get("/sellable-product-units", response_model=List[SellableProductUnitResponse])
+async def get_all_sellable_product_units(
+    sellable_product_id: Optional[str] = None,
+    product_id: Optional[str] = None,
+    user: dict = Depends(get_current_user)
+):
+    query = {}
+    if sellable_product_id:
+        query["sellable_product_id"] = sellable_product_id
+    elif product_id:
+        sps = await db.sellable_products.find({"product_id": product_id}).to_list(1000)
+        sp_ids = [(sp.get("id") or str(sp.get("_id"))) for sp in sps]
+        sp_ids = [sid for sid in sp_ids if sid]
+        if not sp_ids:
+            return []
+        query["sellable_product_id"] = {"$in": sp_ids}
+
+    items = await db.sellable_product_units.find(query).to_list(10000)
+    units = {u.get("id") or str(u.get("_id")): u["name"] for u in await db.units.find({}).to_list(1000)}
+    return [SellableProductUnitResponse(**map_id(item), unit_name=units.get(item.get("unit_id"))) for item in items]
 
 @router.get("/sellable-product-units/{sp_id}", response_model=List[SellableProductUnitResponse])
 async def get_sellable_product_units(sp_id: str, user: dict = Depends(get_current_user)):

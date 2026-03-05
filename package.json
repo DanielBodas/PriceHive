@@ -1,0 +1,15 @@
+{
+    "name": "pricehive-root",
+    "version": "1.0.0",
+    "description": "PriceHive Monorepo",
+    "private": true,
+    "scripts": {
+        "predev": "npx --yes kill-port 3000 10000",
+        "dev:backend": "cd backend && \".venv\\Scripts\\uvicorn.exe\" app.main:app --reload --port 10000",
+        "dev:frontend": "cd frontend && npm start",
+        "dev": "concurrently -k -c \"green.bold,blue.bold\" -p \"[{name}]\" -n \"backend,frontend\" \"npm run dev:backend\" \"npm run dev:frontend\""
+    },
+    "devDependencies": {
+        "concurrently": "^8.2.2"
+    }
+}

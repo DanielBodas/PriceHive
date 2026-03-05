@@ -4,7 +4,7 @@ from typing import List
 import uuid
 from datetime import datetime, timezone
 from ..core.database import db
-from ..core.auth import get_current_user, add_points, create_notification
+from ..core.auth import get_current_user, add_points, add_credits, create_notification
 from ..models.price import PriceCreate, PriceResponse
 
 router = APIRouter(prefix="/prices", tags=["prices"])
@@ -47,6 +47,7 @@ async def create_price(data: PriceCreate, user: dict = Depends(get_current_user)
     brand = await db.brands.find_one({"id": sp["brand_id"]}, {"_id": 0}) if sp else None
 
     await add_points(user["id"], 10, f"Precio registrado")
+    await add_credits(user["id"], 10, f"Precio registrado")
 
     if previous_price and sp:
         price_change = data.price - previous_price["price"]
