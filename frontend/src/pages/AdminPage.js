@@ -31,6 +31,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const AdminPage = () => {
     const [categories, setCategories] = useState([]);
+    const [attributes, setAttributes] = useState([]);
     const [brands, setBrands] = useState([]);
     const [supermarkets, setSupermarkets] = useState([]);
     const [units, setUnits] = useState([]);
@@ -41,6 +42,7 @@ const AdminPage = () => {
 
     // Dialog states
     const [categoryDialog, setCategoryDialog] = useState(false);
+    const [attributeDialog, setAttributeDialog] = useState(false);
     const [brandDialog, setBrandDialog] = useState(false);
     const [supermarketDialog, setSupermarketDialog] = useState(false);
     const [unitDialog, setUnitDialog] = useState(false);
@@ -53,17 +55,20 @@ const AdminPage = () => {
 
     // Form states
     const [categoryForm, setCategoryForm] = useState({ name: "", description: "" });
+    const [attributeForm, setAttributeForm] = useState({ name: "", description: "" });
     const [brandForm, setBrandForm] = useState({ name: "", logo_url: "" });
     const [supermarketForm, setSupermarketForm] = useState({ name: "", logo_url: "" });
     const [unitForm, setUnitForm] = useState({ name: "", abbreviation: "" });
     const [productForm, setProductForm] = useState({
-        name: "", brand_id: "", category_id: "", unit_id: "", barcode: "", image_url: ""
+        name: "", brand_id: "", category_id: "", unit_id: "", barcode: "", image_url: "",
+        is_base: false, allowed_attribute_ids: [], base_product_id: "", attribute_values: {}
     });
     const [sellableForm, setSellableForm] = useState({ supermarket_id: "", brand_id: "", product_ids: [] });
     const [catalogForm, setCatalogForm] = useState({ brand_id: "", product_ids: [], status: "active" });
     const [productSearch, setProductSearch] = useState("");
     const [productTableSearch, setProductTableSearch] = useState("");
     const [categoryTableSearch, setCategoryTableSearch] = useState("");
+    const [attributeTableSearch, setAttributeTableSearch] = useState("");
     const [brandTableSearch, setBrandTableSearch] = useState("");
     const [supermarketTableSearch, setSupermarketTableSearch] = useState("");
     const [unitTableSearch, setUnitTableSearch] = useState("");
@@ -107,8 +112,9 @@ const AdminPage = () => {
 
     const fetchAllData = async () => {
         try {
-            const [catsRes, brandsRes, smsRes, unitsRes, prodsRes, sellableRes, catalogRes, productUnitsRes] = await Promise.all([
+            const [catsRes, attrsRes, brandsRes, smsRes, unitsRes, prodsRes, sellableRes, catalogRes, productUnitsRes] = await Promise.all([
                 axios.get(`${API}/admin/categories`),
+                axios.get(`${API}/admin/attributes`),
                 axios.get(`${API}/admin/brands`),
                 axios.get(`${API}/admin/supermarkets`),
                 axios.get(`${API}/admin/units`),
@@ -118,6 +124,7 @@ const AdminPage = () => {
                 axios.get(`${API}/admin/product-units`)
             ]);
             setCategories(catsRes.data);
+            setAttributes(attrsRes.data);
             setBrands(brandsRes.data);
             setSupermarkets(smsRes.data);
             setUnits(unitsRes.data);
@@ -149,6 +156,14 @@ const AdminPage = () => {
         return (
             (c.name || "").toLowerCase().includes(q) ||
             (c.description || "").toLowerCase().includes(q)
+        );
+    });
+    const filteredAttributesTable = attributes.filter((a) => {
+        const q = (attributeTableSearch || "").toLowerCase().trim();
+        if (!q) return true;
+        return (
+            (a.name || "").toLowerCase().includes(q) ||
+            (a.description || "").toLowerCase().includes(q)
         );
     });
     const filteredProductsTable = getFilteredProducts(productTableSearch);
@@ -455,6 +470,20 @@ const AdminPage = () => {
         try { await axios.delete(`${API}/admin/categories/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
+    const handleSaveAttribute = async () => {
+        try {
+            if (editingItem) await axios.put(`${API}/admin/attributes/${editingItem.id}`, attributeForm);
+            else await axios.post(`${API}/admin/attributes`, attributeForm);
+            fetchAllData(); setAttributeDialog(false); setAttributeForm({ name: "", description: "" }); setEditingItem(null);
+            toast.success("Atributo guardado");
+        } catch (error) { toast.error("Error al guardar"); }
+    };
+
+    const handleDeleteAttribute = async (id) => {
+        if (!window.confirm("¿Eliminar?")) return;
+        try { await axios.delete(`${API}/admin/attributes/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
+    };
+
     const handleSaveBrand = async () => {
         try {
             if (editingItem) await axios.put(`${API}/admin/brands/${editingItem.id}`, brandForm);
@@ -504,7 +533,11 @@ const AdminPage = () => {
                 brand_id: productForm.brand_id || null,
                 unit_id: productForm.unit_id || null,
                 barcode: productForm.barcode || null,
-                image_url: productForm.image_url || null
+                image_url: productForm.image_url || null,
+                base_product_id: productForm.base_product_id || null,
+                is_base: !!productForm.is_base,
+                allowed_attribute_ids: productForm.allowed_attribute_ids || [],
+                attribute_values: productForm.attribute_values || {}
             };
             if (editingItem) await axios.put(`${API}/admin/products/${editingItem.id}`, payload);
             else await axios.post(`${API}/admin/products`, payload);
@@ -689,6 +722,7 @@ const AdminPage = () => {
                         <Tabs defaultValue="categories">
                             <TabsList className="bg-slate-50 border p-1 mb-4 flex-wrap h-auto">
                                 <TabsTrigger value="categories" className="gap-2" data-testid="tab-categories"><Layers className="w-4 h-4" /> Categorias</TabsTrigger>
+                                <TabsTrigger value="attributes" className="gap-2" data-testid="tab-attributes"><Tag className="w-4 h-4" /> Atributos</TabsTrigger>
                                 <TabsTrigger value="products" className="gap-2" data-testid="tab-products"><Package className="w-4 h-4" /> Productos</TabsTrigger>
                                 <TabsTrigger value="brands" className="gap-2" data-testid="tab-brands"><Tag className="w-4 h-4" /> Marcas</TabsTrigger>
                                 <TabsTrigger value="supermarkets" className="gap-2" data-testid="tab-supermarkets"><Store className="w-4 h-4" /> Supermercados</TabsTrigger>
@@ -713,15 +747,63 @@ const AdminPage = () => {
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Categoria</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Categoria</TableHead><TableHead>Tipo/Info</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {filteredProductsTable.map(p => (
                                                     <TableRow key={p.id}>
-                                                        <TableCell className="font-medium">{p.name}</TableCell>
+                                                        <TableCell className="font-medium">
+                                                            {p.name}
+                                                            {p.attribute_values && Object.entries(p.attribute_values).length > 0 && (
+                                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                                    {Object.entries(p.attribute_values).map(([attrId, val]) => {
+                                                                        const attr = attributes.find(a => a.id === attrId);
+                                                                        return <Badge key={attrId} variant="outline" className="text-[10px]">{attr?.name}: {val}</Badge>
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
                                                         <TableCell>{p.category_name}</TableCell>
+                                                        <TableCell>
+                                                            {p.is_base ? <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200">Producto Base</Badge> : (p.base_product_name ? <Badge variant="outline">Variante de {p.base_product_name}</Badge> : "-")}
+                                                        </TableCell>
                                                         <TableCell className="flex justify-end gap-1 pr-4">
-                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(p); setProductForm(p); setProductDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(p); setProductForm({ ...p, attribute_values: p.attribute_values || {} }); setProductDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(p.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="attributes">
+                                <Card>
+                                    <CardHeader className="space-y-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <CardTitle className="text-lg">Atributos de Producto</CardTitle>
+                                                <p className="text-sm text-slate-500 mt-1">{filteredAttributesTable.length} registros</p>
+                                            </div>
+                                            <Button onClick={() => { setEditingItem(null); setAttributeForm({ name: "", description: "" }); setAttributeDialog(true); }} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Nuevo Atributo</Button>
+                                        </div>
+                                        <div className="relative">
+                                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <Input value={attributeTableSearch} onChange={(e) => setAttributeTableSearch(e.target.value)} placeholder="Buscar atributo" className="pl-9" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        <Table>
+                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Descripción</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {filteredAttributesTable.map(a => (
+                                                    <TableRow key={a.id}>
+                                                        <TableCell className="font-medium">{a.name}</TableCell>
+                                                        <TableCell>{a.description}</TableCell>
+                                                        <TableCell className="flex justify-end gap-1 pr-4">
+                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(a); setAttributeForm(a); setAttributeDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteAttribute(a.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
@@ -1105,7 +1187,7 @@ const AdminPage = () => {
 
             {/* Diálogos */}
             <Dialog open={productDialog} onOpenChange={setProductDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Producto</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <div className="space-y-2">
@@ -1119,7 +1201,97 @@ const AdminPage = () => {
                                 <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
+
+                        <div className="flex items-center space-x-2 pt-2">
+                            <Checkbox
+                                id="is_base"
+                                checked={productForm.is_base}
+                                onCheckedChange={(checked) => setProductForm({ ...productForm, is_base: checked === true })}
+                            />
+                            <Label htmlFor="is_base" className="cursor-pointer">¿Es un Producto Base? (Tendrá variantes)</Label>
+                        </div>
+
+                        {productForm.is_base && (
+                            <div className="space-y-2 border p-3 rounded-md bg-slate-50">
+                                <Label>Atributos Permitidos para Variantes</Label>
+                                <div className="grid grid-cols-2 gap-2 mt-2">
+                                    {attributes.map(attr => (
+                                        <div key={attr.id} className="flex items-center space-x-2">
+                                            <Checkbox
+                                                id={`attr-${attr.id}`}
+                                                checked={productForm.allowed_attribute_ids?.includes(attr.id)}
+                                                onCheckedChange={(checked) => {
+                                                    const current = productForm.allowed_attribute_ids || [];
+                                                    if (checked) setProductForm({ ...productForm, allowed_attribute_ids: [...current, attr.id] });
+                                                    else setProductForm({ ...productForm, allowed_attribute_ids: current.filter(id => id !== attr.id) });
+                                                }}
+                                            />
+                                            <Label htmlFor={`attr-${attr.id}`} className="text-xs cursor-pointer">{attr.name}</Label>
+                                        </div>
+                                    ))}
+                                </div>
+                            </div>
+                        )}
+
+                        {!productForm.is_base && (
+                            <div className="space-y-4 border p-3 rounded-md bg-slate-50">
+                                <div className="space-y-2">
+                                    <Label>Producto Base (Opcional)</Label>
+                                    <Select value={productForm.base_product_id} onValueChange={v => {
+                                        const base = products.find(p => p.id === v);
+                                        setProductForm({ ...productForm, base_product_id: v, attribute_values: {} });
+                                    }}>
+                                        <SelectTrigger><SelectValue placeholder="Ninguno (Producto Independiente)" /></SelectTrigger>
+                                        <SelectContent>
+                                            <SelectItem value="">Ninguno</SelectItem>
+                                            {products.filter(p => p.is_base).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+
+                                {productForm.base_product_id && (
+                                    <div className="space-y-3">
+                                        <Label className="text-sm font-semibold">Valores de Atributos</Label>
+                                        {products.find(p => p.id === productForm.base_product_id)?.allowed_attribute_ids?.map(attrId => {
+                                            const attr = attributes.find(a => a.id === attrId);
+                                            return (
+                                                <div key={attrId} className="space-y-1">
+                                                    <Label className="text-xs">{attr?.name}</Label>
+                                                    <Input
+                                                        size="sm"
+                                                        value={productForm.attribute_values?.[attrId] || ""}
+                                                        onChange={e => setProductForm({
+                                                            ...productForm,
+                                                            attribute_values: { ...productForm.attribute_values, [attrId]: e.target.value }
+                                                        })}
+                                                        placeholder={`Valor de ${attr?.name}`}
+                                                    />
+                                                </div>
+                                            );
+                                        })}
+                                    </div>
+                                )}
+                            </div>
+                        )}
+
                         <Button onClick={handleSaveProduct} className="w-full bg-emerald-500" data-testid="save-product-btn">Guardar Producto</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={attributeDialog} onOpenChange={setAttributeDialog}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Atributo</DialogTitle></DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                            <Label>Nombre</Label>
+                            <Input value={attributeForm.name} onChange={e => setAttributeForm({ ...attributeForm, name: e.target.value })} placeholder="Ej: Sabor, Grasa, Formato..." />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Descripción</Label>
+                            <Input value={attributeForm.description} onChange={e => setAttributeForm({ ...attributeForm, description: e.target.value })} placeholder="Descripción opcional" />
+                        </div>
+                        <Button onClick={handleSaveAttribute} className="w-full bg-emerald-500">Guardar Atributo</Button>
                     </div>
                 </DialogContent>
             </Dialog>

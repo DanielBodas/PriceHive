@@ -1,5 +1,14 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
+
+class AttributeCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+
+class AttributeResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
 
 class CategoryCreate(BaseModel):
     name: str
@@ -44,6 +53,10 @@ class ProductCreate(BaseModel):
     unit_id: Optional[str] = None
     barcode: Optional[str] = None
     image_url: Optional[str] = None
+    is_base: bool = False
+    allowed_attribute_ids: List[str] = []
+    base_product_id: Optional[str] = None
+    attribute_values: Optional[Dict[str, str]] = None
 
 class ProductResponse(BaseModel):
     id: str
@@ -57,6 +70,11 @@ class ProductResponse(BaseModel):
     barcode: Optional[str] = None
     image_url: Optional[str] = None
     latest_price: Optional[float] = None
+    is_base: bool = False
+    allowed_attribute_ids: List[str] = []
+    base_product_id: Optional[str] = None
+    base_product_name: Optional[str] = None
+    attribute_values: Optional[Dict[str, str]] = None
 
 # Operational Models
 class SellableProductCreate(BaseModel):
