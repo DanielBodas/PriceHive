@@ -183,7 +183,7 @@ async def delete_supermarket(sm_id: str, user: dict = Depends(get_admin_user)):
 @router.post("/attributes", response_model=AttributeResponse)
 async def create_attribute(data: AttributeCreate, user: dict = Depends(get_admin_user)):
     attr_id = str(uuid.uuid4())
-    doc = {"id": attr_id, "name": data.name, "description": data.description}
+    doc = {"id": attr_id, "name": data.name, "description": data.description, "values": data.values}
     await db.attributes.insert_one(doc)
     return AttributeResponse(**doc)
 
@@ -194,15 +194,16 @@ async def get_attributes(user: dict = Depends(get_current_user)):
 
 @router.put("/attributes/{attr_id}", response_model=AttributeResponse)
 async def update_attribute(attr_id: str, data: AttributeCreate, user: dict = Depends(get_admin_user)):
-    result = await db.attributes.update_one({"id": attr_id}, {"$set": {"name": data.name, "description": data.description}})
+    update_data = {"name": data.name, "description": data.description, "values": data.values}
+    result = await db.attributes.update_one({"id": attr_id}, {"$set": update_data})
     if result.matched_count == 0:
         try:
             from bson import ObjectId
-            result = await db.attributes.update_one({"_id": ObjectId(attr_id)}, {"$set": {"name": data.name, "description": data.description}})
+            result = await db.attributes.update_one({"_id": ObjectId(attr_id)}, {"$set": update_data})
         except: pass
     if result.matched_count == 0:
         raise HTTPException(status_code=404, detail="Attribute not found")
-    return AttributeResponse(id=attr_id, name=data.name, description=data.description)
+    return AttributeResponse(id=attr_id, **update_data)
 
 @router.delete("/attributes/{attr_id}")
 async def delete_attribute(attr_id: str, user: dict = Depends(get_admin_user)):

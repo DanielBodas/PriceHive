@@ -55,7 +55,8 @@ const AdminPage = () => {
 
     // Form states
     const [categoryForm, setCategoryForm] = useState({ name: "", description: "" });
-    const [attributeForm, setAttributeForm] = useState({ name: "", description: "" });
+    const [attributeForm, setAttributeForm] = useState({ name: "", description: "", values: [] });
+    const [newAttributeValue, setNewAttributeValue] = useState("");
     const [brandForm, setBrandForm] = useState({ name: "", logo_url: "" });
     const [supermarketForm, setSupermarketForm] = useState({ name: "", logo_url: "" });
     const [unitForm, setUnitForm] = useState({ name: "", abbreviation: "" });
@@ -474,7 +475,7 @@ const AdminPage = () => {
         try {
             if (editingItem) await axios.put(`${API}/admin/attributes/${editingItem.id}`, attributeForm);
             else await axios.post(`${API}/admin/attributes`, attributeForm);
-            fetchAllData(); setAttributeDialog(false); setAttributeForm({ name: "", description: "" }); setEditingItem(null);
+            fetchAllData(); setAttributeDialog(false); setAttributeForm({ name: "", description: "", values: [] }); setEditingItem(null);
             toast.success("Atributo guardado");
         } catch (error) { toast.error("Error al guardar"); }
     };
@@ -795,14 +796,19 @@ const AdminPage = () => {
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Descripción</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Descripción</TableHead><TableHead>Valores</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {filteredAttributesTable.map(a => (
                                                     <TableRow key={a.id}>
                                                         <TableCell className="font-medium">{a.name}</TableCell>
                                                         <TableCell>{a.description}</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {a.values?.map((v, i) => <Badge key={i} variant="secondary" className="text-[10px]">{v}</Badge>)}
+                                                            </div>
+                                                        </TableCell>
                                                         <TableCell className="flex justify-end gap-1 pr-4">
-                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(a); setAttributeForm(a); setAttributeDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(a); setAttributeForm({ ...a, values: a.values || [] }); setAttributeDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteAttribute(a.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
                                                     </TableRow>
@@ -1237,13 +1243,13 @@ const AdminPage = () => {
                             <div className="space-y-4 border p-3 rounded-md bg-slate-50">
                                 <div className="space-y-2">
                                     <Label>Producto Base (Opcional)</Label>
-                                    <Select value={productForm.base_product_id} onValueChange={v => {
-                                        const base = products.find(p => p.id === v);
-                                        setProductForm({ ...productForm, base_product_id: v, attribute_values: {} });
+                                    <Select value={productForm.base_product_id || "none"} onValueChange={v => {
+                                        const baseProductId = v === "none" ? "" : v;
+                                        setProductForm({ ...productForm, base_product_id: baseProductId, attribute_values: {} });
                                     }}>
                                         <SelectTrigger><SelectValue placeholder="Ninguno (Producto Independiente)" /></SelectTrigger>
                                         <SelectContent>
-                                            <SelectItem value="">Ninguno</SelectItem>
+                                            <SelectItem value="none">Ninguno</SelectItem>
                                             {products.filter(p => p.is_base).map(p => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}
                                         </SelectContent>
                                     </Select>
@@ -1257,15 +1263,31 @@ const AdminPage = () => {
                                             return (
                                                 <div key={attrId} className="space-y-1">
                                                     <Label className="text-xs">{attr?.name}</Label>
-                                                    <Input
-                                                        size="sm"
-                                                        value={productForm.attribute_values?.[attrId] || ""}
-                                                        onChange={e => setProductForm({
-                                                            ...productForm,
-                                                            attribute_values: { ...productForm.attribute_values, [attrId]: e.target.value }
-                                                        })}
-                                                        placeholder={`Valor de ${attr?.name}`}
-                                                    />
+                                                    {attr?.values && attr.values.length > 0 ? (
+                                                        <Select
+                                                            value={productForm.attribute_values?.[attrId] || "none"}
+                                                            onValueChange={v => setProductForm({
+                                                                ...productForm,
+                                                                attribute_values: { ...productForm.attribute_values, [attrId]: v === "none" ? "" : v }
+                                                            })}
+                                                        >
+                                                            <SelectTrigger size="sm"><SelectValue placeholder={`Seleccionar ${attr.name}`} /></SelectTrigger>
+                                                            <SelectContent>
+                                                                <SelectItem value="none">Seleccionar...</SelectItem>
+                                                                {attr.values.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                                            </SelectContent>
+                                                        </Select>
+                                                    ) : (
+                                                        <Input
+                                                            size="sm"
+                                                            value={productForm.attribute_values?.[attrId] || ""}
+                                                            onChange={e => setProductForm({
+                                                                ...productForm,
+                                                                attribute_values: { ...productForm.attribute_values, [attrId]: e.target.value }
+                                                            })}
+                                                            placeholder={`Valor de ${attr?.name}`}
+                                                        />
+                                                    )}
                                                 </div>
                                             );
                                         })}
@@ -1280,7 +1302,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={attributeDialog} onOpenChange={setAttributeDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Atributo</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <div className="space-y-2">
@@ -1291,6 +1313,49 @@ const AdminPage = () => {
                             <Label>Descripción</Label>
                             <Input value={attributeForm.description} onChange={e => setAttributeForm({ ...attributeForm, description: e.target.value })} placeholder="Descripción opcional" />
                         </div>
+
+                        <div className="space-y-3 pt-2">
+                            <Label>Valores Posibles</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    value={newAttributeValue}
+                                    onChange={e => setNewAttributeValue(e.target.value)}
+                                    placeholder="Nuevo valor..."
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            if (newAttributeValue.trim()) {
+                                                setAttributeForm({ ...attributeForm, values: [...(attributeForm.values || []), newAttributeValue.trim()] });
+                                                setNewAttributeValue("");
+                                            }
+                                        }
+                                    }}
+                                />
+                                <Button size="sm" type="button" onClick={() => {
+                                    if (newAttributeValue.trim()) {
+                                        setAttributeForm({ ...attributeForm, values: [...(attributeForm.values || []), newAttributeValue.trim()] });
+                                        setNewAttributeValue("");
+                                    }
+                                }}><Plus className="w-4 h-4" /></Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2 min-h-10 p-2 border rounded bg-slate-50">
+                                {attributeForm.values?.map((v, i) => (
+                                    <Badge key={i} className="gap-1 pr-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                                        {v}
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-4 w-4 rounded-full hover:bg-emerald-200"
+                                            onClick={() => setAttributeForm({ ...attributeForm, values: attributeForm.values.filter((_, idx) => idx !== i) })}
+                                        >
+                                            <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                    </Badge>
+                                ))}
+                                {(!attributeForm.values || attributeForm.values.length === 0) && <span className="text-xs text-slate-400 italic">Sin valores definidos</span>}
+                            </div>
+                        </div>
+
                         <Button onClick={handleSaveAttribute} className="w-full bg-emerald-500">Guardar Atributo</Button>
                     </div>
                 </DialogContent>

@@ -4,11 +4,13 @@ from typing import Optional, List, Dict
 class AttributeCreate(BaseModel):
     name: str
     description: Optional[str] = None
+    values: List[str] = []
 
 class AttributeResponse(BaseModel):
     id: str
     name: str
     description: Optional[str] = None
+    values: List[str] = []
 
 class CategoryCreate(BaseModel):
     name: str

@@ -11,6 +11,7 @@ Generic attributes that can be associated with products.
 - `id`: UUID
 - `name`: String (e.g., "Sabor", "Grasa")
 - `description`: String (Optional)
+- `values`: List of Strings. Predefined options for variants (e.g., ["Fresa", "Limón", "Natural"]).
 
 ### Product Model Updates
 The `Product` collection now supports hierarchical relationships and dynamic attributes.
@@ -81,10 +82,10 @@ erDiagram
 - **Search**: The `get_products` endpoint automatically resolves `base_product_name` for variants to facilitate UI display.
 
 ## 5. UI/UX Design
-- **Management**: A new "Atributos" tab in the Admin Panel allows creating generic attributes.
+- **Management**: A new "Atributos" tab in the Admin Panel allows creating generic attributes and defining their possible values.
 - **Product Creation**:
     - Users can toggle "¿Es un Producto Base?".
     - For Base Products, a list of checkboxes allows selecting which attributes variants can have.
     - For regular products, a "Producto Base" dropdown allows linking it as a variant.
-    - When a base is selected, dynamic input fields appear for each allowed attribute.
+    - When a base is selected, dynamic fields appear for each allowed attribute. If the attribute has predefined values, a dropdown is shown; otherwise, a free-text input is provided.
 - **Visual Feedback**: Variants display their attribute values as badges in the product table.
