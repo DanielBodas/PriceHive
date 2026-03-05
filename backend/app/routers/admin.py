@@ -307,16 +307,19 @@ async def get_products(user: dict = Depends(get_current_user)):
         category_id = p.get("category_id") or (base_p.get("category_id") if base_p else None)
         unit_id = p.get("unit_id") or (base_p.get("unit_id") if base_p else None)
 
-        result.append(ProductResponse(
+        # Build response data, overriding specific fields in p
+        resp_data = {
             **p,
-            brand_id=brand_id,
-            brand_name=brands.get(brand_id),
-            category_id=category_id or "",
-            category_name=categories.get(category_id),
-            unit_id=unit_id,
-            unit_name=units.get(unit_id),
-            base_product_name=base_p.get("name") if base_p else None
-        ))
+            "brand_id": brand_id,
+            "brand_name": brands.get(brand_id),
+            "category_id": category_id or "",
+            "category_name": categories.get(category_id),
+            "unit_id": unit_id,
+            "unit_name": units.get(unit_id),
+            "base_product_name": base_p.get("name") if base_p else None
+        }
+
+        result.append(ProductResponse(**resp_data))
     return result
 
 @router.put("/products/{prod_id}", response_model=ProductResponse)
