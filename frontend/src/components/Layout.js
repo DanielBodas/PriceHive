@@ -38,7 +38,6 @@ const Layout = ({ children }) => {
     const { user, logout } = useAuth();
     const location = useLocation();
     const navigate = useNavigate();
-    const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
 
     const baseNavItems = [
@@ -151,27 +150,27 @@ const Layout = ({ children }) => {
                                 </span>
                             </div>
 
-                            {/* User Dropdown (Desktop Only) */}
+                            {/* User Dropdown */}
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild className="hidden md:flex">
+                                <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="sm" className="flex items-center gap-1.5 lg:gap-2 px-1.5 lg:px-2">
                                         <Avatar className="w-7 h-7 lg:w-8 lg:h-8">
                                             <AvatarImage src={user?.picture} />
-                                            <AvatarFallback className="bg-emerald-100 text-emerald-600 text-xs lg:text-sm">
+                                            <AvatarFallback className="bg-emerald-100 text-emerald-600 text-xs lg:text-sm font-bold">
                                                 {user?.name?.charAt(0).toUpperCase()}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <span className="hidden xl:block text-sm font-medium text-slate-700 max-w-[120px] truncate">
+                                        <span className="hidden sm:block text-sm font-bold text-slate-700 max-w-[120px] truncate">
                                             {user?.name}
                                         </span>
                                         {user?.role === 'admin' && (
-                                            <span className="hidden xl:inline px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+                                            <span className="hidden xl:inline px-2 py-0.5 bg-emerald-100 text-emerald-700 text-[10px] font-bold uppercase rounded-full tracking-wider">
                                                 Admin
                                             </span>
                                         )}
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48 hidden md:block">
+                                <DropdownMenuContent align="end" className="w-56">
                                     <div className="px-2 py-1.5 text-sm">
                                         <p className="font-medium text-slate-900">{user?.name}</p>
                                         <p className="text-xs text-slate-500 truncate">{user?.email}</p>
@@ -204,136 +203,9 @@ const Layout = ({ children }) => {
                                 </DropdownMenuContent>
                             </DropdownMenu>
 
-                            {/* Mobile menu button */}
-                            <Button
-                                variant="ghost"
-                                size="icon"
-                                className="md:hidden h-9 w-9"
-                                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-                                data-testid="mobile-menu-btn"
-                            >
-                                {mobileMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-                            </Button>
                         </div>
                     </div>
                 </div>
-
-                {/* Mobile Navigation Menu (Drawer style) */}
-                {mobileMenuOpen && (
-                    <div className="md:hidden border-t border-slate-200 bg-white shadow-lg animate-in slide-in-from-top duration-200">
-                        <div className="px-4 py-4 space-y-2 max-h-[calc(100vh-4rem)] overflow-y-auto">
-                            {/* User info en móvil */}
-                            <div className="flex items-center gap-3 px-4 py-4 bg-emerald-50 rounded-xl mb-2">
-                                <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
-                                    <AvatarImage src={user?.picture} />
-                                    <AvatarFallback className="bg-emerald-100 text-emerald-600 font-bold">
-                                        {user?.name?.charAt(0).toUpperCase()}
-                                    </AvatarFallback>
-                                </Avatar>
-                                <div className="flex-1 min-w-0">
-                                    <p className="text-base font-bold text-slate-900 truncate">{user?.name}</p>
-                                    <div className="flex items-center gap-2 mt-0.5">
-                                        <Star className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
-                                        <span className="text-sm font-mono font-bold text-emerald-600">{user?.points || 0} pts</span>
-                                    </div>
-                                </div>
-                            </div>
-
-                            {/* Essential Nav Items - Restored for better accessibility */}
-                            <div className="space-y-1 mb-2">
-                                {navItems.map((item) => {
-                                    const isActive = location.pathname === item.path;
-                                    return (
-                                        <Link
-                                            key={item.path}
-                                            to={item.path}
-                                            onClick={() => setMobileMenuOpen(false)}
-                                        >
-                                            <Button
-                                                variant={isActive ? "default" : "ghost"}
-                                                className={`w-full justify-start gap-4 h-11 rounded-xl ${isActive
-                                                        ? "bg-emerald-500 text-white"
-                                                        : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
-                                                    }`}
-                                            >
-                                                {item.icon}
-                                                <span className="flex-1 text-left font-medium">{item.label}</span>
-                                            </Button>
-                                        </Link>
-                                    );
-                                })}
-                            </div>
-
-                            <div className="h-px bg-slate-100 my-2 mx-2"></div>
-
-                            <Link
-                                to="/profile"
-                                onClick={() => setMobileMenuOpen(false)}
-                            >
-                                <Button
-                                    variant={location.pathname === "/profile" ? "default" : "ghost"}
-                                    className={`w-full justify-start gap-4 h-12 rounded-xl ${location.pathname === "/profile"
-                                            ? "bg-emerald-500 text-white"
-                                            : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
-                                        }`}
-                                >
-                                    <User className="w-5 h-5" />
-                                    <span className="flex-1 text-left font-medium">Mi Perfil</span>
-                                </Button>
-                            </Link>
-
-                            <Link
-                                to="/alerts"
-                                onClick={() => setMobileMenuOpen(false)}
-                            >
-                                <Button
-                                    variant={location.pathname === "/alerts" ? "default" : "ghost"}
-                                    className={`w-full justify-start gap-4 h-12 rounded-xl ${location.pathname === "/alerts"
-                                            ? "bg-emerald-500 text-white"
-                                            : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
-                                        }`}
-                                >
-                                    <Bell className="w-5 h-5" />
-                                    <span className="flex-1 text-left font-medium">Notificaciones</span>
-                                    {unreadCount > 0 && (
-                                        <span className="w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center font-bold">
-                                            {unreadCount > 9 ? "9+" : unreadCount}
-                                        </span>
-                                    )}
-                                </Button>
-                            </Link>
-
-                            {user?.role === 'admin' && (
-                                <Link
-                                    to="/admin"
-                                    onClick={() => setMobileMenuOpen(false)}
-                                >
-                                    <Button
-                                        variant={location.pathname === "/admin" ? "default" : "ghost"}
-                                        className={`w-full justify-start gap-4 h-12 rounded-xl ${location.pathname === "/admin"
-                                                ? "bg-emerald-500 text-white"
-                                                : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
-                                            }`}
-                                    >
-                                        <Settings className="w-5 h-5" />
-                                        <span className="flex-1 text-left font-medium">Administración</span>
-                                    </Button>
-                                </Link>
-                            )}
-
-                            <div className="h-px bg-slate-100 my-2 mx-2"></div>
-
-                            <Button
-                                variant="ghost"
-                                onClick={handleLogout}
-                                className="w-full justify-start gap-4 h-12 rounded-xl text-rose-600 hover:bg-rose-50 hover:text-rose-700 mt-1"
-                            >
-                                <LogOut className="w-5 h-5" />
-                                <span className="flex-1 text-left font-medium">Cerrar Sesión</span>
-                            </Button>
-                        </div>
-                    </div>
-                )}
             </nav>
 
             {/* Bottom Navigation for Mobile */}

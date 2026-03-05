@@ -362,15 +362,14 @@ const ShoppingListPage = () => {
                         <div className={`transition-all duration-300 flex shrink-0 ${listsExpanded ? 'w-full lg:w-64' : 'w-0 lg:w-10'} ${!listsExpanded && 'hidden lg:flex'} overflow-hidden`}>
                             <div className={`${listsExpanded ? 'w-full lg:w-64' : 'w-0'} overflow-hidden transition-all duration-300`}>
                                 <div className="w-full lg:w-64 pr-0 lg:pr-3">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <h2 className="font-semibold text-slate-900 text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>Mis Listas</h2>
-                                        <button
-                                            onClick={() => setListsExpanded(false)}
-                                            className="h-7 w-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                                            title="Ocultar listas"
-                                        >
+                                    <div
+                                        className="flex items-center justify-between mb-3 cursor-pointer hover:bg-slate-50 p-1 rounded-lg transition-colors"
+                                        onClick={() => setListsExpanded(false)}
+                                    >
+                                        <h2 className="font-bold text-slate-900 text-xs uppercase tracking-widest px-1" style={{ fontFamily: 'Manrope, sans-serif' }}>Mis Listas</h2>
+                                        <div className="h-7 w-7 rounded-md flex items-center justify-center text-slate-400">
                                             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
-                                        </button>
+                                        </div>
                                     </div>
                                     {loading ? (
                                         <div className="text-slate-500 text-sm">Cargando...</div>
@@ -419,14 +418,21 @@ const ShoppingListPage = () => {
                             </div>
                         </div>
 
-                        {/* Collapse toggle tab (always visible) */}
-                        <button
-                            onClick={() => setListsExpanded(!listsExpanded)}
-                            className={`flex lg:flex items-center justify-center w-6 lg:w-5 self-stretch shrink-0 hover:bg-slate-100 transition-colors group rounded-sm ${listsExpanded ? 'border-r border-slate-200' : ''} ${!listsExpanded ? 'bg-slate-50 h-10 my-2 rounded-r-lg border border-l-0 border-slate-200 lg:h-auto lg:my-0 lg:rounded-none lg:border-0' : ''}`}
-                            title={listsExpanded ? 'Ocultar listas' : 'Mostrar listas'}
-                        >
-                            <svg className={`w-4 h-4 lg:w-3.5 lg:h-3.5 text-slate-400 lg:text-slate-300 group-hover:text-slate-500 transition-transform ${!listsExpanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
-                        </button>
+                        {/* Vertical toggle bar when collapsed */}
+                        {!listsExpanded && (
+                            <div
+                                onClick={() => setListsExpanded(true)}
+                                className="flex flex-col items-center py-4 w-10 bg-white border-r border-slate-200 cursor-pointer hover:bg-slate-50 transition-colors"
+                            >
+                                <ShoppingCart className="w-4 h-4 text-emerald-500 mb-8" />
+                                <span
+                                    className="text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] whitespace-nowrap"
+                                    style={{ writingMode: 'vertical-rl', transform: 'rotate(180deg)' }}
+                                >
+                                    Mis Listas
+                                </span>
+                            </div>
+                        )}
 
                         {/* List Detail Column */}
                         <div className="flex-1 min-w-0">
@@ -435,15 +441,6 @@ const ShoppingListPage = () => {
                                     <CardHeader className="border-b border-slate-100 pb-4">
                                         <div className="flex items-center justify-between flex-wrap gap-4">
                                             <div className="flex items-center gap-2 md:gap-3">
-                                                <Button
-                                                    variant="outline"
-                                                    size="sm"
-                                                    onClick={() => setListsExpanded(true)}
-                                                    className={`lg:hidden h-9 px-2 gap-1 text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 ${listsExpanded ? 'hidden' : 'flex'}`}
-                                                >
-                                                    <ShoppingCart className="w-4 h-4" />
-                                                    <span className="text-[10px] font-bold uppercase">Listas</span>
-                                                </Button>
                                                 <div>
                                                     <CardTitle className="text-base md:text-xl" style={{ fontFamily: 'Manrope, sans-serif' }}>{selectedList.name}</CardTitle>
                                                     <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
@@ -617,17 +614,17 @@ const ShoppingListPage = () => {
                                                             </div>
 
                                                             {/* Controls Section - All in one row for density */}
-                                                            <div className="flex items-center gap-2 md:gap-4 shrink-0">
-                                                                {/* Quantity (Desktop only unit selector part) */}
-                                                                <div className="hidden md:flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
+                                                            <div className="flex items-center gap-1.5 md:gap-4 shrink-0">
+                                                                {/* Quantity */}
+                                                                <div className="flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
                                                                     <Input
                                                                         type="number" min="0.1" step="0.1"
                                                                         value={item.quantity}
                                                                         onChange={(e) => updateLocalItem(index, { quantity: parseFloat(e.target.value) || 1 })}
                                                                         onBlur={() => saveList(selectedList.items)}
-                                                                        className="h-7 w-[45px] md:h-8 md:w-[60px] text-xs md:text-sm text-center font-bold border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
+                                                                        className="h-7 w-[40px] md:w-[60px] text-[11px] md:text-sm text-center font-bold border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
                                                                     />
-                                                                    <span className="text-[10px] md:text-xs text-slate-400 pr-2 font-bold border-l border-slate-100 pl-2 uppercase">{item.unit_name}</span>
+                                                                    <span className="text-[9px] md:text-xs text-slate-400 pr-1.5 font-bold border-l border-slate-100 pl-1.5 uppercase">{item.unit_name.substring(0, 2)}</span>
                                                                 </div>
 
                                                                 {/* Real Price Input - Thin & horizontal focused */}
@@ -637,12 +634,12 @@ const ShoppingListPage = () => {
                                                                         value={item.price || ""}
                                                                         onChange={(e) => updateLocalItem(index, { price: parseFloat(e.target.value) || null })}
                                                                         onBlur={() => saveList(selectedList.items)}
-                                                                        className={`h-8 md:h-9 w-[65px] md:w-[90px] text-right pr-4 md:pr-6 font-mono text-[11px] md:text-sm shadow-sm transition-all rounded-lg
+                                                                        className={`h-7 md:h-9 w-[55px] md:w-[90px] text-right pr-3.5 md:pr-6 font-mono text-[11px] md:text-sm shadow-sm transition-all rounded-lg
                                                                             ${item.price ? 'border-emerald-500 bg-emerald-50/50 font-bold text-emerald-800' : 'border-slate-200 bg-white placeholder:text-slate-300'}
                                                                             ${item.purchased && !item.price ? 'border-amber-300 bg-amber-50 ring-2 ring-amber-100 ring-offset-0' : ''}
                                                                             ${item.purchased && item.price ? 'bg-transparent shadow-none border-dashed' : ''}`}
                                                                     />
-                                                                    <span className="absolute right-1.5 md:right-2.5 text-[9px] md:text-xs font-bold text-slate-400">€</span>
+                                                                    <span className="absolute right-1 md:right-2.5 text-[8px] md:text-xs font-bold text-slate-400">€</span>
                                                                 </div>
 
                                                                 {/* Delete Icon */}
