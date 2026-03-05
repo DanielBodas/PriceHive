@@ -272,9 +272,9 @@ const AnalyticsPage = () => {
                 </div>
 
                 {/* Search & Filters */}
-                <Card className="border-slate-200" data-testid="search-card">
-                    <CardContent className="p-6">
-                        <div className="grid md:grid-cols-3 gap-4 mb-4">
+                <Card className="border-slate-200 shadow-sm" data-testid="search-card">
+                    <CardContent className="p-4 md:p-6">
+                        <div className="grid md:grid-cols-3 gap-3 md:gap-4 mb-4">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <Input
@@ -301,11 +301,11 @@ const AnalyticsPage = () => {
                             </div>
                         </div>
                         
-                        <div className="grid md:grid-cols-4 gap-4 items-end">
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Producto</label>
+                        <div className="grid sm:grid-cols-2 md:grid-cols-4 gap-3 md:gap-4 items-end">
+                            <div className="space-y-1.5 md:space-y-2">
+                                <label className="text-xs md:text-sm font-bold text-slate-500 uppercase tracking-wider">Producto</label>
                                 <Select value={selectedProduct} onValueChange={setSelectedProduct}>
-                                    <SelectTrigger data-testid="product-select">
+                                    <SelectTrigger data-testid="product-select" className="h-11 md:h-10">
                                         <SelectValue placeholder="Selecciona producto" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -317,10 +317,10 @@ const AnalyticsPage = () => {
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Supermercado (opcional)</label>
+                            <div className="space-y-1.5 md:space-y-2">
+                                <label className="text-xs md:text-sm font-bold text-slate-500 uppercase tracking-wider">Supermercado</label>
                                 <Select value={selectedSupermarket} onValueChange={setSelectedSupermarket}>
-                                    <SelectTrigger data-testid="supermarket-select">
+                                    <SelectTrigger data-testid="supermarket-select" className="h-11 md:h-10">
                                         <SelectValue placeholder="Todos" />
                                     </SelectTrigger>
                                     <SelectContent>
@@ -334,7 +334,7 @@ const AnalyticsPage = () => {
                             <Button 
                                 onClick={runAnalysis}
                                 disabled={analyticsLoading || !selectedProduct}
-                                className="bg-emerald-500 hover:bg-emerald-600 gap-2"
+                                className="bg-emerald-500 hover:bg-emerald-600 gap-2 h-11 md:h-10 font-bold"
                                 data-testid="analyze-btn"
                             >
                                 <TrendingUp className="w-4 h-4" />
@@ -344,77 +344,78 @@ const AnalyticsPage = () => {
                                 onClick={runComparisonOnly}
                                 disabled={analyticsLoading || !selectedProduct}
                                 variant="outline"
-                                className="gap-2"
+                                className="gap-2 h-11 md:h-10 font-bold text-slate-600"
                                 data-testid="compare-btn"
                             >
                                 <BarChart3 className="w-4 h-4" />
-                                Solo Comparativa
+                                <span className="hidden xs:inline">Solo Comparativa</span>
+                                <span className="xs:hidden">Comparar</span>
                             </Button>
                         </div>
                     </CardContent>
                 </Card>
 
                 {(productAnalytics || comparison) && (
-                    <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm text-slate-600">Precio Actual</CardTitle>
+                    <div className="grid grid-cols-2 xl:grid-cols-4 gap-3 md:gap-4">
+                        <Card className="shadow-sm">
+                            <CardHeader className="p-3 md:p-4 pb-1 md:pb-2">
+                                <CardTitle className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">Precio Actual</CardTitle>
                             </CardHeader>
-                            <CardContent>
-                                <p className="text-2xl font-bold text-slate-900">
+                            <CardContent className="p-3 md:p-4 pt-0 md:pt-0">
+                                <p className="text-xl md:text-2xl font-bold text-slate-900">
                                     {productAnalytics?.current_price != null ? formatCurrency(productAnalytics.current_price) : "-"}
                                 </p>
                             </CardContent>
                         </Card>
 
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm text-slate-600">Tendencia</CardTitle>
+                        <Card className="shadow-sm">
+                            <CardHeader className="p-3 md:p-4 pb-1 md:pb-2">
+                                <CardTitle className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">Tendencia</CardTitle>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-3 md:p-4 pt-0 md:pt-0">
                                 {trend ? (
                                     <div className="flex items-center gap-2">
                                         {trend.direction === "up" ? (
-                                            <TrendingUp className="w-5 h-5 text-rose-600" />
+                                            <TrendingUp className="w-4 h-4 md:w-5 md:h-5 text-rose-600" />
                                         ) : trend.direction === "down" ? (
-                                            <TrendingDown className="w-5 h-5 text-emerald-600" />
+                                            <TrendingDown className="w-4 h-4 md:w-5 md:h-5 text-emerald-600" />
                                         ) : (
-                                            <BarChart3 className="w-5 h-5 text-slate-500" />
+                                            <BarChart3 className="w-4 h-4 md:w-5 md:h-5 text-slate-500" />
                                         )}
-                                        <p className={`text-2xl font-bold ${trend.direction === "up" ? "text-rose-600" : trend.direction === "down" ? "text-emerald-600" : "text-slate-700"}`}>
+                                        <p className={`text-xl md:text-2xl font-bold ${trend.direction === "up" ? "text-rose-600" : trend.direction === "down" ? "text-emerald-600" : "text-slate-700"}`}>
                                             {trend.deltaPct > 0 ? "+" : ""}{trend.deltaPct.toFixed(1)}%
                                         </p>
                                     </div>
                                 ) : (
-                                    <p className="text-sm text-slate-500">Sin datos suficientes</p>
+                                    <p className="text-xs md:text-sm text-slate-500">Sin datos</p>
                                 )}
                             </CardContent>
                         </Card>
 
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm text-slate-600">Rango Historico</CardTitle>
+                        <Card className="shadow-sm">
+                            <CardHeader className="p-3 md:p-4 pb-1 md:pb-2">
+                                <CardTitle className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">Rango</CardTitle>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-3 md:p-4 pt-0 md:pt-0">
                                 {productAnalytics?.min_price != null && productAnalytics?.max_price != null ? (
-                                    <p className="text-sm font-mono text-slate-900">
-                                        {formatCurrency(productAnalytics.min_price)} - {formatCurrency(productAnalytics.max_price)}
+                                    <p className="text-xs md:text-sm font-mono font-bold text-slate-900">
+                                        {productAnalytics.min_price.toFixed(2)} - {productAnalytics.max_price.toFixed(2)}
                                     </p>
                                 ) : (
-                                    <p className="text-sm text-slate-500">Sin datos</p>
+                                    <p className="text-xs md:text-sm text-slate-500">Sin datos</p>
                                 )}
                             </CardContent>
                         </Card>
 
-                        <Card>
-                            <CardHeader className="pb-2">
-                                <CardTitle className="text-sm text-slate-600">Ahorro Potencial</CardTitle>
+                        <Card className="shadow-sm">
+                            <CardHeader className="p-3 md:p-4 pb-1 md:pb-2">
+                                <CardTitle className="text-[10px] md:text-xs font-bold text-slate-400 uppercase tracking-widest">Ahorro</CardTitle>
                             </CardHeader>
-                            <CardContent>
+                            <CardContent className="p-3 md:p-4 pt-0 md:pt-0">
                                 {priceSpread ? (
-                                    <p className="text-2xl font-bold text-emerald-600">{formatCurrency(priceSpread.delta)}</p>
+                                    <p className="text-xl md:text-2xl font-bold text-emerald-600">{formatCurrency(priceSpread.delta)}</p>
                                 ) : (
-                                    <p className="text-sm text-slate-500">Sin comparativa</p>
+                                    <p className="text-xs md:text-sm text-slate-500">Sin datos</p>
                                 )}
                             </CardContent>
                         </Card>
@@ -478,7 +479,7 @@ const AnalyticsPage = () => {
                                         </div>
 
                                         {/* Chart */}
-                                        <div className="h-64">
+                                        <div className="h-56 md:h-64">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <LineChart data={historyData}>
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -556,7 +557,7 @@ const AnalyticsPage = () => {
                                         )}
 
                                         {/* Bar Chart */}
-                                        <div className="h-64">
+                                        <div className="h-56 md:h-64">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart data={comparisonSorted} layout="vertical">
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -568,8 +569,8 @@ const AnalyticsPage = () => {
                                                     <YAxis 
                                                         type="category" 
                                                         dataKey="supermarket_name" 
-                                                        tick={{ fontSize: 12, fill: '#64748b' }}
-                                                        width={100}
+                                                        tick={{ fontSize: 10, fill: '#64748b' }}
+                                                        width={window.innerWidth < 640 ? 60 : 100}
                                                     />
                                                     <Tooltip 
                                                         formatter={(value) => [formatCurrency(value), "Precio"]}
@@ -589,24 +590,24 @@ const AnalyticsPage = () => {
                                         </div>
 
                                         {/* Price List */}
-                                        <div className="mt-4 space-y-2">
+                                        <div className="mt-6 space-y-2">
                                             {comparisonSorted.map((item, index) => (
                                                 <div 
                                                     key={index}
-                                                    className={`flex items-center justify-between p-3 rounded-lg ${
-                                                        index === 0 ? 'bg-emerald-50' : 'bg-slate-50'
+                                                    className={`flex items-center justify-between p-3 rounded-xl border ${
+                                                        index === 0 ? 'bg-emerald-50 border-emerald-100' : 'bg-white border-slate-100'
                                                     }`}
                                                 >
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2">
                                                             {index === 0 && <TrendingDown className="w-4 h-4 text-emerald-600" />}
-                                                            <span className="text-slate-700">{item.supermarket_name}</span>
+                                                            <span className="text-sm font-bold text-slate-700">{item.supermarket_name}</span>
                                                         </div>
-                                                        <span className="text-xs text-slate-500">
-                                                            {index === 0 ? "Referencia mas barata" : `+${formatCurrency(item.price - bestPrice.price)} vs mejor`}
+                                                        <span className="text-[10px] md:text-xs text-slate-400 font-medium">
+                                                            {index === 0 ? "¡MEJOR PRECIO!" : `+${formatCurrency(item.price - bestPrice.price)} vs mejor`}
                                                         </span>
                                                     </div>
-                                                    <span className={`font-mono font-semibold ${
+                                                    <span className={`font-mono font-bold ${
                                                         index === 0 ? 'text-emerald-600' : 'text-slate-900'
                                                     }`}>
                                                         {formatCurrency(item.price)}

@@ -357,9 +357,9 @@ const ShoppingListPage = () => {
                         </Dialog>
                     </div>
 
-                    <div className="flex gap-0 relative">
+                    <div className="flex flex-col lg:flex-row gap-0 relative">
                         {/* Lists Sidebar */}
-                        <div className={`transition-all duration-300 flex shrink-0 ${listsExpanded ? 'w-full lg:w-64' : 'w-0 lg:w-10'} overflow-hidden`}>
+                        <div className={`transition-all duration-300 flex shrink-0 ${listsExpanded ? 'w-full lg:w-64' : 'w-0 lg:w-10'} ${!listsExpanded && 'hidden lg:flex'} overflow-hidden`}>
                             <div className={`${listsExpanded ? 'w-full lg:w-64' : 'w-0'} overflow-hidden transition-all duration-300`}>
                                 <div className="w-full lg:w-64 pr-0 lg:pr-3">
                                     <div className="flex items-center justify-between mb-3">
@@ -390,7 +390,7 @@ const ShoppingListPage = () => {
                                                         }`}
                                                     onClick={() => {
                                                         setSelectedList(list);
-                                                        if (window.innerWidth < 1024) setListsExpanded(false);
+                                                        setListsExpanded(false);
                                                     }}
                                                     data-testid={`list-card-${list.id}`}
                                                 >
@@ -422,10 +422,10 @@ const ShoppingListPage = () => {
                         {/* Collapse toggle tab (always visible) */}
                         <button
                             onClick={() => setListsExpanded(!listsExpanded)}
-                            className={`hidden lg:flex items-center justify-center w-5 self-stretch shrink-0 hover:bg-slate-100 transition-colors group rounded-sm ${listsExpanded ? 'border-r border-slate-200' : ''}`}
+                            className={`flex lg:flex items-center justify-center w-6 lg:w-5 self-stretch shrink-0 hover:bg-slate-100 transition-colors group rounded-sm ${listsExpanded ? 'border-r border-slate-200' : ''} ${!listsExpanded ? 'bg-slate-50 h-10 my-2 rounded-r-lg border border-l-0 border-slate-200 lg:h-auto lg:my-0 lg:rounded-none lg:border-0' : ''}`}
                             title={listsExpanded ? 'Ocultar listas' : 'Mostrar listas'}
                         >
-                            <svg className={`w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 transition-transform ${!listsExpanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
+                            <svg className={`w-4 h-4 lg:w-3.5 lg:h-3.5 text-slate-400 lg:text-slate-300 group-hover:text-slate-500 transition-transform ${!listsExpanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
                         </button>
 
                         {/* List Detail Column */}
@@ -434,17 +434,18 @@ const ShoppingListPage = () => {
                                 <Card className="border-slate-200" data-testid="list-detail-card">
                                     <CardHeader className="border-b border-slate-100 pb-4">
                                         <div className="flex items-center justify-between flex-wrap gap-4">
-                                            <div className="flex items-center gap-3">
+                                            <div className="flex items-center gap-2 md:gap-3">
                                                 <Button
-                                                    variant="ghost"
-                                                    size="icon"
+                                                    variant="outline"
+                                                    size="sm"
                                                     onClick={() => setListsExpanded(true)}
-                                                    className="lg:hidden h-9 w-9 -ml-2 text-slate-500 hover:bg-slate-100"
+                                                    className={`lg:hidden h-9 px-2 gap-1 text-emerald-600 border-emerald-200 bg-emerald-50 hover:bg-emerald-100 ${listsExpanded ? 'hidden' : 'flex'}`}
                                                 >
-                                                    <Store className="w-5 h-5" />
+                                                    <ShoppingCart className="w-4 h-4" />
+                                                    <span className="text-[10px] font-bold uppercase">Listas</span>
                                                 </Button>
                                                 <div>
-                                                    <CardTitle style={{ fontFamily: 'Manrope, sans-serif' }}>{selectedList.name}</CardTitle>
+                                                    <CardTitle className="text-base md:text-xl" style={{ fontFamily: 'Manrope, sans-serif' }}>{selectedList.name}</CardTitle>
                                                     <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
                                                         <Store className="w-4 h-4" />
                                                         {selectedList.supermarket_name}
@@ -581,106 +582,77 @@ const ShoppingListPage = () => {
                                                     {selectedList.items?.map((item, index) => (
                                                         <div
                                                             key={index}
-                                                            className={`p-3 sm:p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 ${item.purchased ? 'bg-slate-50/70 border-l border-emerald-500' : 'hover:bg-slate-50/50 border-l border-transparent'}`}
+                                                            className={`px-3 py-2 md:p-4 transition-colors flex flex-row items-center gap-3 md:gap-4 ${item.purchased ? 'bg-emerald-50/30 border-l-4 border-emerald-500' : 'hover:bg-slate-50/50 border-l-4 border-transparent'}`}
                                                             data-testid={`list-item-${index}`}
                                                         >
-                                                            <div className="flex items-center gap-3 sm:gap-4 flex-1">
-                                                                {/* Checkbox */}
+                                                            {/* Checkbox - Fixed width */}
+                                                            <div className="shrink-0">
                                                                 <Checkbox
                                                                     checked={item.purchased}
                                                                     onCheckedChange={(checked) => handleUpdateItem(index, { purchased: checked })}
-                                                                    className="w-6 h-6 rounded-md data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 mt-1"
+                                                                    className="w-5 h-5 md:w-6 md:h-6 rounded-md data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
                                                                     data-testid={`item-checkbox-${index}`}
                                                                 />
+                                                            </div>
 
-                                                                {/* Main Product Info & Quantity Row */}
-                                                                <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                                    {/* Title & Brand */}
-                                                                    <div className="flex-1 min-w-0 flex flex-col">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <h3 className={`font-medium text-sm sm:text-base truncate transition-all ${item.purchased ? 'line-through text-slate-400' : 'text-slate-900'}`}>
-                                                                                {item.product_name}
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                                            <p className="text-xs text-slate-500 truncate max-w-[120px]">{item.brand_name}</p>
-                                                                        </div>
-                                                                    </div>
+                                                            {/* Product Info - Flexible space */}
+                                                            <div className="flex-1 min-w-0 flex flex-col md:flex-row md:items-center justify-between gap-1">
+                                                                <div className="flex-1 min-w-0">
+                                                                    <h3 className={`font-bold text-[13px] md:text-base truncate ${item.purchased ? 'text-slate-400' : 'text-slate-900'}`}>
+                                                                        {item.product_name}
+                                                                    </h3>
+                                                                    <p className="text-[9px] md:text-xs font-medium text-slate-400 uppercase tracking-tight md:tracking-wider truncate">
+                                                                        {item.brand_name}
+                                                                        <span className="md:hidden ml-2 px-1 bg-slate-100 rounded text-slate-500 lowercase font-bold">{item.unit_name}</span>
+                                                                    </p>
+                                                                </div>
 
-                                                                    {/* Estimated Price Center Column */}
-                                                                    <div className={`hidden sm:flex flex-col items-center justify-center shrink-0 w-24 transition-opacity duration-300 ${showEstimated ? 'opacity-100' : 'opacity-0 select-none pointer-events-none'}`}>
-                                                                        <span className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider mb-0.5">Estimado</span>
-                                                                        <span className="text-xs font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 flex items-center shadow-sm">
-                                                                            <Sparkles className="w-2.5 h-2.5 mr-1" />
-                                                                            {item.estimated_price ? `${item.estimated_price.toFixed(2)}€` : '-'}
-                                                                        </span>
-                                                                    </div>
-
-                                                                    {/* Quantity Adjuster & Unit & Mobile Est */}
-                                                                    <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-between sm:justify-end">
-
-                                                                        {/* Mobile Estimated Price Inline */}
-                                                                        <div className={`sm:hidden overflow-hidden transition-all duration-300 ${showEstimated ? 'max-w-[100px] opacity-100' : 'max-w-0 opacity-0 pointer-events-none select-none'}`}>
-                                                                            <span className="text-[10px] font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 flex items-center shadow-sm w-max">
-                                                                                <Sparkles className="w-2.5 h-2.5 mr-1" />
-                                                                                {item.estimated_price ? `${item.estimated_price.toFixed(2)}€` : '-'}
-                                                                            </span>
-                                                                        </div>
-                                                                        <div className="flex items-center bg-transparent border border-slate-200 rounded-md p-0.5">
-                                                                            <Input
-                                                                                type="number"
-                                                                                min="0.1" step="0.1"
-                                                                                value={item.quantity}
-                                                                                onChange={(e) => updateLocalItem(index, { quantity: parseFloat(e.target.value) || 1 })}
-                                                                                onBlur={() => saveList(selectedList.items)}
-                                                                                className={`h-8 w-[60px] text-sm text-center font-mono border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1
-                                                                                ${item.purchased ? 'bg-transparent text-slate-500' : 'bg-white text-slate-900'}
-                                                                            `}
-                                                                            />
-                                                                            <span className="text-xs text-slate-500 pr-3 font-medium border-l border-slate-200 pl-2 bg-transparent">{item.unit_name}</span>
-                                                                        </div>
-
-                                                                        {/* Mobile only delete icon */}
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => handleRemoveItem(index)}
-                                                                            className="sm:hidden h-8 w-8 text-slate-400 hover:text-rose-600 shrink-0"
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4" />
-                                                                        </Button>
-                                                                    </div>
+                                                                {/* Desktop Estimated Price */}
+                                                                <div className={`hidden md:flex flex-col items-center justify-center shrink-0 w-24 transition-opacity duration-300 ${showEstimated ? 'opacity-100' : 'opacity-0 select-none pointer-events-none'}`}>
+                                                                    <span className="text-[10px] text-indigo-400 font-bold uppercase tracking-wider mb-0.5">Est.</span>
+                                                                    <span className="text-xs font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 flex items-center">
+                                                                        {item.estimated_price ? `${item.estimated_price.toFixed(2)}€` : '-'}
+                                                                    </span>
                                                                 </div>
                                                             </div>
 
-                                                            {/* Right Side: Real Price */}
-                                                            <div className="flex items-center gap-3 w-full sm:w-auto mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-slate-100 justify-end">
+                                                            {/* Controls Section - All in one row for density */}
+                                                            <div className="flex items-center gap-2 md:gap-4 shrink-0">
+                                                                {/* Quantity (Desktop only unit selector part) */}
+                                                                <div className="hidden md:flex items-center bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
+                                                                    <Input
+                                                                        type="number" min="0.1" step="0.1"
+                                                                        value={item.quantity}
+                                                                        onChange={(e) => updateLocalItem(index, { quantity: parseFloat(e.target.value) || 1 })}
+                                                                        onBlur={() => saveList(selectedList.items)}
+                                                                        className="h-7 w-[45px] md:h-8 md:w-[60px] text-xs md:text-sm text-center font-bold border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1"
+                                                                    />
+                                                                    <span className="text-[10px] md:text-xs text-slate-400 pr-2 font-bold border-l border-slate-100 pl-2 uppercase">{item.unit_name}</span>
+                                                                </div>
 
-                                                                {/* Real Price Input */}
-                                                                <div className="relative shrink-0">
+                                                                {/* Real Price Input - Thin & horizontal focused */}
+                                                                <div className="relative shrink-0 flex items-center">
                                                                     <Input
                                                                         type="number" min="0" step="0.01" placeholder="0.00"
                                                                         value={item.price || ""}
                                                                         onChange={(e) => updateLocalItem(index, { price: parseFloat(e.target.value) || null })}
                                                                         onBlur={() => saveList(selectedList.items)}
-                                                                        className={`h-9 w-[80px] sm:w-[90px] text-right pr-6 font-mono text-sm shadow-sm transition-colors
-                                                                            ${item.price ? 'border-emerald-500 bg-emerald-50/50 font-semibold text-emerald-800' : 'border-slate-200 bg-white placeholder:text-slate-300'} 
-                                                                            ${item.purchased && !item.price ? 'border-amber-300 bg-amber-50 ring-2 ring-amber-100 ring-offset-1' : ''}
-                                                                            ${item.purchased && item.price ? 'bg-transparent' : ''}`}
+                                                                        className={`h-8 md:h-9 w-[65px] md:w-[90px] text-right pr-4 md:pr-6 font-mono text-[11px] md:text-sm shadow-sm transition-all rounded-lg
+                                                                            ${item.price ? 'border-emerald-500 bg-emerald-50/50 font-bold text-emerald-800' : 'border-slate-200 bg-white placeholder:text-slate-300'}
+                                                                            ${item.purchased && !item.price ? 'border-amber-300 bg-amber-50 ring-2 ring-amber-100 ring-offset-0' : ''}
+                                                                            ${item.purchased && item.price ? 'bg-transparent shadow-none border-dashed' : ''}`}
                                                                     />
-                                                                    <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold
-                                                                    ${item.price ? 'text-emerald-700' : 'text-slate-400'}
-                                                                `}>€</span>
+                                                                    <span className="absolute right-1.5 md:right-2.5 text-[9px] md:text-xs font-bold text-slate-400">€</span>
                                                                 </div>
 
-                                                                {/* Desktop only delete icon */}
+                                                                {/* Delete Icon */}
                                                                 <Button
                                                                     variant="ghost"
                                                                     size="icon"
                                                                     onClick={() => handleRemoveItem(index)}
-                                                                    className="hidden sm:flex h-8 w-8 text-slate-300 hover:text-rose-600 hover:bg-rose-50 shrink-0"
+                                                                    className="h-7 w-7 md:h-9 md:w-9 text-slate-300 hover:text-rose-600 hover:bg-rose-50 shrink-0"
                                                                 >
-                                                                    <Trash2 className="w-4 h-4" />
+                                                                    <Trash2 className="w-3.5 h-3.5 md:w-4 md:h-4" />
                                                                 </Button>
                                                             </div>
                                                         </div>
@@ -688,42 +660,43 @@ const ShoppingListPage = () => {
                                                 </div>
 
                                                 {/* Footer: Totals aligned precisely to card columns */}
-                                                <div className="px-3 sm:px-4 py-3 bg-slate-50 border-t border-slate-200">
-                                                    <div className="flex items-center gap-3 sm:gap-4">
+                                                <div className="px-4 py-4 bg-slate-50 border-t border-slate-200">
+                                                    <div className="flex items-center gap-4">
 
                                                         {/* Submit button — far left */}
                                                         <Button
                                                             onClick={() => setConfirmSubmitOpen(true)}
-                                                            className="shrink-0 bg-slate-900 hover:bg-slate-800 text-white gap-1.5 h-9 text-xs rounded-lg transition-all shadow-sm hover:shadow-md"
+                                                            className="shrink-0 bg-slate-900 hover:bg-slate-800 text-white gap-1.5 h-10 md:h-9 text-[10px] md:text-xs rounded-xl md:rounded-lg transition-all shadow-md md:shadow-sm"
                                                             data-testid="submit-prices-btn"
                                                         >
-                                                            <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                                                            <span className="font-medium hidden sm:inline">Subir Precios</span>
+                                                            <CheckCircle2 className="w-4 h-4 md:w-3.5 md:h-3.5 flex-shrink-0" />
+                                                            <span className="font-bold hidden sm:inline">Subir Precios</span>
+                                                            <span className="sm:hidden font-bold">Subir</span>
                                                         </Button>
 
                                                         {/* Flex spacer pushes totals to exact right positions */}
                                                         <div className="flex-1" />
 
                                                         {/* Estimated total — same w-24 as center column in cards */}
-                                                        <div className={`hidden sm:flex flex-col items-center justify-center shrink-0 w-24 transition-opacity duration-300 ${showEstimated ? 'opacity-100' : 'opacity-0 pointer-events-none select-none'}`}>
-                                                            <span className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider mb-0.5 flex items-center gap-0.5">
-                                                                <Sparkles className="w-2.5 h-2.5" /> Estimado
+                                                        <div className={`flex flex-col items-center justify-center shrink-0 w-auto md:w-24 transition-opacity duration-300 ${showEstimated ? 'opacity-100' : 'opacity-0 pointer-events-none select-none'}`}>
+                                                            <span className="text-[9px] md:text-[10px] text-indigo-400 font-bold uppercase tracking-wider mb-0.5 flex items-center gap-0.5">
+                                                                <Sparkles className="w-2 md:w-2.5 h-2 md:h-2.5" /> Est.
                                                             </span>
-                                                            <span className="text-sm font-mono text-indigo-700 font-semibold">
-                                                                {selectedList.total_estimated?.toFixed(2) || '0.00'} €
+                                                            <span className="text-xs md:text-sm font-mono text-indigo-700 font-bold">
+                                                                {selectedList.total_estimated?.toFixed(2) || '0.00'}€
                                                             </span>
                                                         </div>
 
                                                         {/* Real price total — same w-[90px] as price input in cards */}
-                                                        <div className="flex flex-col items-end justify-center shrink-0 w-[90px]">
-                                                            <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Total Real</span>
-                                                            <span className="font-mono text-base font-bold text-emerald-600">
-                                                                {selectedList.total_actual?.toFixed(2) || '0.00'} €
+                                                        <div className="flex flex-col items-end justify-center shrink-0 w-auto md:w-[90px]">
+                                                            <span className="text-[9px] md:text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Total</span>
+                                                            <span className="font-mono text-sm md:text-base font-bold text-emerald-600">
+                                                                {selectedList.total_actual?.toFixed(2) || '0.00'}€
                                                             </span>
                                                         </div>
 
                                                         {/* Spacer matching the delete button column width in cards */}
-                                                        <div className="hidden sm:block w-8 shrink-0" />
+                                                        <div className="hidden md:block w-9 shrink-0" />
                                                     </div>
                                                 </div>
                                             </>

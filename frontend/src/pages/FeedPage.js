@@ -150,28 +150,28 @@ const FeedPage = () => {
 
     return (
         <Layout>
-            <div className="max-w-2xl mx-auto space-y-6" data-testid="feed-page">
+            <div className="max-w-2xl mx-auto space-y-4 md:space-y-6" data-testid="feed-page">
                 {/* Header */}
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                <div className="px-1 md:px-0">
+                    <h1 className="text-2xl md:text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
                         Muro
                     </h1>
-                    <p className="text-slate-500 mt-1">Comparte y descubre información de la comunidad</p>
+                    <p className="text-sm md:text-base text-slate-500 mt-1">Comparte y descubre información de la comunidad</p>
                 </div>
 
                 {/* New Post */}
-                <Card className="border-slate-200" data-testid="new-post-card">
-                    <CardContent className="p-4 space-y-4">
+                <Card className="border-slate-200 shadow-sm" data-testid="new-post-card">
+                    <CardContent className="p-3 md:p-4 space-y-4">
                         <Textarea
                             placeholder="¿Qué quieres compartir con la comunidad?"
                             value={newPost}
                             onChange={(e) => setNewPost(e.target.value)}
-                            className="min-h-[100px] resize-none bg-slate-50 border-slate-200 focus:border-emerald-500"
+                            className="min-h-[80px] md:min-h-[100px] resize-none bg-slate-50 border-slate-200 focus:border-emerald-500 text-sm md:text-base"
                             data-testid="new-post-textarea"
                         />
-                        <div className="flex items-center justify-between">
+                        <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3">
                             <Select value={postType} onValueChange={setPostType}>
-                                <SelectTrigger className="w-48" data-testid="post-type-select">
+                                <SelectTrigger className="w-full sm:w-48" data-testid="post-type-select">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -183,7 +183,7 @@ const FeedPage = () => {
                             <Button
                                 onClick={handleCreatePost}
                                 disabled={posting || !newPost.trim()}
-                                className="bg-emerald-500 hover:bg-emerald-600 gap-2"
+                                className="bg-emerald-500 hover:bg-emerald-600 gap-2 h-10 md:h-11"
                                 data-testid="create-post-btn"
                             >
                                 <Send className="w-4 h-4" />
@@ -210,22 +210,22 @@ const FeedPage = () => {
                     <div className="space-y-4">
                         {posts.map((post) => (
                             <Card key={post.id} className="border-slate-200" data-testid={`post-${post.id}`}>
-                                <CardHeader className="pb-3">
+                                <CardHeader className="p-3 md:p-4 pb-2 md:pb-3">
                                     <div className="flex items-start justify-between">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-medium">
+                                        <div className="flex items-center gap-2 md:gap-3">
+                                            <div className="w-9 h-9 md:w-10 md:h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-bold text-sm md:text-base">
                                                 {post.user_name?.charAt(0).toUpperCase()}
                                             </div>
                                             <div>
-                                                <p className="font-medium text-slate-900">{post.user_name}</p>
-                                                <p className="text-xs text-slate-400 flex items-center gap-1">
+                                                <p className="text-sm md:text-base font-bold text-slate-900 leading-tight">{post.user_name}</p>
+                                                <p className="text-[10px] md:text-xs text-slate-400 flex items-center gap-1 mt-0.5">
                                                     <Clock className="w-3 h-3" />
                                                     {formatDate(post.created_at)}
                                                 </p>
                                             </div>
                                         </div>
-                                        <div className="flex items-center gap-2">
-                                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getPostTypeStyles(post.post_type)}`}>
+                                        <div className="flex items-center gap-1 md:gap-2">
+                                            <span className={`px-2 md:px-3 py-0.5 md:py-1 rounded-full text-[10px] md:text-xs font-bold border uppercase tracking-wider ${getPostTypeStyles(post.post_type)}`}>
                                                 {getPostTypeLabel(post.post_type)}
                                             </span>
                                             {(user?.id === post.user_id || user?.role === 'admin') && (
@@ -242,18 +242,18 @@ const FeedPage = () => {
                                         </div>
                                     </div>
                                 </CardHeader>
-                                <CardContent className="pt-0">
-                                    <p className="text-slate-700 whitespace-pre-wrap mb-4">{post.content}</p>
+                                <CardContent className="p-3 md:p-4 pt-0 md:pt-0">
+                                    <p className="text-sm md:text-base text-slate-700 whitespace-pre-wrap mb-4 leading-relaxed">{post.content}</p>
 
                                     {/* Reactions */}
-                                    <div className="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-4">
+                                    <div className="flex items-center gap-1 md:gap-2 flex-wrap border-t border-slate-100 pt-3 md:pt-4">
                                         {reactionButtons.map((btn) => (
                                             <Button
                                                 key={btn.type}
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => handleReaction(post.id, btn.type)}
-                                                className={`gap-1.5 ${post.reactions[btn.type] > 0 ? 'text-emerald-600' : 'text-slate-500'}`}
+                                                className={`h-9 px-2 md:px-3 gap-1.5 rounded-lg ${post.reactions[btn.type] > 0 ? 'bg-emerald-50 text-emerald-600 font-bold' : 'text-slate-500'}`}
                                                 data-testid={`reaction-${btn.type}-${post.id}`}
                                             >
                                                 {btn.icon}
@@ -264,7 +264,7 @@ const FeedPage = () => {
                                             variant="ghost"
                                             size="sm"
                                             onClick={() => toggleComments(post.id)}
-                                            className="gap-1.5 text-slate-500 ml-auto"
+                                            className={`h-9 px-2 md:px-3 gap-1.5 ml-auto rounded-lg ${expandedComments[post.id] ? 'bg-slate-100 text-slate-900 font-bold' : 'text-slate-500'}`}
                                             data-testid={`toggle-comments-${post.id}`}
                                         >
                                             <MessageSquare className="w-4 h-4" />

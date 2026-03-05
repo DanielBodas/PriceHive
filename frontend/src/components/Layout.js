@@ -72,18 +72,18 @@ const Layout = ({ children }) => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-slate-50 pb-20 md:pb-0">
             {/* Top Navigation */}
             <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
+                <div className="max-w-7xl mx-auto px-4 sm:px-4 lg:px-6">
+                    <div className="flex items-center justify-between h-14 md:h-16">
                         {/* Logo */}
                         <div className="flex items-center gap-2 flex-shrink-0">
                             <Link to="/dashboard" className="flex items-center gap-2">
-                                <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
-                                    <Tag className="w-5 h-5 text-white" />
+                                <div className="w-8 h-8 md:w-9 md:h-9 rounded-lg md:rounded-xl bg-emerald-500 flex items-center justify-center">
+                                    <Tag className="w-4 h-4 md:w-5 md:h-5 text-white" />
                                 </div>
-                                <span className="text-lg font-bold text-slate-900 hidden sm:block" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                                <span className="text-lg font-bold text-slate-900 hidden xs:block" style={{ fontFamily: 'Manrope, sans-serif' }}>
                                     PriceHive
                                 </span>
                             </Link>
@@ -151,9 +151,9 @@ const Layout = ({ children }) => {
                                 </span>
                             </div>
 
-                            {/* User Dropdown */}
+                            {/* User Dropdown (Desktop Only) */}
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
+                                <DropdownMenuTrigger asChild className="hidden md:flex">
                                     <Button variant="ghost" size="sm" className="flex items-center gap-1.5 lg:gap-2 px-1.5 lg:px-2">
                                         <Avatar className="w-7 h-7 lg:w-8 lg:h-8">
                                             <AvatarImage src={user?.picture} />
@@ -171,7 +171,7 @@ const Layout = ({ children }) => {
                                         )}
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuContent align="end" className="w-48 hidden md:block">
                                     <div className="px-2 py-1.5 text-sm">
                                         <p className="font-medium text-slate-900">{user?.name}</p>
                                         <p className="text-xs text-slate-500 truncate">{user?.email}</p>
@@ -218,64 +218,53 @@ const Layout = ({ children }) => {
                     </div>
                 </div>
 
-                {/* Mobile Navigation */}
+                {/* Mobile Navigation Menu (Drawer style) */}
                 {mobileMenuOpen && (
-                    <div className="md:hidden border-t border-slate-200 bg-white shadow-lg">
-                        <div className="px-3 py-3 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
+                    <div className="md:hidden border-t border-slate-200 bg-white shadow-lg animate-in slide-in-from-top duration-200">
+                        <div className="px-4 py-4 space-y-2 max-h-[calc(100vh-4rem)] overflow-y-auto">
                             {/* User info en móvil */}
-                            <div className="flex items-center gap-3 px-3 py-3 bg-emerald-50 rounded-lg mb-3">
-                                <Avatar className="w-10 h-10">
+                            <div className="flex items-center gap-3 px-4 py-4 bg-emerald-50 rounded-xl mb-2">
+                                <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
                                     <AvatarImage src={user?.picture} />
-                                    <AvatarFallback className="bg-emerald-100 text-emerald-600">
+                                    <AvatarFallback className="bg-emerald-100 text-emerald-600 font-bold">
                                         {user?.name?.charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-slate-900 truncate">{user?.name}</p>
+                                    <p className="text-base font-bold text-slate-900 truncate">{user?.name}</p>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <Star className="w-3 h-3 text-emerald-500" />
-                                        <span className="text-xs font-mono text-emerald-600">{user?.points || 0} pts</span>
+                                        <Star className="w-3.5 h-3.5 text-emerald-500 fill-emerald-500" />
+                                        <span className="text-sm font-mono font-bold text-emerald-600">{user?.points || 0} pts</span>
                                     </div>
                                 </div>
                             </div>
 
-                            {/* Navigation items */}
-                            {navItems.map((item) => {
-                                const isActive = location.pathname === item.path;
-                                const hasNotification = item.path === "/alerts" && unreadCount > 0;
-
-                                return (
-                                    <Link
-                                        key={item.path}
-                                        to={item.path}
-                                        onClick={() => setMobileMenuOpen(false)}
-                                    >
-                                        <Button
-                                            variant={isActive ? "default" : "ghost"}
-                                            className={`w-full justify-start gap-3 h-11 ${isActive
-                                                    ? "bg-emerald-500 text-white"
-                                                    : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
-                                                }`}
+                            {/* Essential Nav Items - Restored for better accessibility */}
+                            <div className="space-y-1 mb-2">
+                                {navItems.map((item) => {
+                                    const isActive = location.pathname === item.path;
+                                    return (
+                                        <Link
+                                            key={item.path}
+                                            to={item.path}
+                                            onClick={() => setMobileMenuOpen(false)}
                                         >
-                                            <span className="relative">
+                                            <Button
+                                                variant={isActive ? "default" : "ghost"}
+                                                className={`w-full justify-start gap-4 h-11 rounded-xl ${isActive
+                                                        ? "bg-emerald-500 text-white"
+                                                        : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                                    }`}
+                                            >
                                                 {item.icon}
-                                                {hasNotification && (
-                                                    <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500 border-2 border-white"></span>
-                                                )}
-                                            </span>
-                                            <span className="flex-1 text-left">{item.label}</span>
-                                            {hasNotification && (
-                                                <span className="w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center">
-                                                    {unreadCount > 9 ? "9+" : unreadCount}
-                                                </span>
-                                            )}
-                                        </Button>
-                                    </Link>
-                                );
-                            })}
+                                                <span className="flex-1 text-left font-medium">{item.label}</span>
+                                            </Button>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
 
-
-                            <div className="h-px bg-slate-200 my-2"></div>
+                            <div className="h-px bg-slate-100 my-2 mx-2"></div>
 
                             <Link
                                 to="/profile"
@@ -283,13 +272,13 @@ const Layout = ({ children }) => {
                             >
                                 <Button
                                     variant={location.pathname === "/profile" ? "default" : "ghost"}
-                                    className={`w-full justify-start gap-3 h-11 ${location.pathname === "/profile"
+                                    className={`w-full justify-start gap-4 h-12 rounded-xl ${location.pathname === "/profile"
                                             ? "bg-emerald-500 text-white"
                                             : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
                                         }`}
                                 >
                                     <User className="w-5 h-5" />
-                                    <span className="flex-1 text-left">Mi Perfil</span>
+                                    <span className="flex-1 text-left font-medium">Mi Perfil</span>
                                 </Button>
                             </Link>
 
@@ -299,15 +288,15 @@ const Layout = ({ children }) => {
                             >
                                 <Button
                                     variant={location.pathname === "/alerts" ? "default" : "ghost"}
-                                    className={`w-full justify-start gap-3 h-11 ${location.pathname === "/alerts"
+                                    className={`w-full justify-start gap-4 h-12 rounded-xl ${location.pathname === "/alerts"
                                             ? "bg-emerald-500 text-white"
                                             : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
                                         }`}
                                 >
                                     <Bell className="w-5 h-5" />
-                                    <span className="flex-1 text-left">Notificaciones</span>
+                                    <span className="flex-1 text-left font-medium">Notificaciones</span>
                                     {unreadCount > 0 && (
-                                        <span className="w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center">
+                                        <span className="w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center font-bold">
                                             {unreadCount > 9 ? "9+" : unreadCount}
                                         </span>
                                     )}
@@ -321,33 +310,61 @@ const Layout = ({ children }) => {
                                 >
                                     <Button
                                         variant={location.pathname === "/admin" ? "default" : "ghost"}
-                                        className={`w-full justify-start gap-3 h-11 ${location.pathname === "/admin"
+                                        className={`w-full justify-start gap-4 h-12 rounded-xl ${location.pathname === "/admin"
                                                 ? "bg-emerald-500 text-white"
                                                 : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
                                             }`}
                                     >
                                         <Settings className="w-5 h-5" />
-                                        <span className="flex-1 text-left">Admin</span>
+                                        <span className="flex-1 text-left font-medium">Administración</span>
                                     </Button>
                                 </Link>
                             )}
 
+                            <div className="h-px bg-slate-100 my-2 mx-2"></div>
+
                             <Button
                                 variant="ghost"
                                 onClick={handleLogout}
-                                className="w-full justify-start gap-3 h-11 text-rose-600 hover:bg-rose-50 hover:text-rose-700 mt-1"
+                                className="w-full justify-start gap-4 h-12 rounded-xl text-rose-600 hover:bg-rose-50 hover:text-rose-700 mt-1"
                             >
                                 <LogOut className="w-5 h-5" />
-                                <span className="flex-1 text-left">Cerrar Sesión</span>
+                                <span className="flex-1 text-left font-medium">Cerrar Sesión</span>
                             </Button>
                         </div>
                     </div>
                 )}
             </nav>
 
+            {/* Bottom Navigation for Mobile */}
+            <div className="md:hidden fixed bottom-0 left-0 right-0 z-50 bg-white border-t border-slate-200 shadow-[0_-4px_10px_rgba(0,0,0,0.05)] px-2 pb-safe">
+                <div className="flex items-center justify-around h-16">
+                    {navItems.map((item) => {
+                        const isActive = location.pathname === item.path;
+                        return (
+                            <Link
+                                key={item.path}
+                                to={item.path}
+                                className={`flex flex-col items-center justify-center flex-1 h-full gap-1 transition-colors ${
+                                    isActive ? "text-emerald-600" : "text-slate-500"
+                                }`}
+                            >
+                                <div className={`p-1.5 rounded-lg transition-colors ${isActive ? "bg-emerald-50" : ""}`}>
+                                    {item.icon}
+                                </div>
+                                <span className="text-[10px] font-bold uppercase tracking-wider">{item.label.split(' ')[0]}</span>
+                                {item.path === "/alerts" && unreadCount > 0 && (
+                                    <span className="absolute top-2 ml-5 w-2 h-2 rounded-full bg-rose-500 border-2 border-white"></span>
+                                )}
+                            </Link>
+                        );
+                    })}
+                </div>
+            </div>
+
             {/* Main Content */}
-            <main className="pt-16 min-h-screen">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+            <main className="pt-14 md:pt-16 min-h-screen">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8">
                     {children}
                 </div>
             </main>
