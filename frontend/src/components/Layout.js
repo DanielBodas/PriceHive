@@ -151,9 +151,9 @@ const Layout = ({ children }) => {
                                 </span>
                             </div>
 
-                            {/* User Dropdown */}
+                            {/* User Dropdown (Desktop Only) */}
                             <DropdownMenu>
-                                <DropdownMenuTrigger asChild>
+                                <DropdownMenuTrigger asChild className="hidden md:flex">
                                     <Button variant="ghost" size="sm" className="flex items-center gap-1.5 lg:gap-2 px-1.5 lg:px-2">
                                         <Avatar className="w-7 h-7 lg:w-8 lg:h-8">
                                             <AvatarImage src={user?.picture} />
@@ -171,7 +171,7 @@ const Layout = ({ children }) => {
                                         )}
                                     </Button>
                                 </DropdownMenuTrigger>
-                                <DropdownMenuContent align="end" className="w-48">
+                                <DropdownMenuContent align="end" className="w-48 hidden md:block">
                                     <div className="px-2 py-1.5 text-sm">
                                         <p className="font-medium text-slate-900">{user?.name}</p>
                                         <p className="text-xs text-slate-500 truncate">{user?.email}</p>

@@ -21,7 +21,7 @@ const LoginPage = () => {
         setLoading(true);
         try {
             await login(email, password);
-            toast.success("¡Bienvenido de vuelta!");
+            toast.success("Acceso concedido", { duration: 2000 });
             navigate("/dashboard");
         } catch (error) {
             // --- NUEVA LÓGICA DE DIAGNÓSTICO ---

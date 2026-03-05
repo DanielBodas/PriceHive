@@ -22,7 +22,7 @@ const AuthCallback = () => {
                 const sessionId = sessionIdMatch[1];
                 try {
                     const user = await processGoogleSession(sessionId);
-                    toast.success(`¡Bienvenido, ${user.name}!`);
+                    toast.success(`¡Hola, ${user.name}!`, { duration: 2000 });
                     // Clear the hash and navigate to dashboard
                     window.history.replaceState(null, '', '/dashboard');
                     navigate('/dashboard', { replace: true, state: { user } });
