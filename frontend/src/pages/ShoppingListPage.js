@@ -422,10 +422,10 @@ const ShoppingListPage = () => {
                         {/* Collapse toggle tab (always visible) */}
                         <button
                             onClick={() => setListsExpanded(!listsExpanded)}
-                            className={`hidden lg:flex items-center justify-center w-5 self-stretch shrink-0 hover:bg-slate-100 transition-colors group rounded-sm ${listsExpanded ? 'border-r border-slate-200' : ''}`}
+                            className={`flex lg:flex items-center justify-center w-6 lg:w-5 self-stretch shrink-0 hover:bg-slate-100 transition-colors group rounded-sm ${listsExpanded ? 'border-r border-slate-200' : ''} ${!listsExpanded ? 'bg-slate-50 h-10 my-2 rounded-r-lg border border-l-0 border-slate-200 lg:h-auto lg:my-0 lg:rounded-none lg:border-0' : ''}`}
                             title={listsExpanded ? 'Ocultar listas' : 'Mostrar listas'}
                         >
-                            <svg className={`w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 transition-transform ${!listsExpanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
+                            <svg className={`w-4 h-4 lg:w-3.5 lg:h-3.5 text-slate-400 lg:text-slate-300 group-hover:text-slate-500 transition-transform ${!listsExpanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
                         </button>
 
                         {/* List Detail Column */}
@@ -581,29 +581,29 @@ const ShoppingListPage = () => {
                                                     {selectedList.items?.map((item, index) => (
                                                         <div
                                                             key={index}
-                                                            className={`p-3 md:p-4 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-3 md:gap-4 ${item.purchased ? 'bg-emerald-50/30 border-l-4 border-emerald-500' : 'hover:bg-slate-50/50 border-l-4 border-transparent'}`}
+                                                            className={`p-2 md:p-4 transition-colors flex flex-col md:flex-row md:items-center justify-between gap-2 md:gap-4 ${item.purchased ? 'bg-emerald-50/30 border-l-4 border-emerald-500' : 'hover:bg-slate-50/50 border-l-4 border-transparent'}`}
                                                             data-testid={`list-item-${index}`}
                                                         >
-                                                            <div className="flex items-start md:items-center gap-3 md:gap-4 flex-1">
+                                                            <div className="flex items-start md:items-center gap-2.5 md:gap-4 flex-1">
                                                                 {/* Checkbox - Larger on mobile */}
                                                                 <Checkbox
                                                                     checked={item.purchased}
                                                                     onCheckedChange={(checked) => handleUpdateItem(index, { purchased: checked })}
-                                                                    className="w-7 h-7 md:w-6 md:h-6 rounded-lg md:rounded-md data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 mt-0.5 md:mt-0"
+                                                                    className="w-6 h-6 md:w-6 md:h-6 rounded-lg md:rounded-md data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 mt-0.5 md:mt-0"
                                                                     data-testid={`item-checkbox-${index}`}
                                                                 />
 
                                                                 {/* Main Product Info & Quantity Row */}
-                                                                <div className="flex-1 min-w-0 flex flex-col md:flex-row md:items-center justify-between gap-2">
+                                                                <div className="flex-1 min-w-0 flex flex-col md:flex-row md:items-center justify-between gap-1.5 md:gap-2">
                                                                     {/* Title & Brand */}
                                                                     <div className="flex-1 min-w-0 flex flex-col">
                                                                         <div className="flex items-center gap-2">
-                                                                            <h3 className={`font-bold text-sm md:text-base truncate transition-all ${item.purchased ? 'text-slate-400' : 'text-slate-900'}`}>
+                                                                            <h3 className={`font-bold text-[13px] md:text-base truncate transition-all ${item.purchased ? 'text-slate-400' : 'text-slate-900'}`}>
                                                                                 {item.product_name}
                                                                             </h3>
                                                                         </div>
-                                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                                            <p className="text-[10px] md:text-xs font-medium text-slate-400 uppercase tracking-wider truncate max-w-[150px]">{item.brand_name}</p>
+                                                                        <div className="flex items-center gap-2 mt-0">
+                                                                            <p className="text-[9px] md:text-xs font-medium text-slate-400 uppercase tracking-wider truncate max-w-[150px]">{item.brand_name}</p>
                                                                         </div>
                                                                     </div>
 
@@ -617,12 +617,12 @@ const ShoppingListPage = () => {
                                                                     </div>
 
                                                                     {/* Quantity Adjuster & Unit & Mobile Est */}
-                                                                    <div className="flex items-center gap-2 w-full md:w-auto mt-1 md:mt-0 justify-between md:justify-end">
+                                                                    <div className="flex items-center gap-2 w-full md:w-auto mt-0.5 md:mt-0 justify-between md:justify-end">
 
                                                                         <div className="flex items-center gap-2">
                                                                             {/* Mobile Estimated Price Inline */}
                                                                             <div className={`md:hidden overflow-hidden transition-all duration-300 ${showEstimated ? 'max-w-[100px] opacity-100' : 'max-w-0 opacity-0 pointer-events-none select-none'}`}>
-                                                                                <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-1 rounded-lg border border-indigo-100 flex items-center shadow-sm w-max">
+                                                                                <span className="text-[10px] font-mono font-bold text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded-lg border border-indigo-100 flex items-center shadow-sm w-max">
                                                                                     <Sparkles className="w-2.5 h-2.5 mr-1" />
                                                                                     {item.estimated_price ? `${item.estimated_price.toFixed(2)}€` : '-'}
                                                                                 </span>
@@ -635,11 +635,11 @@ const ShoppingListPage = () => {
                                                                                     value={item.quantity}
                                                                                     onChange={(e) => updateLocalItem(index, { quantity: parseFloat(e.target.value) || 1 })}
                                                                                     onBlur={() => saveList(selectedList.items)}
-                                                                                    className={`h-8 w-[50px] md:w-[60px] text-xs md:text-sm text-center font-bold border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1
+                                                                                    className={`h-7 w-[45px] md:h-8 md:w-[60px] text-xs md:text-sm text-center font-bold border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1
                                                                                     ${item.purchased ? 'bg-transparent text-slate-400' : 'bg-white text-slate-900'}
                                                                                 `}
                                                                                 />
-                                                                                <span className="text-[10px] md:text-xs text-slate-400 pr-2 font-bold border-l border-slate-100 pl-2 uppercase tracking-tighter">{item.unit_name}</span>
+                                                                                <span className="text-[10px] md:text-xs text-slate-400 pr-1.5 font-bold border-l border-slate-100 pl-1.5 uppercase tracking-tighter">{item.unit_name}</span>
                                                                             </div>
                                                                         </div>
 
@@ -648,17 +648,17 @@ const ShoppingListPage = () => {
                                                                             variant="ghost"
                                                                             size="icon"
                                                                             onClick={() => handleRemoveItem(index)}
-                                                                            className="md:hidden h-9 w-9 text-slate-300 hover:text-rose-600 shrink-0"
+                                                                            className="md:hidden h-8 w-8 text-slate-300 hover:text-rose-600 shrink-0"
                                                                         >
-                                                                            <Trash2 className="w-4 h-4" />
+                                                                            <Trash2 className="w-3.5 h-3.5" />
                                                                         </Button>
                                                                     </div>
                                                                 </div>
                                                             </div>
 
                                                             {/* Right Side: Real Price - Full width on mobile footer of item */}
-                                                            <div className="flex items-center gap-3 w-full md:w-auto mt-2 md:mt-0 pt-2 md:pt-0 border-t md:border-0 border-slate-100 justify-end">
-                                                                <span className="md:hidden text-[10px] font-bold text-slate-400 uppercase tracking-wider mr-auto">Precio Real</span>
+                                                            <div className="flex items-center gap-3 w-full md:w-auto mt-1 md:mt-0 pt-1 md:pt-0 border-t md:border-0 border-slate-100 justify-end">
+                                                                <span className="md:hidden text-[9px] font-bold text-slate-400 uppercase tracking-wider mr-auto">Precio Real</span>
 
                                                                 {/* Real Price Input - Larger on mobile */}
                                                                 <div className="relative shrink-0">
@@ -667,12 +667,12 @@ const ShoppingListPage = () => {
                                                                         value={item.price || ""}
                                                                         onChange={(e) => updateLocalItem(index, { price: parseFloat(e.target.value) || null })}
                                                                         onBlur={() => saveList(selectedList.items)}
-                                                                        className={`h-10 md:h-9 w-[100px] md:w-[90px] text-right pr-7 font-mono text-sm shadow-sm transition-all rounded-lg
+                                                                        className={`h-9 md:h-9 w-[90px] md:w-[90px] text-right pr-6 font-mono text-xs md:text-sm shadow-sm transition-all rounded-lg
                                                                             ${item.price ? 'border-emerald-500 bg-emerald-50/50 font-bold text-emerald-800' : 'border-slate-200 bg-white placeholder:text-slate-300'}
                                                                             ${item.purchased && !item.price ? 'border-amber-300 bg-amber-50 ring-2 ring-amber-100 ring-offset-1' : ''}
                                                                             ${item.purchased && item.price ? 'bg-transparent shadow-none border-dashed' : ''}`}
                                                                     />
-                                                                    <span className={`absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold
+                                                                    <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] md:text-xs font-bold
                                                                     ${item.price ? 'text-emerald-700' : 'text-slate-400'}
                                                                 `}>€</span>
                                                                 </div>

@@ -223,7 +223,7 @@ const Layout = ({ children }) => {
                     <div className="md:hidden border-t border-slate-200 bg-white shadow-lg animate-in slide-in-from-top duration-200">
                         <div className="px-4 py-4 space-y-2 max-h-[calc(100vh-4rem)] overflow-y-auto">
                             {/* User info en móvil */}
-                            <div className="flex items-center gap-3 px-4 py-4 bg-emerald-50 rounded-xl mb-4">
+                            <div className="flex items-center gap-3 px-4 py-4 bg-emerald-50 rounded-xl mb-2">
                                 <Avatar className="w-12 h-12 border-2 border-white shadow-sm">
                                     <AvatarImage src={user?.picture} />
                                     <AvatarFallback className="bg-emerald-100 text-emerald-600 font-bold">
@@ -238,6 +238,33 @@ const Layout = ({ children }) => {
                                     </div>
                                 </div>
                             </div>
+
+                            {/* Essential Nav Items - Restored for better accessibility */}
+                            <div className="space-y-1 mb-2">
+                                {navItems.map((item) => {
+                                    const isActive = location.pathname === item.path;
+                                    return (
+                                        <Link
+                                            key={item.path}
+                                            to={item.path}
+                                            onClick={() => setMobileMenuOpen(false)}
+                                        >
+                                            <Button
+                                                variant={isActive ? "default" : "ghost"}
+                                                className={`w-full justify-start gap-4 h-11 rounded-xl ${isActive
+                                                        ? "bg-emerald-500 text-white"
+                                                        : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                                    }`}
+                                            >
+                                                {item.icon}
+                                                <span className="flex-1 text-left font-medium">{item.label}</span>
+                                            </Button>
+                                        </Link>
+                                    );
+                                })}
+                            </div>
+
+                            <div className="h-px bg-slate-100 my-2 mx-2"></div>
 
                             <Link
                                 to="/profile"
