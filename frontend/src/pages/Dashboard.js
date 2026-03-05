@@ -64,33 +64,38 @@ const Dashboard = () => {
 
     return (
         <Layout>
-            <div className="space-y-8" data-testid="dashboard-page">
+            <div className="space-y-6 md:space-y-8" data-testid="dashboard-page">
                 {/* Header */}
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                        Dashboard
-                    </h1>
-                    <p className="text-slate-500 mt-1">Resumen de la actividad de PriceHive</p>
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                            Dashboard
+                        </h1>
+                        <p className="text-sm md:text-base text-slate-500 mt-1">Resumen de la actividad de PriceHive</p>
+                    </div>
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                     {statCards.map((stat, index) => (
                         <Card 
                             key={index} 
                             className="border-slate-200 stats-card overflow-hidden"
                             data-testid={`stat-card-${index}`}
                         >
-                            <CardContent className="p-6">
-                                <div className="flex items-start justify-between">
+                            <CardContent className="p-4 md:p-6">
+                                <div className="flex flex-col-reverse md:flex-row items-start justify-between gap-3 md:gap-0">
                                     <div>
-                                        <p className="text-sm text-slate-500 mb-1">{stat.label}</p>
-                                        <p className="text-3xl font-bold text-slate-900 font-mono">
+                                        <p className="text-[10px] md:text-sm font-bold uppercase tracking-wider text-slate-400 mb-1">{stat.label}</p>
+                                        <p className="text-xl md:text-3xl font-bold text-slate-900 font-mono">
                                             {loading ? "..." : stat.value.toLocaleString()}
                                         </p>
                                     </div>
-                                    <div className={`${stat.color} text-white p-3 rounded-xl`}>
-                                        {stat.icon}
+                                    <div className={`${stat.color} text-white p-2 md:p-3 rounded-lg md:rounded-xl shadow-lg shadow-emerald-500/10`}>
+                                        {/* Icon resize on mobile */}
+                                        <div className="w-5 h-5 md:w-6 md:h-6 flex items-center justify-center">
+                                            {stat.icon}
+                                        </div>
                                     </div>
                                 </div>
                             </CardContent>

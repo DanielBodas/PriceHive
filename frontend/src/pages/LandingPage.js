@@ -32,35 +32,38 @@ const LandingPage = () => {
     return (
         <div className="min-h-screen bg-slate-50">
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-slate-200/50">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-slate-200/50 px-4">
+                <div className="max-w-7xl mx-auto py-3 md:py-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                        <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
-                            <Tag className="w-5 h-5 text-white" />
+                        <div className="w-8 h-8 md:w-10 md:h-10 rounded-lg md:rounded-xl bg-emerald-500 flex items-center justify-center">
+                            <Tag className="w-4 h-4 md:w-5 md:h-5 text-white" />
                         </div>
-                        <span className="text-xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                        <span className="text-lg md:text-xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
                             PriceHive
                         </span>
                     </div>
-                    <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 md:gap-4">
                         <Link to="/login">
-                            <Button variant="ghost" className="text-slate-600 hover:text-emerald-600" data-testid="login-nav-btn">
-                                Iniciar Sesión
+                            <Button variant="ghost" size="sm" className="text-slate-600 hover:text-emerald-600 px-2 md:px-4" data-testid="login-nav-btn">
+                                <span className="hidden xs:inline">Iniciar Sesión</span>
+                                <span className="xs:hidden">Login</span>
                             </Button>
                         </Link>
                         <Button 
                             onClick={loginWithGoogle}
-                            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-6 btn-lift" 
+                            size="sm"
+                            className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-4 md:px-6 btn-lift"
                             data-testid="register-nav-btn"
                         >
-                            Empezar con Google
+                            <span className="hidden xs:inline">Empezar con Google</span>
+                            <span className="xs:hidden">Empezar</span>
                         </Button>
                     </div>
                 </div>
             </nav>
 
             {/* Hero Section */}
-            <section className="hero-gradient pt-32 pb-24 px-6">
+            <section className="hero-gradient pt-24 md:pt-32 pb-16 md:pb-24 px-6 overflow-hidden">
                 <div className="max-w-7xl mx-auto">
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         <div className="animate-fade-in-up">
@@ -76,21 +79,21 @@ const LandingPage = () => {
                                 Compara precios reales de supermercados gracias a nuestra comunidad. 
                                 Detecta subidas de precios encubiertas y ahorra en cada compra.
                             </p>
-                            <div className="flex flex-wrap gap-4">
+                            <div className="flex flex-col sm:flex-row gap-4">
                                 <Button 
                                     size="lg" 
-                                    className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-8 py-6 text-lg font-semibold btn-lift shadow-lg shadow-emerald-500/20"
+                                    className="bg-emerald-500 hover:bg-emerald-600 text-white rounded-full px-8 py-4 md:py-6 text-base md:text-lg font-semibold btn-lift shadow-lg shadow-emerald-500/20 w-full sm:w-auto"
                                     data-testid="hero-cta-btn"
                                     onClick={loginWithGoogle}
                                 >
                                     Empezar con Google
                                     <ArrowRight className="w-5 h-5 ml-2" />
                                 </Button>
-                                <Link to="/login">
+                                <Link to="/login" className="w-full sm:w-auto">
                                     <Button 
                                         variant="outline" 
                                         size="lg" 
-                                        className="rounded-full px-8 py-6 text-lg border-slate-300 hover:bg-slate-100"
+                                        className="rounded-full px-8 py-4 md:py-6 text-base md:text-lg border-slate-300 hover:bg-slate-100 w-full"
                                         data-testid="hero-login-btn"
                                     >
                                         Ya tengo cuenta
@@ -106,7 +109,7 @@ const LandingPage = () => {
                                     className="w-full h-full object-cover"
                                 />
                             </div>
-                            <div className="absolute -bottom-6 -left-6 bg-white rounded-xl p-4 shadow-xl border border-slate-100">
+                            <div className="absolute -bottom-4 -left-4 md:-bottom-6 md:-left-6 bg-white rounded-xl p-3 md:p-4 shadow-xl border border-slate-100">
                                 <div className="flex items-center gap-3">
                                     <div className="w-12 h-12 rounded-full bg-emerald-100 flex items-center justify-center">
                                         <TrendingDown className="w-6 h-6 text-emerald-600" />
@@ -123,13 +126,13 @@ const LandingPage = () => {
             </section>
 
             {/* Features Section */}
-            <section className="py-24 px-6 bg-white">
+            <section className="py-16 md:py-24 px-6 bg-white">
                 <div className="max-w-7xl mx-auto">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    <div className="text-center mb-12 md:mb-16">
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
                             Todo lo que necesitas para comprar inteligente
                         </h2>
-                        <p className="text-base text-slate-600 max-w-2xl mx-auto">
+                        <p className="text-sm md:text-base text-slate-600 max-w-2xl mx-auto">
                             Herramientas colaborativas para que nunca más pagues de más
                         </p>
                     </div>
@@ -156,27 +159,27 @@ const LandingPage = () => {
             </section>
 
             {/* How it works */}
-            <section className="py-24 px-6 bg-slate-50">
+            <section className="py-16 md:py-24 px-6 bg-slate-50">
                 <div className="max-w-7xl mx-auto">
-                    <div className="text-center mb-16">
-                        <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    <div className="text-center mb-12 md:mb-16">
+                        <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
                             Cómo funciona
                         </h2>
                     </div>
-                    <div className="grid md:grid-cols-3 gap-8">
+                    <div className="grid sm:grid-cols-2 md:grid-cols-3 gap-12 md:gap-8">
                         {[
                             { step: "01", title: "Crea tu lista", desc: "Añade los productos que necesitas comprar" },
                             { step: "02", title: "Compra y registra", desc: "Anota los precios que encuentras en el super" },
                             { step: "03", title: "Comparte y ahorra", desc: "Tu info ayuda a otros y ves las mejores ofertas" }
                         ].map((item, index) => (
                             <div key={index} className="text-center animate-fade-in-up" style={{ animationDelay: `${index * 150}ms` }}>
-                                <div className="text-6xl font-bold text-emerald-200 mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                                <div className="text-5xl md:text-6xl font-bold text-emerald-200 mb-2 md:mb-4" style={{ fontFamily: 'Manrope, sans-serif' }}>
                                     {item.step}
                                 </div>
-                                <h3 className="text-xl font-semibold text-slate-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                                <h3 className="text-lg md:text-xl font-semibold text-slate-900 mb-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
                                     {item.title}
                                 </h3>
-                                <p className="text-slate-600">{item.desc}</p>
+                                <p className="text-sm md:text-base text-slate-600 px-4 md:px-0">{item.desc}</p>
                             </div>
                         ))}
                     </div>
@@ -184,17 +187,17 @@ const LandingPage = () => {
             </section>
 
             {/* CTA Section */}
-            <section className="py-24 px-6 bg-emerald-500">
+            <section className="py-16 md:py-24 px-6 bg-emerald-500">
                 <div className="max-w-4xl mx-auto text-center">
-                    <h2 className="text-3xl sm:text-4xl font-bold text-white mb-6" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-white mb-6" style={{ fontFamily: 'Manrope, sans-serif' }}>
                         Únete a la comunidad PriceHive
                     </h2>
-                    <p className="text-emerald-100 text-lg mb-8 max-w-2xl mx-auto">
+                    <p className="text-emerald-100 text-base md:text-lg mb-8 max-w-2xl mx-auto">
                         Más de 10.000 usuarios ya están ahorrando en sus compras semanales
                     </p>
                     <Button 
                         size="lg" 
-                        className="bg-white text-emerald-600 hover:bg-slate-100 rounded-full px-10 py-6 text-lg font-semibold shadow-xl"
+                        className="bg-white text-emerald-600 hover:bg-slate-100 rounded-full px-8 md:px-10 py-4 md:py-6 text-base md:text-lg font-semibold shadow-xl w-full sm:w-auto"
                         data-testid="cta-register-btn"
                         onClick={loginWithGoogle}
                     >
