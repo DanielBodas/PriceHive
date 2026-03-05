@@ -6,20 +6,24 @@ import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { toast } from "sonner";
-import { 
-    MessageSquare, 
-    Heart, 
-    ThumbsUp, 
-    Lightbulb, 
+import {
+    MessageSquare,
+    Heart,
+    ThumbsUp,
+    Lightbulb,
     AlertTriangle,
     Send,
     Clock,
-    User
+    User,
+    Trash2
 } from "lucide-react";
+
+import { useAuth } from "../contexts/AuthContext";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const FeedPage = () => {
+    const { user } = useAuth();
     const [posts, setPosts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [newPost, setNewPost] = useState("");
@@ -68,6 +72,17 @@ const FeedPage = () => {
         }
     };
 
+    const handleDeletePost = async (postId) => {
+        if (!window.confirm("¿Seguro que quieres eliminar esta publicación?")) return;
+        try {
+            await axios.delete(`${API}/posts/${postId}`);
+            toast.success("Publicación eliminada");
+            fetchPosts();
+        } catch (error) {
+            toast.error("Error al eliminar");
+        }
+    };
+
     const toggleComments = async (postId) => {
         if (expandedComments[postId]) {
             setExpandedComments({ ...expandedComments, [postId]: false });
@@ -99,8 +114,8 @@ const FeedPage = () => {
 
     const formatDate = (dateString) => {
         const date = new Date(dateString);
-        return date.toLocaleDateString('es-ES', { 
-            day: 'numeric', 
+        return date.toLocaleDateString('es-ES', {
+            day: 'numeric',
             month: 'short',
             hour: '2-digit',
             minute: '2-digit'
@@ -165,7 +180,7 @@ const FeedPage = () => {
                                     <SelectItem value="tip">Consejo</SelectItem>
                                 </SelectContent>
                             </Select>
-                            <Button 
+                            <Button
                                 onClick={handleCreatePost}
                                 disabled={posting || !newPost.trim()}
                                 className="bg-emerald-500 hover:bg-emerald-600 gap-2"
@@ -209,14 +224,27 @@ const FeedPage = () => {
                                                 </p>
                                             </div>
                                         </div>
-                                        <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getPostTypeStyles(post.post_type)}`}>
-                                            {getPostTypeLabel(post.post_type)}
-                                        </span>
+                                        <div className="flex items-center gap-2">
+                                            <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getPostTypeStyles(post.post_type)}`}>
+                                                {getPostTypeLabel(post.post_type)}
+                                            </span>
+                                            {(user?.id === post.user_id || user?.role === 'admin') && (
+                                                <Button
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    onClick={() => handleDeletePost(post.id)}
+                                                    className="w-8 h-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                                                    data-testid={`delete-post-${post.id}`}
+                                                >
+                                                    <Trash2 className="w-4 h-4" />
+                                                </Button>
+                                            )}
+                                        </div>
                                     </div>
                                 </CardHeader>
                                 <CardContent className="pt-0">
                                     <p className="text-slate-700 whitespace-pre-wrap mb-4">{post.content}</p>
-                                    
+
                                     {/* Reactions */}
                                     <div className="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-4">
                                         {reactionButtons.map((btn) => (
@@ -261,7 +289,7 @@ const FeedPage = () => {
                                                     </div>
                                                 </div>
                                             ))}
-                                            
+
                                             {/* Add Comment */}
                                             <div className="flex gap-2">
                                                 <input

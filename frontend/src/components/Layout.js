@@ -2,7 +2,7 @@ import { Link, useLocation, useNavigate } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "./ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "./ui/avatar";
-import { 
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -15,13 +15,13 @@ import {
     TooltipProvider,
     TooltipTrigger,
 } from "./ui/tooltip";
-import { 
-    Tag, 
-    LayoutDashboard, 
-    MessageSquare, 
-    ShoppingCart, 
-    BarChart3, 
-    Settings, 
+import {
+    Tag,
+    LayoutDashboard,
+    MessageSquare,
+    ShoppingCart,
+    BarChart3,
+    Settings,
     LogOut,
     Menu,
     X,
@@ -46,12 +46,9 @@ const Layout = ({ children }) => {
         { path: "/feed", label: "Muro", icon: <MessageSquare className="w-5 h-5" /> },
         { path: "/shopping-list", label: "Lista de Compra", icon: <ShoppingCart className="w-5 h-5" /> },
         { path: "/analytics", label: "Análisis", icon: <BarChart3 className="w-5 h-5" /> },
-        { path: "/alerts", label: "Alertas", icon: <Bell className="w-5 h-5" /> },
     ];
 
-    const navItems = user?.role === 'admin' 
-        ? [...baseNavItems, { path: "/admin", label: "Admin", icon: <Settings className="w-5 h-5" /> }]
-        : baseNavItems;
+    const navItems = baseNavItems;
 
     useEffect(() => {
         const fetchUnreadCount = async () => {
@@ -98,7 +95,7 @@ const Layout = ({ children }) => {
                                 {navItems.map((item) => {
                                     const isActive = location.pathname === item.path;
                                     const hasNotification = item.path === "/alerts" && unreadCount > 0;
-                                    
+
                                     return (
                                         <Tooltip key={item.path}>
                                             <TooltipTrigger asChild>
@@ -106,11 +103,10 @@ const Layout = ({ children }) => {
                                                     <Button
                                                         variant={isActive ? "default" : "ghost"}
                                                         size="sm"
-                                                        className={`relative gap-2 transition-all ${
-                                                            isActive 
-                                                                ? "bg-emerald-500 text-white hover:bg-emerald-600" 
+                                                        className={`relative gap-2 transition-all ${isActive
+                                                                ? "bg-emerald-500 text-white hover:bg-emerald-600"
                                                                 : "text-slate-600 hover:text-emerald-600 hover:bg-emerald-50"
-                                                        }`}
+                                                            }`}
                                                         data-testid={`nav-${item.path.slice(1)}`}
                                                     >
                                                         <span className="relative">
@@ -194,6 +190,12 @@ const Layout = ({ children }) => {
                                             </span>
                                         )}
                                     </DropdownMenuItem>
+                                    {user?.role === 'admin' && (
+                                        <DropdownMenuItem onClick={() => navigate('/admin')} className="cursor-pointer">
+                                            <Settings className="w-4 h-4 mr-2" />
+                                            Admin
+                                        </DropdownMenuItem>
+                                    )}
                                     <DropdownMenuSeparator />
                                     <DropdownMenuItem onClick={handleLogout} className="cursor-pointer text-rose-600">
                                         <LogOut className="w-4 h-4 mr-2" />
@@ -201,7 +203,7 @@ const Layout = ({ children }) => {
                                     </DropdownMenuItem>
                                 </DropdownMenuContent>
                             </DropdownMenu>
-                            
+
                             {/* Mobile menu button */}
                             <Button
                                 variant="ghost"
@@ -241,20 +243,19 @@ const Layout = ({ children }) => {
                             {navItems.map((item) => {
                                 const isActive = location.pathname === item.path;
                                 const hasNotification = item.path === "/alerts" && unreadCount > 0;
-                                
+
                                 return (
-                                    <Link 
-                                        key={item.path} 
+                                    <Link
+                                        key={item.path}
                                         to={item.path}
                                         onClick={() => setMobileMenuOpen(false)}
                                     >
                                         <Button
                                             variant={isActive ? "default" : "ghost"}
-                                            className={`w-full justify-start gap-3 h-11 ${
-                                                isActive 
-                                                    ? "bg-emerald-500 text-white" 
+                                            className={`w-full justify-start gap-3 h-11 ${isActive
+                                                    ? "bg-emerald-500 text-white"
                                                     : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
-                                            }`}
+                                                }`}
                                         >
                                             <span className="relative">
                                                 {item.icon}
@@ -272,6 +273,73 @@ const Layout = ({ children }) => {
                                     </Link>
                                 );
                             })}
+
+
+                            <div className="h-px bg-slate-200 my-2"></div>
+
+                            <Link
+                                to="/profile"
+                                onClick={() => setMobileMenuOpen(false)}
+                            >
+                                <Button
+                                    variant={location.pathname === "/profile" ? "default" : "ghost"}
+                                    className={`w-full justify-start gap-3 h-11 ${location.pathname === "/profile"
+                                            ? "bg-emerald-500 text-white"
+                                            : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                        }`}
+                                >
+                                    <User className="w-5 h-5" />
+                                    <span className="flex-1 text-left">Mi Perfil</span>
+                                </Button>
+                            </Link>
+
+                            <Link
+                                to="/alerts"
+                                onClick={() => setMobileMenuOpen(false)}
+                            >
+                                <Button
+                                    variant={location.pathname === "/alerts" ? "default" : "ghost"}
+                                    className={`w-full justify-start gap-3 h-11 ${location.pathname === "/alerts"
+                                            ? "bg-emerald-500 text-white"
+                                            : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                        }`}
+                                >
+                                    <Bell className="w-5 h-5" />
+                                    <span className="flex-1 text-left">Notificaciones</span>
+                                    {unreadCount > 0 && (
+                                        <span className="w-6 h-6 rounded-full bg-rose-500 text-white text-xs flex items-center justify-center">
+                                            {unreadCount > 9 ? "9+" : unreadCount}
+                                        </span>
+                                    )}
+                                </Button>
+                            </Link>
+
+                            {user?.role === 'admin' && (
+                                <Link
+                                    to="/admin"
+                                    onClick={() => setMobileMenuOpen(false)}
+                                >
+                                    <Button
+                                        variant={location.pathname === "/admin" ? "default" : "ghost"}
+                                        className={`w-full justify-start gap-3 h-11 ${location.pathname === "/admin"
+                                                ? "bg-emerald-500 text-white"
+                                                : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                            }`}
+                                    >
+                                        <Settings className="w-5 h-5" />
+                                        <span className="flex-1 text-left">Admin</span>
+                                    </Button>
+                                </Link>
+                            )}
+
+                            <Button
+                                variant="ghost"
+                                onClick={handleLogout}
+                                className="w-full justify-start gap-3 h-11 text-rose-600 hover:bg-rose-50 hover:text-rose-700 mt-1"
+                            >
+                                <LogOut className="w-5 h-5" />
+                                <span className="flex-1 text-left">Cerrar Sesión</span>
+                            </Button>
                         </div>
                     </div>
                 )}
