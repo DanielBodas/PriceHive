@@ -381,29 +381,22 @@ async def delete_product(prod_id: str, user: dict = Depends(get_admin_user)):
 async def create_sellable_products_bulk(data: SellableProductBulkCreate, user: dict = Depends(get_admin_user)):
     results = []
 
-    # If catalog_entry_ids is empty, it means we are linking all active products of a brand
-    target_ids = data.catalog_entry_ids
-    if not target_ids:
-        brand_entries = await db.brand_product_catalog.find({
-            "brand_id": data.brand_id,
-            "status": "active"
-        }).to_list(1000)
-        target_ids = [e.get("id") or str(e.get("_id")) for e in brand_entries]
+    # Always link all active products of the brand to the supermarket
+    brand_entries = await db.brand_product_catalog.find({
+        "brand_id": data.brand_id,
+        "status": "active"
+    }).to_list(1000)
 
-    for entry_id in target_ids:
-        catalog_entry = await db.brand_product_catalog.find_one({"id": entry_id})
-        if not catalog_entry:
-            continue
+    for entry in brand_entries:
+        pid = entry["product_id"]
+        # We don't store variant attributes in sellable_products anymore
+        # as availability is defined at Brand-Product level, and variants
+        # are just combinations of allowed attributes.
 
-        pid = catalog_entry["product_id"]
-        attr_vals = catalog_entry.get("attribute_values", {})
-
-        # Check if already exists with same attributes
         existing = await db.sellable_products.find_one({
             "supermarket_id": data.supermarket_id,
             "product_id": pid,
-            "brand_id": data.brand_id,
-            "attribute_values": attr_vals
+            "brand_id": data.brand_id
         })
 
         if not existing:
@@ -412,8 +405,7 @@ async def create_sellable_products_bulk(data: SellableProductBulkCreate, user: d
                 "id": sp_id,
                 "supermarket_id": data.supermarket_id,
                 "product_id": pid,
-                "brand_id": data.brand_id,
-                "attribute_values": attr_vals
+                "brand_id": data.brand_id
             }
             await db.sellable_products.insert_one(doc)
             await _sync_product_units_to_sellable_product(sp_id, pid)
@@ -422,7 +414,7 @@ async def create_sellable_products_bulk(data: SellableProductBulkCreate, user: d
             existing_sp_id = existing.get("id") or str(existing.get("_id"))
             if existing_sp_id:
                 await _sync_product_units_to_sellable_product(existing_sp_id, pid)
-    return {"message": f"{len(results)} productos vinculados correctamente", "product_ids": results}
+    return {"message": f"Marca vinculada. {len(results)} productos operativos añadidos.", "product_ids": results}
 
 @router.post("/sellable-products", response_model=SellableProductResponse)
 async def create_sellable_product(data: SellableProductCreate, user: dict = Depends(get_admin_user)):
@@ -503,15 +495,24 @@ async def delete_sellable_product(sp_id: str, user: dict = Depends(get_admin_use
 
 @router.delete("/supermarkets/{sm_id}/brands/{brand_id}")
 async def delete_brand_from_supermarket(sm_id: str, brand_id: str, user: dict = Depends(get_admin_user)):
-    # Deletes all products of a brand in a specific supermarket
+    # Find all sellable products for this brand in this supermarket to clean up units
+    sps = await db.sellable_products.find({
+        "supermarket_id": sm_id,
+        "brand_id": brand_id
+    }).to_list(1000)
+
+    sp_ids = [sp.get("id") or str(sp.get("_id")) for sp in sps]
+
+    # Delete associated units
+    if sp_ids:
+        await db.sellable_product_units.delete_many({"sellable_product_id": {"$in": sp_ids}})
+
+    # Deletes all products of the brand in the supermarket
     result = await db.sellable_products.delete_many({
         "supermarket_id": sm_id,
         "brand_id": brand_id
     })
 
-    # Also delete associated units for those sellable products
-    # We need to find the IDs first
-    # This is slightly inefficient but safer
     return {"message": f"Brand removed from supermarket. {result.deleted_count} products deleted."}
 
 # Product Units
@@ -641,73 +642,49 @@ async def delete_sellable_product_unit(spu_id: str, user: dict = Depends(get_adm
 @router.post("/brand-catalog/bulk")
 async def create_brand_catalog_bulk(data: BrandProductCatalogBulkCreate, user: dict = Depends(get_admin_user)):
     results = []
-
-    # If we have attribute combinations, we are creating specific variants
-    if data.attribute_combinations:
-        for pid in data.product_ids:
-            for combo in data.attribute_combinations:
-                # Check for existing variant
-                existing = await db.brand_product_catalog.find_one({
-                    "brand_id": data.brand_id,
-                    "product_id": pid,
-                    "attribute_values": combo
-                })
-                if existing:
-                    # Robust update: use either id or _id
-                    target_filter = {"id": existing["id"]} if "id" in existing else {"_id": existing["_id"]}
-                    await db.brand_product_catalog.update_one(
-                        target_filter,
-                        {"$set": {"status": data.status}}
-                    )
-                else:
-                    bc_id = str(uuid.uuid4())
-                    doc = {
-                        "id": bc_id,
-                        "brand_id": data.brand_id,
-                        "product_id": pid,
-                        "status": data.status,
-                        "attribute_values": combo
-                    }
-                    await db.brand_product_catalog.insert_one(doc)
-            results.append(pid)
-    else:
-        # Standard bulk without specific attributes
-        for pid in data.product_ids:
-            existing = await db.brand_product_catalog.find_one({
+    for pid in data.product_ids:
+        existing = await db.brand_product_catalog.find_one({
+            "brand_id": data.brand_id,
+            "product_id": pid
+        })
+        if existing:
+            target_filter = {"id": existing["id"]} if "id" in existing else {"_id": existing["_id"]}
+            await db.brand_product_catalog.update_one(
+                target_filter,
+                {"$set": {"status": data.status}}
+            )
+        else:
+            bc_id = str(uuid.uuid4())
+            doc = {
+                "id": bc_id,
                 "brand_id": data.brand_id,
                 "product_id": pid,
-                "attribute_values": {"$in": [None, {}, []]}
-            })
-            if existing:
-                target_filter = {"id": existing["id"]} if "id" in existing else {"_id": existing["_id"]}
-                await db.brand_product_catalog.update_one(
-                    target_filter,
-                    {"$set": {"status": data.status}}
-                )
-            else:
-                bc_id = str(uuid.uuid4())
-                doc = {"id": bc_id, "brand_id": data.brand_id, "product_id": pid, "status": data.status, "attribute_values": {}}
-                await db.brand_product_catalog.insert_one(doc)
-            results.append(pid)
+                "status": data.status,
+                "allowed_attributes": {}
+            }
+            await db.brand_product_catalog.insert_one(doc)
+        results.append(pid)
 
-    return {"message": f"{len(results)} productos actualizados en el catálogo", "product_ids": results}
+    return {"message": f"{len(results)} productos añadidos al catálogo de marca", "product_ids": results}
 
 @router.post("/brand-catalog", response_model=BrandProductCatalogResponse)
 async def create_brand_catalog_entry(data: BrandProductCatalogCreate, user: dict = Depends(get_admin_user)):
-    # Check if an exact match (brand + product + attributes) exists to update instead of duplicate
     query = {
         "brand_id": data.brand_id,
-        "product_id": data.product_id,
-        "attribute_values": data.attribute_values
+        "product_id": data.product_id
     }
     existing = await db.brand_product_catalog.find_one(query)
 
     if existing:
+        target_filter = {"id": existing["id"]} if "id" in existing else {"_id": existing["_id"]}
         await db.brand_product_catalog.update_one(
-            {"id": existing["id"]},
-            {"$set": {"status": data.status}}
+            target_filter,
+            {"$set": {
+                "status": data.status,
+                "allowed_attributes": data.allowed_attributes
+            }}
         )
-        doc = {**existing, "status": data.status}
+        doc = {**existing, "status": data.status, "allowed_attributes": data.allowed_attributes}
     else:
         bc_id = str(uuid.uuid4())
         doc = {
@@ -715,7 +692,7 @@ async def create_brand_catalog_entry(data: BrandProductCatalogCreate, user: dict
             "brand_id": data.brand_id,
             "product_id": data.product_id,
             "status": data.status,
-            "attribute_values": data.attribute_values
+            "allowed_attributes": data.allowed_attributes
         }
         await db.brand_product_catalog.insert_one(doc)
 

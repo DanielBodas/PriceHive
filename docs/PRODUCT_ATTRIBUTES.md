@@ -14,28 +14,50 @@ Generic attributes that can be associated with products.
 - `values`: List of Strings. Predefined options for variants (e.g., ["Fresa", "Limón", "Natural"]).
 
 ### Product Model Updates
-The `Product` collection now supports hierarchical relationships and dynamic attributes.
+The `Product` collection now focuses on conceptual base products.
 
-- `is_base`: Boolean. If true, this product serves as a conceptual base for variants.
-- `allowed_attribute_ids`: List of Attribute UUIDs. Defines which attributes are applicable to variants of this base product.
-- `base_product_id`: UUID (Optional). References the base product if this is a variant.
-- `attribute_values`: Dictionary `{attribute_id: value_string}`. Stores the specific values for this variant.
+- `is_base`: Boolean. Defaults to true. These products represent general concepts (e.g., "Yogurt").
+- `allowed_attribute_ids`: List of Attribute UUIDs. Defines which generic attributes (e.g., "Flavor") are applicable to this concept.
 
-## 2. Entity Diagram (Conceptual)
+### Brand Product Catalog (Grouped Variants)
+Instead of creating a separate `Product` record for every variation, PriceHive uses a grouped matrix model within the `brand_product_catalog` collection.
+
+- `brand_id`: UUID.
+- `product_id`: UUID (references a base product).
+- `status`: String ("active", "planned", "discontinued").
+- `allowed_attributes`: Dictionary `{attribute_id: [value1, value2]}`. Stores the matrix of all valid values this brand offers for this product.
+
+### Shopping List Items (Specific Variants)
+Specific variant selections are stored at the shopping list level.
+
+- `sellable_product_id`: UUID (links to the Brand-Product availability).
+- `attribute_values`: Dictionary `{attribute_id: selected_value}`. Stores the user's specific choice (e.g., `{flavor: "Lemon"}`).
+
+## 2. Entity Diagram (Grouped Matrix Model)
 
 ```mermaid
 erDiagram
-    CATEGORY ||--o{ PRODUCT : contains
-    ATTRIBUTE ||--o{ PRODUCT : "allowed in (base)"
-    PRODUCT ||--o{ PRODUCT : "has variant"
-    PRODUCT ||--o{ ATTRIBUTE_VALUE : "defines"
+    CATEGORY ||--o{ PRODUCT_BASE : contains
+    ATTRIBUTE ||--o{ PRODUCT_BASE : "mapped to"
+    BRAND ||--o{ BRAND_CATALOG : "has portfolio"
+    PRODUCT_BASE ||--o{ BRAND_CATALOG : "available in"
+    BRAND_CATALOG ||--o{ SHOPPING_LIST_ITEM : "specifies"
 
-    PRODUCT {
+    PRODUCT_BASE {
         string id
         string name
-        boolean is_base
-        string base_product_id
         list allowed_attribute_ids
+    }
+
+    BRAND_CATALOG {
+        string id
+        string brand_id
+        string product_id
+        dict allowed_attributes
+    }
+
+    SHOPPING_LIST_ITEM {
+        string sellable_product_id
         dict attribute_values
     }
 
@@ -54,38 +76,40 @@ erDiagram
   "id": "base-yogurt-uuid",
   "name": "Yogur",
   "category_id": "category-dairy-uuid",
-  "is_base": true,
-  "allowed_attribute_ids": ["attr-flavor-uuid", "attr-fat-uuid"],
-  "base_product_id": null,
-  "attribute_values": {}
+  "allowed_attribute_ids": ["attr-flavor-uuid"]
 }
 ```
 
-### Variant: Strawberry Yogurt
+### Brand Catalog Entry (Grouped)
 ```json
 {
-  "id": "variant-strawberry-uuid",
-  "name": "Yogur de Fresa",
-  "category_id": "category-dairy-uuid",
-  "is_base": false,
-  "base_product_id": "base-yogurt-uuid",
+  "brand_id": "brand-danone-uuid",
+  "product_id": "base-yogurt-uuid",
+  "status": "active",
+  "allowed_attributes": {
+    "attr-flavor-uuid": ["Fresa", "Limón", "Natural"]
+  }
+}
+```
+
+### Shopping List Item (Specific Choice)
+```json
+{
+  "sellable_product_id": "danone-yogurt-at-mercadona-uuid",
+  "product_name": "Yogur",
+  "brand_name": "Danone",
   "attribute_values": {
-    "attr-flavor-uuid": "Fresa",
-    "attr-fat-uuid": "Entera"
+    "attr-flavor-uuid": "Limón"
   }
 }
 ```
 
 ## 4. Backend Implementation
-- **Flexibility**: Using a Dictionary for `attribute_values` allows adding new attributes without MongoDB schema migrations.
-- **Validation**: Variants inherit the category from their base product concept, though they can be overridden.
-- **Search**: The `get_products` endpoint automatically resolves `base_product_name` for variants to facilitate UI display.
+- **Data Inheritance**: The public API automatically resolves Brand and Category metadata for items by following the linkage from `SellableProduct` -> `ProductBase`.
+- **Estimation Engine**: Price estimation prioritizes records with matching `attribute_values` to provide variant-accurate pricing.
+- **Cascading Cleanup**: Deleting a Brand from a Supermarket automatically removes all its associated `SellableProduct` and `SellableProductUnit` links.
 
 ## 5. UI/UX Design
-- **Management**: A new "Atributos" tab in the Admin Panel allows creating generic attributes and defining their possible values.
-- **Product Creation**:
-    - Users can toggle "¿Es un Producto Base?".
-    - For Base Products, a list of checkboxes allows selecting which attributes variants can have.
-    - For regular products, a "Producto Base" dropdown allows linking it as a variant.
-    - When a base is selected, dynamic fields appear for each allowed attribute. If the attribute has predefined values, a dropdown is shown; otherwise, a free-text input is provided.
-- **Visual Feedback**: Variants display their attribute values as badges in the product table.
+- **Inline Catalog Matrix**: The Brand Catalog uses a matrix view where admins multi-select values (Strawberry, Lemon, etc.) directly on the product card. Selections are synced in real-time.
+- **Dynamic Selectors**: The Shopping List "Add Item" dialog generates dynamic dropdowns based on the selected brand's portfolio. Selecting "Yogurt" + "Danone" will show a flavor selector with "Fresa, Limón, Natural".
+- **Visual Metadata**: Variants are displayed with their selected attributes in parentheses (e.g., "Yogur (Limón)") to distinguish them without requiring unique product names.

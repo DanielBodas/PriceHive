@@ -259,9 +259,9 @@ const AdminPage = () => {
 
     const supermarketCatalogTree = Object.values(
         filteredSellableTable.reduce((acc, row) => {
-            const supermarketId = row.supermarket_id || row.supermarket_name || "unknown-supermarket";
-            const brandId = row.brand_id || row.brand_name || "unknown-brand";
-            const productId = row.product_id || row.product_name || "unknown-product";
+            const supermarketId = row.supermarket_id || "unknown-supermarket";
+            const brandId = row.brand_id || "unknown-brand";
+            const productId = row.product_id || "unknown-product";
 
             if (!acc[supermarketId]) {
                 acc[supermarketId] = { id: supermarketId, name: row.supermarket_name || "Sin supermercado", brands: {} };
@@ -273,16 +273,8 @@ const AdminPage = () => {
                 acc[supermarketId].brands[brandId].products[productId] = {
                     id: productId,
                     name: row.product_name || "Sin producto",
-                    brand_id: row.brand_id,
-                    product_id: row.product_id,
-                    variants: []
                 };
             }
-            acc[supermarketId].brands[brandId].products[productId].variants.push({
-                id: row.id,
-                attribute_values: row.attribute_values || {},
-                status: brandCatalogStatusByBrandProduct[`${row.brand_id || ""}::${row.product_id || ""}`] || "missing"
-            });
             return acc;
         }, {})
     )
@@ -290,12 +282,13 @@ const AdminPage = () => {
             const brandsList = Object.values(supermarket.brands).map((brand) => ({
                 ...brand,
                 products: Object.values(brand.products).sort((a, b) => a.name.localeCompare(b.name)),
+                products_count: Object.values(brand.products).length
             }));
             return {
                 ...supermarket,
                 brands: brandsList.sort((a, b) => a.name.localeCompare(b.name)),
                 brands_count: brandsList.length,
-                products_count: brandsList.reduce((acc, brand) => acc + brand.products.length, 0),
+                total_products_count: brandsList.reduce((acc, b) => acc + b.products_count, 0)
             };
         })
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -318,22 +311,15 @@ const AdminPage = () => {
                 acc[brandId] = { id: brandId, name: row.brand_name || "Sin marca", products: {} };
             }
 
-            if (!acc[brandId].products[productId]) {
-                acc[brandId].products[productId] = {
-                    id: productId,
-                    name: row.product_name || "Sin producto",
-                    brand_id: row.brand_id,
-                    product_id: row.product_id,
-                    variants: [],
-                    supermarkets: Object.values(supermarketsByBrandProduct[key] || {}).sort((a, b) => a.localeCompare(b)),
-                };
-            }
-
-            acc[brandId].products[productId].variants.push({
-                id: row.id,
+            acc[brandId].products[productId] = {
+                id: row.id, // entry id
+                name: row.product_name || "Sin producto",
                 status: row.status,
-                attribute_values: row.attribute_values || {}
-            });
+                brand_id: row.brand_id,
+                product_id: row.product_id,
+                allowed_attributes: row.allowed_attributes || {},
+                supermarkets: Object.values(supermarketsByBrandProduct[key] || {}).sort((a, b) => a.localeCompare(b)),
+            };
 
             return acc;
         }, {})
@@ -604,35 +590,11 @@ const AdminPage = () => {
                 return;
             }
 
-            // Generate combinations if attributes are selected
-            let combinations = [];
-            const selectedAttrIds = Object.keys(attributeSelection).filter(id => attributeSelection[id].length > 0);
-
-            if (selectedAttrIds.length > 0) {
-                const generate = (index, current) => {
-                    if (index === selectedAttrIds.length) {
-                        combinations.push(current);
-                        return;
-                    }
-                    const attrId = selectedAttrIds[index];
-                    attributeSelection[attrId].forEach(val => {
-                        generate(index + 1, { ...current, [attrId]: val });
-                    });
-                };
-                generate(0, {});
-            }
-
-            const payload = {
-                ...catalogForm,
-                attribute_combinations: combinations.length > 0 ? combinations : null
-            };
-
-            const res = await axios.post(`${API}/admin/brand-catalog/bulk`, payload);
+            const res = await axios.post(`${API}/admin/brand-catalog/bulk`, catalogForm);
             toast.success(res.data.message);
             fetchAllData();
             setCatalogDialog(false);
-            setCatalogForm({ brand_id: "", product_ids: [], status: "active", attribute_combinations: [] });
-            setAttributeSelection({});
+            setCatalogForm({ brand_id: "", product_ids: [], status: "active" });
             setProductSearch("");
         } catch (e) { toast.error("Error al actualizar catálogo"); }
     };
@@ -958,95 +920,81 @@ const AdminPage = () => {
                                     <CardHeader className="space-y-4">
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
-                                                <CardTitle className="text-lg">Catalogo Supermercado</CardTitle>
-                                                <p className="text-sm text-slate-500 mt-1">Vista por supermercado, con marcas y productos operativos</p>
+                                                <CardTitle className="text-lg">Catálogo Supermercado</CardTitle>
+                                                <p className="text-sm text-slate-500 mt-1">Gestiona qué marcas están disponibles en cada establecimiento.</p>
                                             </div>
                                             <Button onClick={() => setAddSupermarketToCatalogDialog(true)} className="bg-emerald-500" data-testid="new-sellable-btn"><Plus className="w-4 h-4 mr-2" /> Añadir Supermercado</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <Input value={sellableTableSearch} onChange={(e) => setSellableTableSearch(e.target.value)} placeholder="Filtrar por supermercado, marca o producto" className="pl-9" />
+                                            <Input value={sellableTableSearch} onChange={(e) => setSellableTableSearch(e.target.value)} placeholder="Filtrar por supermercado o marca" className="pl-9" />
                                         </div>
                                     </CardHeader>
                                     <CardContent>
                                         <Accordion type="multiple" className="w-full">
                                             {supermarketCatalogTree.map((supermarket) => (
                                                 <AccordionItem key={supermarket.id} value={`sm-${supermarket.id}`}>
-                                                    <AccordionTrigger className="hover:no-underline">
+                                                    <AccordionTrigger className="hover:no-underline py-4">
                                                         <div className="flex items-center justify-between w-full pr-4">
                                                             <div className="flex items-center gap-3">
                                                                 <span className="font-semibold text-slate-800">{supermarket.name}</span>
-                                                                <Badge variant="secondary">{supermarket.brands_count} marcas</Badge>
-                                                                <Badge variant="secondary">{supermarket.products_count} productos</Badge>
+                                                                <div className="flex gap-2">
+                                                                    <Badge variant="secondary" className="bg-slate-100 text-slate-600">{supermarket.brands_count} marcas</Badge>
+                                                                    <Badge variant="secondary" className="bg-emerald-50 text-emerald-600">{supermarket.total_products_count} productos activos</Badge>
+                                                                </div>
                                                             </div>
-                                                            <Button size="sm" variant="outline" className="h-8" onClick={(e) => { e.stopPropagation(); setSellableForm({ ...sellableForm, supermarket_id: supermarket.id, brand_id: "", product_ids: [] }); setSupermarketBrandDialog(true); }}>
-                                                                <Plus className="w-3 h-3 mr-1" /> Gestionar Marcas
+                                                            <Button size="sm" variant="outline" className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={(e) => { e.stopPropagation(); setSellableForm({ ...sellableForm, supermarket_id: supermarket.id, brand_id: "", catalog_entry_ids: [] }); setSupermarketBrandDialog(true); }}>
+                                                                <Plus className="w-3.5 h-3.5 mr-1.5" /> Añadir Marca
                                                             </Button>
                                                         </div>
                                                     </AccordionTrigger>
-                                                    <AccordionContent className="pt-2">
-                                                        <Accordion type="multiple" className="w-full space-y-2">
+                                                    <AccordionContent className="pt-2 pb-4">
+                                                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 px-1">
                                                             {supermarket.brands.map((brand) => (
-                                                                <AccordionItem key={`${supermarket.id}-${brand.id}`} value={`sm-${supermarket.id}-brand-${brand.id}`} className="rounded-lg border bg-white px-0 shadow-sm">
-                                                                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
-                                                                        <div className="flex items-center justify-between w-full pr-4">
-                                                                            <div className="flex items-center gap-3">
-                                                                                <p className="font-medium text-slate-800">{brand.name}</p>
-                                                                                <Badge variant="outline">{brand.products.length} productos</Badge>
+                                                                <div key={brand.id} className="group relative rounded-xl border bg-white p-4 shadow-sm hover:shadow-md transition-all">
+                                                                    <div className="flex items-start justify-between mb-2">
+                                                                        <div className="flex items-center gap-3">
+                                                                            <div className="w-10 h-10 rounded-lg bg-slate-50 border flex items-center justify-center text-slate-400 font-bold">
+                                                                                {brand.name.substring(0, 1)}
                                                                             </div>
-                                                                    <Button size="sm" variant="ghost" className="h-7 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={(e) => { e.stopPropagation(); setSellableForm({ ...sellableForm, supermarket_id: supermarket.id, brand_id: brand.id, catalog_entry_ids: [] }); setSellableDialog(true); }}>
-                                                                                <Plus className="w-3 h-3 mr-1" /> Vincular Productos
-                                                                            </Button>
-                                                                        </div>
-                                                                    </AccordionTrigger>
-                                                                    <AccordionContent className="px-0 pb-0">
-                                                                        <div className="divide-y">
-                                                                            <div className="px-4 py-2 bg-rose-50/30 flex justify-end">
-                                                                                <Button variant="ghost" size="sm" className="text-rose-600 h-7 text-[10px] uppercase font-bold" onClick={async (e) => {
-                                                                                    e.stopPropagation();
-                                                                                    if (window.confirm(`¿Seguro que quieres quitar la marca ${brand.name} de este supermercado? Se borrarán todos sus productos.`)) {
-                                                                                        try {
-                                                                                            await axios.delete(`${API}/admin/supermarkets/${supermarket.id}/brands/${brand.id}`);
-                                                                                            toast.success("Marca eliminada del supermercado");
-                                                                                            fetchAllData();
-                                                                                        } catch (e) { toast.error("Error al eliminar marca"); }
-                                                                                    }
-                                                                                }}><Trash2 className="w-3 h-3 mr-1" /> Eliminar Marca del Súper</Button>
+                                                                            <div>
+                                                                                <p className="font-bold text-slate-800 leading-tight">{brand.name}</p>
+                                                                                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{brand.products_count} productos operativos</p>
                                                                             </div>
-                                                                            {brand.products.map((product) => {
-                                                                                return (
-                                                                                    <div key={`${supermarket.id}-${brand.id}-${product.id}`} className="px-4 py-3 space-y-2">
-                                                                                        <div className="flex items-center justify-between">
-                                                                                            <span className="font-bold text-slate-700 text-sm">{product.name}</span>
-                                                                                            <Badge variant="outline" className="text-[10px]">{product.variants.length} variantes</Badge>
-                                                                                        </div>
-                                                                                        <div className="grid gap-1">
-                                                                                            {product.variants.map((variant) => {
-                                                                                                return (
-                                                                                                    <div key={variant.id} className="flex items-center justify-between p-2 rounded bg-slate-50/50 border border-transparent hover:border-slate-100">
-                                                                                                        <div className="flex flex-wrap items-center gap-2 overflow-hidden">
-                                                                                                            {Object.entries(variant.attribute_values).length > 0 ? (
-                                                                                                                Object.entries(variant.attribute_values).map(([attrId, val]) => {
-                                                                                                                    const attr = attributes.find(a => a.id === attrId);
-                                                                                                                    return <Badge key={attrId} variant="secondary" className="text-[9px] h-4 font-normal px-1">{attr?.name}: {val}</Badge>
-                                                                                                                })
-                                                                                                            ) : (
-                                                                                                                <span className="text-[10px] text-slate-400 italic">Estándar</span>
-                                                                                                            )}
-                                                                                                        </div>
-                                                                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-rose-400 hover:text-rose-600" onClick={() => handleDeleteSellable(variant.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
-                                                                                                    </div>
-                                                                                                );
-                                                                                            })}
-                                                                                        </div>
-                                                                                    </div>
-                                                                                );
-                                                                            })}
                                                                         </div>
-                                                                    </AccordionContent>
-                                                                </AccordionItem>
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                            onClick={async (e) => {
+                                                                                e.stopPropagation();
+                                                                                if (window.confirm(`¿Quitar ${brand.name} de ${supermarket.name}? Todos sus productos dejarán de estar operativos en este súper.`)) {
+                                                                                    try {
+                                                                                        await axios.delete(`${API}/admin/supermarkets/${supermarket.id}/brands/${brand.id}`);
+                                                                                        toast.success("Marca eliminada del supermercado");
+                                                                                        fetchAllData();
+                                                                                    } catch (e) { toast.error("Error al eliminar"); }
+                                                                                }
+                                                                            }}
+                                                                        >
+                                                                            <Trash2 className="w-4 h-4" />
+                                                                        </Button>
+                                                                    </div>
+                                                                    <div className="mt-3 flex flex-wrap gap-1 max-h-16 overflow-y-auto no-scrollbar">
+                                                                        {brand.products.map(p => (
+                                                                            <Badge key={p.id} variant="secondary" className="text-[9px] font-normal bg-slate-50 text-slate-500 border-none px-1.5 py-0">
+                                                                                {p.name}
+                                                                            </Badge>
+                                                                        ))}
+                                                                    </div>
+                                                                </div>
                                                             ))}
-                                                        </Accordion>
+                                                            {supermarket.brands.length === 0 && (
+                                                                <div className="col-span-full py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                                                                    <p className="text-sm text-slate-400 italic">No hay marcas vinculadas a este supermercado.</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </AccordionContent>
                                                 </AccordionItem>
                                             ))}
@@ -1074,61 +1022,154 @@ const AdminPage = () => {
                                         <Accordion type="multiple" className="w-full">
                                             {brandCatalogTree.map((brand) => (
                                                 <AccordionItem key={brand.id} value={`brand-${brand.id}`}>
-                                                    <AccordionTrigger className="hover:no-underline">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="font-semibold text-slate-800">{brand.name}</span>
-                                                            <Badge variant="secondary">{brand.products_count} productos</Badge>
+                                                    <AccordionTrigger className="hover:no-underline py-4">
+                                                        <div className="flex items-center justify-between w-full pr-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="font-semibold text-slate-800">{brand.name}</span>
+                                                                <Badge variant="secondary" className="bg-slate-100 text-slate-600">{brand.products_count} productos</Badge>
+                                                            </div>
+                                                            <Button
+                                                                variant="ghost"
+                                                                size="icon"
+                                                                className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-full"
+                                                                onClick={async (e) => {
+                                                                    e.stopPropagation();
+                                                                    if (window.confirm(`¿Seguro que quieres quitar la marca ${brand.name} del catálogo?`)) {
+                                                                        const entries = brandCatalog.filter(bc => bc.brand_id === brand.id);
+                                                                        try {
+                                                                            await Promise.all(entries.map(ent => axios.delete(`${API}/admin/brand-catalog/${ent.id}`)));
+                                                                            toast.success("Marca eliminada del catálogo");
+                                                                            fetchAllData();
+                                                                        } catch (err) { toast.error("Error al eliminar"); }
+                                                                    }
+                                                                }}
+                                                            >
+                                                                <Trash2 className="w-4 h-4" />
+                                                            </Button>
                                                         </div>
                                                     </AccordionTrigger>
-                                                    <AccordionContent className="pt-2">
-                                                        <div className="space-y-3">
-                                                            <div className="flex justify-end mb-2">
-                                                                <Button size="sm" variant="ghost" className="h-8 text-emerald-600" onClick={(e) => { e.stopPropagation(); setCatalogForm({ ...catalogForm, brand_id: brand.id, product_ids: [], status: "active", attribute_combinations: [] }); setCatalogDialog(true); }}>
-                                                                    <Plus className="w-4 h-4 mr-1" /> Gestionar Productos
+                                                    <AccordionContent className="pt-2 pb-6 px-1">
+                                                        <div className="space-y-4">
+                                                            <div className="flex justify-between items-center bg-emerald-50/50 p-3 rounded-lg border border-emerald-100">
+                                                                <p className="text-xs text-emerald-700 font-medium">Gestiona el portfolio de productos para esta marca.</p>
+                                                                <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 h-8" onClick={() => { setCatalogForm({ ...catalogForm, brand_id: brand.id, product_ids: [], status: "active" }); setCatalogDialog(true); }}>
+                                                                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Añadir Productos
                                                                 </Button>
                                                             </div>
-                                                            {brand.products.map((product) => {
-                                                                return (
-                                                                    <div key={`${brand.id}-${product.id}`} className="rounded-lg border bg-white shadow-sm overflow-hidden">
-                                                                        <div className="bg-slate-50/50 px-4 py-2 border-b flex items-center justify-between">
-                                                                            <div className="flex items-center gap-2">
-                                                                                <span className="font-bold text-slate-700">{product.name}</span>
-                                                                                <Badge variant="outline" className="bg-white">{product.variants.length} variantes</Badge>
-                                                                            </div>
-                                                                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
-                                                                                <Store className="w-3 h-3" />
-                                                                                <span className="truncate max-w-[200px]">
-                                                                                    {product.supermarkets.length > 0 ? product.supermarkets.join(", ") : "No operativo"}
-                                                                                </span>
-                                                                            </div>
-                                                                        </div>
-                                                                        <div className="p-3 space-y-2">
-                                                                            {product.variants.map((variant) => {
-                                                                                const statusMeta = getCatalogStatusMeta(variant.status);
-                                                                                return (
-                                                                                    <div key={variant.id} className="flex items-center justify-between gap-4 p-2 rounded-md hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
-                                                                                        <div className="flex flex-wrap items-center gap-2 flex-1">
-                                                                                            <Badge className={statusMeta.className}>{statusMeta.label}</Badge>
-                                                                                            {Object.entries(variant.attribute_values).length > 0 ? (
-                                                                                                Object.entries(variant.attribute_values).map(([attrId, val]) => {
-                                                                                                    const attr = attributes.find(a => a.id === attrId);
-                                                                                                    return <Badge key={attrId} variant="secondary" className="text-[10px] font-normal">{attr?.name}: {val}</Badge>
-                                                                                                })
-                                                                                            ) : (
-                                                                                                <span className="text-xs text-slate-400 italic">Producto estándar (sin atributos)</span>
+
+                                                            <div className="grid gap-3">
+                                                                {brand.products.map((product) => {
+                                                                    const statusMeta = getCatalogStatusMeta(product.status);
+                                                                    const productConcept = products.find(p => p.id === product.product_id);
+
+                                                                    return (
+                                                                        <div key={product.id} className="rounded-xl border bg-white shadow-sm overflow-hidden group">
+                                                                            <div className="px-4 py-3 border-b flex items-center justify-between bg-slate-50/30 group-hover:bg-slate-50/80 transition-colors">
+                                                                                <div className="flex items-center gap-3">
+                                                                                    <div className="w-8 h-8 rounded-lg bg-white border flex items-center justify-center text-slate-400">
+                                                                                        <Package className="w-4 h-4" />
+                                                                                    </div>
+                                                                                    <div>
+                                                                                        <span className="font-bold text-slate-800">{product.name}</span>
+                                                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                                                            <Badge className={`${statusMeta.className} text-[9px] h-4 px-1.5`}>{statusMeta.label}</Badge>
+                                                                                            {product.supermarkets.length > 0 && (
+                                                                                                <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                                                                                    <Store className="w-2.5 h-2.5" /> {product.supermarkets.join(", ")}
+                                                                                                </span>
                                                                                             )}
                                                                                         </div>
-                                                                                        <div className="flex gap-1">
-                                                                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openCatalogStatusEditor({ ...variant, brand_name: brand.name, product_name: product.name, brand_id: brand.id, product_id: product.product_id })}><Pencil className="w-3 h-3" /></Button>
-                                                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500" onClick={() => handleDeleteCatalogEntry(variant.id)}><Trash2 className="w-3 h-3" /></Button>
-                                                                                        </div>
                                                                                     </div>
-                                                                                );
-                                                                            })}
+                                                                                </div>
+                                                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+                                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-400 hover:text-rose-600" onClick={() => handleDeleteCatalogEntry(product.id)}><Trash2 className="w-4 h-4" /></Button>
+                                                                                </div>
+                                                                            </div>
+
+                                                                            <div className="p-4 space-y-4">
+                                                                                {productConcept?.allowed_attribute_ids?.length > 0 ? (
+                                                                                    <div className="grid sm:grid-cols-2 gap-4">
+                                                                                        {productConcept.allowed_attribute_ids.map(attrId => {
+                                                                                            const attr = attributes.find(a => a.id === attrId);
+                                                                                            if (!attr) return null;
+
+                                                                                            return (
+                                                                                                <div key={attrId} className="space-y-2">
+                                                                                                    <Label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{attr.name}</Label>
+                                                                                                    <div className="flex flex-wrap gap-1.5">
+                                                                                                        {attr.values?.map(val => (
+                                                                                                            <div
+                                                                                                                key={val}
+                                                                                                                className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs cursor-pointer transition-all ${
+                                                                                                                    product.allowed_attributes?.[attrId]?.includes(val)
+                                                                                                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
+                                                                                                                    : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                                                                                                }`}
+                                                                                                                onClick={async () => {
+                                                                                                                    const current = product.allowed_attributes?.[attrId] || [];
+                                                                                                                    const next = current.includes(val) ? current.filter(v => v !== val) : [...current, val];
+                                                                                                                    const updatedAttrs = { ...product.allowed_attributes, [attrId]: next };
+
+                                                                                                                    try {
+                                                                                                                        await axios.post(`${API}/admin/brand-catalog`, {
+                                                                                                                            brand_id: product.brand_id,
+                                                                                                                            product_id: product.product_id,
+                                                                                                                            status: product.status,
+                                                                                                                            allowed_attributes: updatedAttrs
+                                                                                                                        });
+                                                                                                                        fetchAllData();
+                                                                                                                    } catch (e) { toast.error("Error al actualizar"); }
+                                                                                                                }}
+                                                                                                            >
+                                                                                                                <div className={`w-2 h-2 rounded-full ${product.allowed_attributes?.[attrId]?.includes(val) ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                                                                                                                {val}
+                                                                                                            </div>
+                                                                                                        ))}
+                                                                                                    </div>
+                                                                                                </div>
+                                                                                            );
+                                                                                        })}
+                                                                                    </div>
+                                                                                ) : (
+                                                                                    <div className="flex flex-col items-center justify-center py-4 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+                                                                                        <Tag className="w-5 h-5 text-slate-300 mb-1" />
+                                                                                        <p className="text-[11px] text-slate-400 italic">No hay atributos configurados para este producto.</p>
+                                                                                    </div>
+                                                                                )}
+
+                                                                                <div className="pt-2 border-t flex justify-between items-center">
+                                                                                    <Label className="text-[10px] font-medium text-slate-500">Estado del producto:</Label>
+                                                                                    <div className="flex gap-2">
+                                                                                        {["active", "planned", "discontinued"].map(st => (
+                                                                                            <button
+                                                                                                key={st}
+                                                                                                onClick={async () => {
+                                                                                                    try {
+                                                                                                        await axios.post(`${API}/admin/brand-catalog`, {
+                                                                                                            brand_id: product.brand_id,
+                                                                                                            product_id: product.product_id,
+                                                                                                            status: st,
+                                                                                                            allowed_attributes: product.allowed_attributes
+                                                                                                        });
+                                                                                                        fetchAllData();
+                                                                                                    } catch (e) { toast.error("Error"); }
+                                                                                                }}
+                                                                                                className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold transition-colors ${
+                                                                                                    product.status === st
+                                                                                                    ? 'bg-slate-800 text-white'
+                                                                                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                                                                                }`}
+                                                                                            >
+                                                                                                {st === 'active' ? 'Activo' : st === 'planned' ? 'Planeado' : 'Desc.'}
+                                                                                            </button>
+                                                                                        ))}
+                                                                                    </div>
+                                                                                </div>
+                                                                            </div>
                                                                         </div>
-                                                                    </div>
-                                                                );
-                                                            })}
+                                                                    );
+                                                                })}
+                                                            </div>
                                                         </div>
                                                     </AccordionContent>
                                                 </AccordionItem>
@@ -1596,9 +1637,12 @@ const AdminPage = () => {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={catalogDialog} onOpenChange={(val) => { setCatalogDialog(val); if (!val) { setProductSearch(""); setAttributeSelection({}); } }}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle>Gestionar Catálogo de Marca</DialogTitle></DialogHeader>
+            <Dialog open={catalogDialog} onOpenChange={(val) => { setCatalogDialog(val); if (!val) { setProductSearch(""); } }}>
+                <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Añadir Productos al Catálogo</DialogTitle>
+                        <p className="text-sm text-slate-500">Selecciona los productos conceptuales que esta marca comercializa.</p>
+                    </DialogHeader>
                     <div className="space-y-6 pt-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
@@ -1609,7 +1653,7 @@ const AdminPage = () => {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label>Estado</Label>
+                                <Label>Estado Inicial</Label>
                                 <Select value={catalogForm.status} onValueChange={v => setCatalogForm({ ...catalogForm, status: v })}>
                                     <SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
                                     <SelectContent>
@@ -1622,66 +1666,40 @@ const AdminPage = () => {
                         </div>
 
                         {catalogForm.brand_id && (
-                            <>
-                                <div className="space-y-3">
-                                    <Label className="font-bold">1. Seleccionar Productos Conceptuales</Label>
-                                    <div className="relative">
-                                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                        <Input placeholder="Buscar concepto (ej: Yogur)..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="pl-9 h-9" />
-                                    </div>
-                                    <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-48 overflow-y-auto bg-slate-50 shadow-inner">
-                                        {products
-                                            .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-                                            .map(p => (
-                                                <div key={p.id} className="flex items-center space-x-2 p-1 hover:bg-white rounded transition-colors border border-transparent hover:border-slate-200">
+                            <div className="space-y-3">
+                                <Label className="font-bold">Seleccionar Productos</Label>
+                                <div className="relative">
+                                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <Input placeholder="Buscar concepto (ej: Yogur)..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="pl-9 h-9" />
+                                </div>
+                                <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto bg-slate-50 shadow-inner">
+                                    {products
+                                        .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                                        .map(p => {
+                                            const alreadyInCatalog = brandCatalog.some(bc => bc.brand_id === catalogForm.brand_id && bc.product_id === p.id);
+                                            return (
+                                                <div key={p.id} className={`flex items-center space-x-2 p-2 rounded transition-colors border ${alreadyInCatalog ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white hover:border-emerald-200 shadow-sm'}`}>
                                                     <Checkbox
                                                         id={`cat-${p.id}`}
-                                                        checked={catalogForm.product_ids.includes(p.id)}
+                                                        disabled={alreadyInCatalog}
+                                                        checked={alreadyInCatalog || catalogForm.product_ids.includes(p.id)}
                                                         onCheckedChange={(checked) => {
                                                             if (checked) setCatalogForm({ ...catalogForm, product_ids: [...catalogForm.product_ids, p.id] });
                                                             else setCatalogForm({ ...catalogForm, product_ids: catalogForm.product_ids.filter(id => id !== p.id) });
                                                         }}
                                                     />
                                                     <label htmlFor={`cat-${p.id}`} className="text-sm cursor-pointer flex-1 truncate">{p.name}</label>
+                                                    {alreadyInCatalog && <span className="text-[9px] text-slate-500 italic">Ya en catálogo</span>}
                                                 </div>
-                                            ))
-                                        }
-                                    </div>
+                                            );
+                                        })
+                                    }
                                 </div>
-
-                                <div className="space-y-3 pt-4 border-t">
-                                    <Label className="font-bold">2. Variantes de Atributos (Multiselección)</Label>
-                                    <p className="text-xs text-slate-500">Se generarán todas las combinaciones posibles de los valores seleccionados.</p>
-
-                                    <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
-                                        {attributes.map(attr => (
-                                            <div key={attr.id} className="space-y-2 p-3 border rounded-lg bg-slate-50">
-                                                <Label className="text-xs uppercase font-bold text-slate-400 tracking-widest">{attr.name}</Label>
-                                                <div className="flex flex-wrap gap-2">
-                                                    {attr.values?.map(val => (
-                                                        <div key={val} className="flex items-center space-x-1.5 bg-white border rounded px-2 py-1 shadow-sm">
-                                                            <Checkbox
-                                                                id={`val-${attr.id}-${val}`}
-                                                                checked={attributeSelection[attr.id]?.includes(val)}
-                                                                onCheckedChange={(checked) => {
-                                                                    const current = attributeSelection[attr.id] || [];
-                                                                    const next = checked ? [...current, val] : current.filter(v => v !== val);
-                                                                    setAttributeSelection({ ...attributeSelection, [attr.id]: next });
-                                                                }}
-                                                            />
-                                                            <label htmlFor={`val-${attr.id}-${val}`} className="text-xs cursor-pointer">{val}</label>
-                                                        </div>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </div>
-                            </>
+                            </div>
                         )}
 
-                        <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500 mt-2 h-11 text-base font-semibold shadow-lg shadow-emerald-100" disabled={catalogForm.product_ids.length === 0 || !catalogForm.brand_id}>
-                            Generar y Actualizar Catálogo
+                        <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500 mt-2 h-11 text-base font-semibold" disabled={catalogForm.product_ids.length === 0 || !catalogForm.brand_id}>
+                            Añadir {catalogForm.product_ids.length} productos
                         </Button>
                     </div>
                 </DialogContent>

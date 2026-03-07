@@ -33,6 +33,7 @@ const ShoppingListPage = () => {
     const [supermarkets, setSupermarkets] = useState([]);
     const [units, setUnits] = useState([]);
     const [brands, setBrands] = useState([]);
+    const [brandCatalog, setBrandCatalog] = useState([]);
     const [sellableProducts, setSellableProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedList, setSelectedList] = useState(null);
@@ -92,27 +93,20 @@ const ShoppingListPage = () => {
                 Object.entries(newItemAttrValues).filter(([_, v]) => v !== "" && v !== null && v !== "none")
             );
 
-            // Filter variants that match ALL selected attributes
-            const variants = sellableProducts.filter(sp =>
+            // Our new logic:
+            // A sellable product represents a BRAND'S product in a SUPERMARKET.
+            // We only need the ID of that sellable product.
+            // Attributes are just metadata for the list item now.
+            const match = sellableProducts.find(sp =>
                 sp.product_id === newItemProduct &&
                 sp.brand_id === newItemBrandId &&
                 sp.supermarket_id === selectedList.supermarket_id
             );
 
-            const match = variants.find(sp =>
-                JSON.stringify(sp.attribute_values || {}) === JSON.stringify(cleanedAttrs)
-            );
-
             if (match) {
                 setNewItemSellable(match.id);
             } else {
-                // If no exact match, but only one variant exists overall for this brand/product, auto-fill it
-                if (variants.length === 1 && Object.keys(cleanedAttrs).length === 0) {
-                    setNewItemSellable(variants[0].id);
-                    setNewItemAttrValues(variants[0].attribute_values || {});
-                } else {
-                    setNewItemSellable("");
-                }
+                setNewItemSellable("");
             }
         }
     }, [newItemBrandId, newItemAttrValues, newItemProduct, selectedList, sellableProducts]);
@@ -162,9 +156,10 @@ const ShoppingListPage = () => {
                 if (r.data.length > 0) setNewItemUnit(r.data[0].id);
             }).catch(e => console.error("Units fetch error", e));
             const fetchBrands = axios.get(`${API}/admin/brands`).then(r => setBrands(r.data)).catch(e => console.error("Brands fetch error", e));
+            const fetchBrandCatalog = axios.get(`${API}/admin/brand-catalog`).then(r => setBrandCatalog(r.data)).catch(e => console.error("Brand Catalog fetch error", e));
             const fetchSellable = axios.get(`${API}/admin/sellable-products`).then(r => setSellableProducts(r.data)).catch(e => console.error("Sellable fetch error", e));
 
-            await Promise.allSettled([fetchLists, fetchProducts, fetchAttributes, fetchSupermarkets, fetchUnits, fetchBrands, fetchSellable]);
+            await Promise.allSettled([fetchLists, fetchProducts, fetchAttributes, fetchSupermarkets, fetchUnits, fetchBrands, fetchBrandCatalog, fetchSellable]);
         } catch (error) {
             console.error("General error in fetchData:", error);
         } finally {
@@ -207,12 +202,17 @@ const ShoppingListPage = () => {
         }
 
         try {
+            const cleanedAttrs = Object.fromEntries(
+                Object.entries(newItemAttrValues).filter(([_, v]) => v !== "" && v !== null && v !== "none")
+            );
+
             const currentItems = selectedList.items.map(item => ({
                 sellable_product_id: item.sellable_product_id,
                 quantity: item.quantity,
                 unit_id: item.unit_id,
                 price: item.price,
-                purchased: item.purchased
+                purchased: item.purchased,
+                attribute_values: item.attribute_values
             }));
 
             const newItem = {
@@ -220,7 +220,8 @@ const ShoppingListPage = () => {
                 quantity: parseFloat(newItemQuantity) || 1,
                 unit_id: newItemUnit,
                 price: null,
-                purchased: false
+                purchased: false,
+                attribute_values: cleanedAttrs
             };
 
             const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
@@ -252,7 +253,8 @@ const ShoppingListPage = () => {
                 quantity: item.quantity,
                 unit_id: item.unit_id,
                 price: item.price,
-                purchased: item.purchased
+                purchased: item.purchased,
+                attribute_values: item.attribute_values
             }));
 
             const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
@@ -572,23 +574,10 @@ const ShoppingListPage = () => {
                                                                         <Label className="text-xs font-bold text-slate-500 uppercase">3. Atributos (Variante)</Label>
                                                                         {product.allowed_attribute_ids.map(attrId => {
                                                                             const attr = attributes.find(a => a.id === attrId);
-                                                                            // Get unique values for THIS product+brand+attribute in THIS supermarket
-                                                                            // Filtered by other currently selected attributes
-                                                                            const otherAttrs = Object.fromEntries(
-                                                                                Object.entries(newItemAttrValues).filter(([id, v]) => id !== attrId && v !== "" && v !== "none")
-                                                                            );
 
-                                                                            const possibleVals = Array.from(new Set(
-                                                                                sellableProducts
-                                                                                    .filter(sp =>
-                                                                                        sp.product_id === newItemProduct &&
-                                                                                        sp.brand_id === newItemBrandId &&
-                                                                                        sp.supermarket_id === selectedList.supermarket_id &&
-                                                                                        Object.entries(otherAttrs).every(([oid, ov]) => sp.attribute_values?.[oid] === ov)
-                                                                                    )
-                                                                                    .map(sp => sp.attribute_values?.[attrId])
-                                                                                    .filter(Boolean)
-                                                                            ));
+                                                                            // Find the catalog entry for THIS brand and product to see allowed attribute values
+                                                                            const catalogEntry = brandCatalog.find(bc => bc.brand_id === newItemBrandId && bc.product_id === newItemProduct);
+                                                                            const possibleVals = catalogEntry?.allowed_attributes?.[attrId] || [];
 
                                                                             if (possibleVals.length === 0) return null;
 

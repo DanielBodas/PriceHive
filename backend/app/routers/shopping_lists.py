@@ -63,11 +63,30 @@ async def create_shopping_list(data: ShoppingListCreate, user: dict = Depends(ge
         sp = await db.sellable_products.find_one({"id": item.sellable_product_id})
         if not sp: continue
 
+        # Resolve correct estimated price based on variant attributes if present
+        # Currently, prices are linked to sellable_product_id.
+        # However, our sellable_product might be a "Brand-Product" generic entry
+        # and the item might have specific attribute_values.
+        # We need to find if there's a price for this specific variant combination.
+        # For now, we'll look for prices with matching attributes or fallback to sellable_id.
+
+        price_query = {"sellable_product_id": item.sellable_product_id}
+        if item.attribute_values:
+            price_query["attribute_values"] = item.attribute_values
+
         latest = await db.prices.find_one(
-            {"sellable_product_id": item.sellable_product_id},
+            price_query,
             {"_id": 0},
             sort=[("created_at", -1)]
         )
+
+        if not latest and item.attribute_values:
+            # Fallback to any price for this sellable product
+            latest = await db.prices.find_one(
+                {"sellable_product_id": item.sellable_product_id},
+                {"_id": 0},
+                sort=[("created_at", -1)]
+            )
         estimated = None
         if latest:
             latest_price = latest["price"]
@@ -332,6 +351,7 @@ async def submit_prices_from_list(list_id: str, user: dict = Depends(get_current
             price_doc = {
                 "id": price_id,
                 "sellable_product_id": sp_id,
+                "attribute_values": item.get("attribute_values"),
                 "price": item["price"],
                 "quantity": quantity,
                 "user_id": user["id"],
@@ -371,11 +391,23 @@ async def estimate_list(list_id: str, user: dict = Depends(get_current_user)):
             
         estimated = None
         if sp_id:
+            price_query = {"sellable_product_id": sp_id}
+            if item.get("attribute_values"):
+                price_query["attribute_values"] = item["attribute_values"]
+
             latest = await db.prices.find_one(
-                {"sellable_product_id": sp_id},
+                price_query,
                 {"_id": 0},
                 sort=[("created_at", -1)]
             )
+
+            if not latest and item.get("attribute_values"):
+                latest = await db.prices.find_one(
+                    {"sellable_product_id": sp_id},
+                    {"_id": 0},
+                    sort=[("created_at", -1)]
+                )
+
             if latest:
                 latest_price = latest["price"]
                 latest_qty = latest.get("quantity", 1) or 1

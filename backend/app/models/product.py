@@ -125,13 +125,13 @@ class BrandProductCatalogCreate(BaseModel):
     brand_id: str
     product_id: str
     status: str = "active"
-    attribute_values: Optional[Dict[str, str]] = None
+    # New format: {attr_id: [val1, val2]}
+    allowed_attributes: Optional[Dict[str, List[str]]] = None
 
 class BrandProductCatalogBulkCreate(BaseModel):
     brand_id: str
     product_ids: List[str]
     status: str = "active"
-    attribute_combinations: Optional[List[Dict[str, str]]] = None
 
 class BrandProductCatalogResponse(BaseModel):
     id: str
@@ -140,4 +140,4 @@ class BrandProductCatalogResponse(BaseModel):
     product_id: str
     product_name: Optional[str] = None
     status: str
-    attribute_values: Optional[Dict[str, str]] = None
+    allowed_attributes: Optional[Dict[str, List[str]]] = None
