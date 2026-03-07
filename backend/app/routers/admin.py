@@ -380,7 +380,17 @@ async def delete_product(prod_id: str, user: dict = Depends(get_admin_user)):
 @router.post("/sellable-products/bulk")
 async def create_sellable_products_bulk(data: SellableProductBulkCreate, user: dict = Depends(get_admin_user)):
     results = []
-    for entry_id in data.catalog_entry_ids:
+
+    # If catalog_entry_ids is empty, it means we are linking all active products of a brand
+    target_ids = data.catalog_entry_ids
+    if not target_ids:
+        brand_entries = await db.brand_product_catalog.find({
+            "brand_id": data.brand_id,
+            "status": "active"
+        }).to_list(1000)
+        target_ids = [e.get("id") or str(e.get("_id")) for e in brand_entries]
+
+    for entry_id in target_ids:
         catalog_entry = await db.brand_product_catalog.find_one({"id": entry_id})
         if not catalog_entry:
             continue
@@ -614,18 +624,52 @@ async def delete_sellable_product_unit(spu_id: str, user: dict = Depends(get_adm
 @router.post("/brand-catalog/bulk")
 async def create_brand_catalog_bulk(data: BrandProductCatalogBulkCreate, user: dict = Depends(get_admin_user)):
     results = []
-    for pid in data.product_ids:
-        existing = await db.brand_product_catalog.find_one({"brand_id": data.brand_id, "product_id": pid})
-        if existing:
-            await db.brand_product_catalog.update_one(
-                {"brand_id": data.brand_id, "product_id": pid},
-                {"$set": {"status": data.status}}
-            )
-        else:
-            bc_id = str(uuid.uuid4())
-            doc = {"id": bc_id, "brand_id": data.brand_id, "product_id": pid, "status": data.status}
-            await db.brand_product_catalog.insert_one(doc)
-        results.append(pid)
+
+    # If we have attribute combinations, we are creating specific variants
+    if data.attribute_combinations:
+        for pid in data.product_ids:
+            for combo in data.attribute_combinations:
+                # Check for existing variant
+                existing = await db.brand_product_catalog.find_one({
+                    "brand_id": data.brand_id,
+                    "product_id": pid,
+                    "attribute_values": combo
+                })
+                if existing:
+                    await db.brand_product_catalog.update_one(
+                        {"id": existing["id"]},
+                        {"$set": {"status": data.status}}
+                    )
+                else:
+                    bc_id = str(uuid.uuid4())
+                    doc = {
+                        "id": bc_id,
+                        "brand_id": data.brand_id,
+                        "product_id": pid,
+                        "status": data.status,
+                        "attribute_values": combo
+                    }
+                    await db.brand_product_catalog.insert_one(doc)
+            results.append(pid)
+    else:
+        # Standard bulk without specific attributes
+        for pid in data.product_ids:
+            existing = await db.brand_product_catalog.find_one({
+                "brand_id": data.brand_id,
+                "product_id": pid,
+                "attribute_values": {"$in": [None, {}]}
+            })
+            if existing:
+                await db.brand_product_catalog.update_one(
+                    {"id": existing["id"]},
+                    {"$set": {"status": data.status}}
+                )
+            else:
+                bc_id = str(uuid.uuid4())
+                doc = {"id": bc_id, "brand_id": data.brand_id, "product_id": pid, "status": data.status, "attribute_values": {}}
+                await db.brand_product_catalog.insert_one(doc)
+            results.append(pid)
+
     return {"message": f"{len(results)} productos actualizados en el catálogo", "product_ids": results}
 
 @router.post("/brand-catalog", response_model=BrandProductCatalogResponse)

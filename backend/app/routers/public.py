@@ -47,13 +47,34 @@ async def get_public_products(category_id: Optional[str] = None):
     all_units = await db.units.find({}).to_list(1000)
     units = {u.get("id") or str(u.get("_id")): u["name"] for u in all_units}
 
+    # Pre-map base products for inheritance (though conceptually all are bases now)
+    base_prods = {p.get("id") or str(p.get("_id")): p for p in products_raw if p.get("is_base")}
+
     result = []
     for p in products_raw:
-        p["id"] = p.get("id") or str(p.get("_id"))
+        p_id = p.get("id") or str(p.get("_id"))
+        p["id"] = p_id
+
+        base_id = p.get("base_product_id")
+        base_p = base_prods.get(base_id) if base_id else None
+
+        inherited_brand_id = p.get("brand_id") or (base_p.get("brand_id") if base_p else None)
+        inherited_category_id = p.get("category_id") or (base_p.get("category_id") if base_p else None)
+        inherited_unit_id = p.get("unit_id") or (base_p.get("unit_id") if base_p else None)
+
+        resp_dict = dict(p)
+        resp_dict.pop("brand_id", None)
+        resp_dict.pop("category_id", None)
+        resp_dict.pop("unit_id", None)
+
         result.append(ProductResponse(
-            **p,
-            brand_name=brands.get(p.get("brand_id")),
-            category_name=categories.get(p.get("category_id")),
-            unit_name=units.get(p.get("unit_id"))
+            **resp_dict,
+            brand_id=inherited_brand_id,
+            brand_name=brands.get(inherited_brand_id),
+            category_id=inherited_category_id or "",
+            category_name=categories.get(inherited_category_id),
+            unit_id=inherited_unit_id,
+            unit_name=units.get(inherited_unit_id),
+            base_product_name=base_p.get("name") if base_p else None
         ))
     return result

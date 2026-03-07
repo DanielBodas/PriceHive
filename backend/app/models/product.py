@@ -131,6 +131,7 @@ class BrandProductCatalogBulkCreate(BaseModel):
     brand_id: str
     product_ids: List[str]
     status: str = "active"
+    attribute_combinations: Optional[List[Dict[str, str]]] = None
 
 class BrandProductCatalogResponse(BaseModel):
     id: str

@@ -51,6 +51,8 @@ const AdminPage = () => {
     const [sellableDialog, setSellableDialog] = useState(false);
     const [supermarketBrandDialog, setSupermarketBrandDialog] = useState(false);
     const [catalogDialog, setCatalogDialog] = useState(false);
+    const [addSupermarketToCatalogDialog, setAddSupermarketToCatalogDialog] = useState(false);
+    const [addBrandToCatalogDialog, setAddBrandToCatalogDialog] = useState(false);
 
     // Edit states
     const [editingItem, setEditingItem] = useState(null);
@@ -63,11 +65,12 @@ const AdminPage = () => {
     const [supermarketForm, setSupermarketForm] = useState({ name: "", logo_url: "" });
     const [unitForm, setUnitForm] = useState({ name: "", abbreviation: "" });
     const [productForm, setProductForm] = useState({
-        name: "", brand_id: "", category_id: "", unit_id: "", barcode: "", image_url: "",
-        is_base: false, allowed_attribute_ids: [], base_product_id: "", attribute_values: {}
+        name: "", category_id: "", barcode: "", image_url: "",
+        is_base: true, allowed_attribute_ids: []
     });
     const [sellableForm, setSellableForm] = useState({ supermarket_id: "", brand_id: "", catalog_entry_ids: [] });
-    const [catalogForm, setCatalogForm] = useState({ brand_id: "", product_ids: [], status: "active" });
+    const [catalogForm, setCatalogForm] = useState({ brand_id: "", product_ids: [], status: "active", attribute_combinations: [] });
+    const [attributeSelection, setAttributeSelection] = useState({}); // { attrId: [val1, val2] }
     const [productSearch, setProductSearch] = useState("");
     const [productTableSearch, setProductTableSearch] = useState("");
     const [categoryTableSearch, setCategoryTableSearch] = useState("");
@@ -100,14 +103,6 @@ const AdminPage = () => {
         product_name: "",
         status: "active",
     });
-    const [sellableEditDialog, setSellableEditDialog] = useState(false);
-    const [sellableEditForm, setSellableEditForm] = useState({
-        id: "",
-        supermarket_id: "",
-        brand_id: "",
-        product_id: "",
-    });
-    const [sellableEditSaving, setSellableEditSaving] = useState(false);
 
     useEffect(() => {
         fetchAllData();
@@ -206,7 +201,6 @@ const AdminPage = () => {
     }, {});
 
     const filteredRelationProducts = getFilteredProducts(relationProductSearch)
-        .filter(p => !p.is_base) // Bases don't have units
         .map((p) => ({
             ...p,
             allowed_units_count: productUnitCountByProduct[p.id] || 0,
@@ -508,7 +502,7 @@ const AdminPage = () => {
             else await axios.post(`${API}/admin/supermarkets`, supermarketForm);
             fetchAllData(); setSupermarketDialog(false); setSupermarketForm({ name: "", logo_url: "" }); setEditingItem(null);
             toast.success("Supermercado guardado");
-        } catch (e) { toast.error("Error"); }
+        } catch (e) { toast.error("Error al guardar supermercado"); }
     };
 
     const handleDeleteSupermarket = async (id) => {
@@ -534,20 +528,14 @@ const AdminPage = () => {
         try {
             const payload = {
                 ...productForm,
-                brand_id: productForm.brand_id || null,
-                unit_id: productForm.unit_id || null,
-                barcode: productForm.barcode || null,
-                image_url: productForm.image_url || null,
-                base_product_id: productForm.base_product_id || null,
-                is_base: !!productForm.is_base,
-                allowed_attribute_ids: productForm.allowed_attribute_ids || [],
-                attribute_values: productForm.attribute_values || {}
+                is_base: true,
+                allowed_attribute_ids: productForm.allowed_attribute_ids || []
             };
             if (editingItem) await axios.put(`${API}/admin/products/${editingItem.id}`, payload);
             else await axios.post(`${API}/admin/products`, payload);
             fetchAllData(); setProductDialog(false); setEditingItem(null);
-            toast.success("Producto guardado");
-        } catch (e) { toast.error("Error"); }
+            toast.success("Producto conceptual guardado");
+        } catch (e) { toast.error("Error al guardar producto"); }
     };
 
     const handleDeleteProduct = async (id) => {
@@ -588,66 +576,6 @@ const AdminPage = () => {
         }
     };
 
-    const openSellableEditor = ({ id, supermarket_id, brand_id, product_id }) => {
-        if (!id || !supermarket_id || !brand_id || !product_id) {
-            toast.error("No se puede editar este registro");
-            return;
-        }
-        setSellableEditForm({ id, supermarket_id, brand_id, product_id });
-        setSellableEditDialog(true);
-    };
-
-    const handleSaveSellableEdit = async () => {
-        if (!sellableEditForm.id || !sellableEditForm.supermarket_id || !sellableEditForm.brand_id || !sellableEditForm.product_id) {
-            toast.error("Completa todos los campos");
-            return;
-        }
-
-        const current = sellableProducts.find((sp) => sp.id === sellableEditForm.id);
-        if (!current) {
-            toast.error("No se encontro el vinculo original");
-            return;
-        }
-
-        const noChanges =
-            current.supermarket_id === sellableEditForm.supermarket_id &&
-            current.brand_id === sellableEditForm.brand_id &&
-            current.product_id === sellableEditForm.product_id;
-        if (noChanges) {
-            setSellableEditDialog(false);
-            return;
-        }
-
-        const duplicate = sellableProducts.find(
-            (sp) =>
-                sp.id !== sellableEditForm.id &&
-                sp.supermarket_id === sellableEditForm.supermarket_id &&
-                sp.brand_id === sellableEditForm.brand_id &&
-                sp.product_id === sellableEditForm.product_id
-        );
-        if (duplicate) {
-            toast.error("Ya existe ese vinculo en catalogo supermercado");
-            return;
-        }
-
-        setSellableEditSaving(true);
-        try {
-            await axios.post(`${API}/admin/sellable-products`, {
-                supermarket_id: sellableEditForm.supermarket_id,
-                brand_id: sellableEditForm.brand_id,
-                product_id: sellableEditForm.product_id
-            });
-            await axios.delete(`${API}/admin/sellable-products/${sellableEditForm.id}`);
-            toast.success("Vinculo operativo actualizado");
-            setSellableEditDialog(false);
-            await fetchAllData();
-        } catch (error) {
-            console.error("Error saving sellable edit:", error);
-            toast.error("No se pudo actualizar el vinculo");
-        } finally {
-            setSellableEditSaving(false);
-        }
-    };
 
     const handleSaveCatalog = async () => {
         try {
@@ -655,11 +583,36 @@ const AdminPage = () => {
                 toast.error("Selecciona al menos un producto");
                 return;
             }
-            const res = await axios.post(`${API}/admin/brand-catalog/bulk`, catalogForm);
+
+            // Generate combinations if attributes are selected
+            let combinations = [];
+            const selectedAttrIds = Object.keys(attributeSelection).filter(id => attributeSelection[id].length > 0);
+
+            if (selectedAttrIds.length > 0) {
+                const generate = (index, current) => {
+                    if (index === selectedAttrIds.length) {
+                        combinations.push(current);
+                        return;
+                    }
+                    const attrId = selectedAttrIds[index];
+                    attributeSelection[attrId].forEach(val => {
+                        generate(index + 1, { ...current, [attrId]: val });
+                    });
+                };
+                generate(0, {});
+            }
+
+            const payload = {
+                ...catalogForm,
+                attribute_combinations: combinations.length > 0 ? combinations : null
+            };
+
+            const res = await axios.post(`${API}/admin/brand-catalog/bulk`, payload);
             toast.success(res.data.message);
             fetchAllData();
             setCatalogDialog(false);
-            setCatalogForm({ brand_id: "", product_ids: [], status: "active" });
+            setCatalogForm({ brand_id: "", product_ids: [], status: "active", attribute_combinations: [] });
+            setAttributeSelection({});
             setProductSearch("");
         } catch (e) { toast.error("Error al actualizar catálogo"); }
     };
@@ -759,7 +712,7 @@ const AdminPage = () => {
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Categoria</TableHead><TableHead>Tipo/Info</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>Concepto de Producto</TableHead><TableHead>Categoria</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {filteredProductsTable.map(p => (
                                                     <TableRow key={p.id}>
@@ -775,9 +728,6 @@ const AdminPage = () => {
                                                             )}
                                                         </TableCell>
                                                         <TableCell>{p.category_name}</TableCell>
-                                                        <TableCell>
-                                                            {p.is_base ? <Badge className="bg-blue-100 text-blue-700 hover:bg-blue-100 border-blue-200">Producto Base</Badge> : (p.base_product_name ? <Badge variant="outline">Variante de {p.base_product_name}</Badge> : "-")}
-                                                        </TableCell>
                                                         <TableCell className="flex justify-end gap-1 pr-4">
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingItem(p); setProductForm({ ...p, attribute_values: p.attribute_values || {} }); setProductDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(p.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
@@ -987,7 +937,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Catalogo Supermercado</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">Vista por supermercado, con marcas y productos operativos</p>
                                             </div>
-                                            <Button onClick={() => setSellableDialog(true)} className="bg-emerald-500" data-testid="new-sellable-btn"><Plus className="w-4 h-4 mr-2" /> Vincular Producto</Button>
+                                            <Button onClick={() => setAddSupermarketToCatalogDialog(true)} className="bg-emerald-500" data-testid="new-sellable-btn"><Plus className="w-4 h-4 mr-2" /> Añadir Supermercado</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1037,7 +987,6 @@ const AdminPage = () => {
                                                                                             {product.sellable_ids.length > 1 && <Badge variant="outline">{product.sellable_ids.length} vinculos</Badge>}
                                                                                         </div>
                                                                                         <div className="flex items-center gap-2">
-                                                                                            <Button variant="outline" size="sm" onClick={() => openSellableEditor({ id: product.sellable_ids[0], supermarket_id: supermarket.id, brand_id: brand.id, product_id: product.product_id })}><Pencil className="w-4 h-4 mr-2" /> Editar</Button>
                                                                                             <Button variant="ghost" size="sm" className="text-rose-600" onClick={() => handleDeleteSellableGroup(product.sellable_ids)}><Trash2 className="w-4 h-4 mr-2" /> Eliminar</Button>
                                                                                         </div>
                                                                                     </div>
@@ -1064,7 +1013,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Catalogo Marca</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">Portfolio conceptual de marca con estado editable</p>
                                             </div>
-                                            <Button onClick={() => setCatalogDialog(true)} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Actualizar en Bloque</Button>
+                                            <Button onClick={() => setAddBrandToCatalogDialog(true)} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Añadir Marca</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1115,71 +1064,68 @@ const AdminPage = () => {
 
                             <TabsContent value="attr-cat">
                                 <Card>
-                                    <CardHeader>
-                                        <CardTitle className="text-lg">Configuración de Atributos por Producto Base</CardTitle>
-                                        <p className="text-sm text-slate-500 mt-1">Define qué atributos están disponibles para las variantes de cada concepto base.</p>
-                                    </CardHeader>
-                                    <CardContent className="space-y-4">
-                                        <div className="grid gap-4">
-                                            {products.filter(p => p.is_base).sort((a, b) => a.name.localeCompare(b.name)).map(baseProd => (
-                                                <div key={baseProd.id} className="border rounded-lg p-4 space-y-3 bg-white shadow-sm">
-                                                    <div className="flex items-center justify-between border-b pb-2">
-                                                        <div className="flex items-center gap-2">
-                                                            <span className="font-bold text-slate-800">{baseProd.name}</span>
-                                                            <Badge variant="outline">{baseProd.category_name}</Badge>
-                                                        </div>
-                                                        <Badge className="bg-blue-50 text-blue-700">Base</Badge>
-                                                    </div>
-                                                    <div className="space-y-2">
-                                                        <Label className="text-xs font-semibold text-slate-500 uppercase tracking-wider">Atributos Permitidos</Label>
-                                                        <div className="flex flex-wrap gap-x-6 gap-y-3 p-3 rounded-md bg-slate-50 border border-dashed">
-                                                            {attributes.map(attr => (
-                                                                <div key={attr.id} className="flex items-center space-x-2">
-                                                                    <Checkbox
-                                                                        id={`base-${baseProd.id}-attr-${attr.id}`}
-                                                                        checked={baseProd.allowed_attribute_ids?.includes(attr.id)}
-                                                                        onCheckedChange={async (checked) => {
-                                                                            const current = baseProd.allowed_attribute_ids || [];
-                                                                            const next = checked
-                                                                                ? [...current, attr.id]
-                                                                                : current.filter(id => id !== attr.id);
-
-                                                                            try {
-                                                                                await axios.put(`${API}/admin/products/${baseProd.id}`, {
-                                                                                    ...baseProd,
-                                                                                    allowed_attribute_ids: next
-                                                                                });
-                                                                                toast.success(`Atributo ${attr.name} ${checked ? 'añadido' : 'quitado'} de ${baseProd.name}`);
-                                                                                fetchAllData();
-                                                                            } catch (e) {
-                                                                                toast.error("Error al actualizar atributos");
-                                                                            }
-                                                                        }}
-                                                                    />
-                                                                    <label
-                                                                        htmlFor={`base-${baseProd.id}-attr-${attr.id}`}
-                                                                        className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70 cursor-pointer"
-                                                                    >
-                                                                        {attr.name}
-                                                                    </label>
-                                                                </div>
-                                                            ))}
-                                                            {attributes.length === 0 && <p className="text-xs text-slate-400 italic text-center w-full">Crea atributos en la pestaña "Datos Base" primero.</p>}
-                                                        </div>
-                                                    </div>
-                                                    <div className="flex items-center justify-end text-xs text-slate-500">
-                                                        <span>{baseProd.allowed_attribute_ids?.length || 0} atributos configurados</span>
-                                                    </div>
-                                                </div>
-                                            ))}
-                                            {products.filter(p => p.is_base).length === 0 && (
-                                                <div className="text-center py-10 border-2 border-dashed rounded-xl bg-slate-50">
-                                                    <Package className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                                                    <p className="text-slate-500">No hay productos base definidos.</p>
-                                                    <p className="text-xs text-slate-400 mt-1">Crea productos marcados como "Producto Base" para configurar sus atributos aquí.</p>
-                                                </div>
-                                            )}
+                                    <CardHeader className="space-y-4">
+                                        <div>
+                                            <CardTitle className="text-lg">Configuración de Atributos</CardTitle>
+                                            <p className="text-sm text-slate-500 mt-1">Define qué características (sabor, tipo, etc.) puede tener cada producto conceptual.</p>
                                         </div>
+                                        <div className="relative">
+                                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <Input value={productTableSearch} onChange={(e) => setProductTableSearch(e.target.value)} placeholder="Buscar producto conceptual..." className="pl-9" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Accordion type="multiple" className="w-full">
+                                            {products.filter(p => (productTableSearch === "" || p.name.toLowerCase().includes(productTableSearch.toLowerCase()))).sort((a, b) => a.name.localeCompare(b.name)).map(baseProd => (
+                                                <AccordionItem key={baseProd.id} value={`attr-prod-${baseProd.id}`}>
+                                                    <AccordionTrigger className="hover:no-underline">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="font-semibold text-slate-800">{baseProd.name}</span>
+                                                            <Badge variant="secondary" className="bg-blue-50 text-blue-700">{baseProd.allowed_attribute_ids?.length || 0} atributos</Badge>
+                                                        </div>
+                                                    </AccordionTrigger>
+                                                    <AccordionContent className="pt-2 px-1">
+                                                        <div className="bg-slate-50 rounded-lg p-4 border border-dashed">
+                                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Atributos Disponibles</p>
+                                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                                                {attributes.map(attr => (
+                                                                    <div key={attr.id} className="flex items-center space-x-2">
+                                                                        <Checkbox
+                                                                            id={`base-${baseProd.id}-attr-${attr.id}`}
+                                                                            checked={baseProd.allowed_attribute_ids?.includes(attr.id)}
+                                                                            onCheckedChange={async (checked) => {
+                                                                                const current = baseProd.allowed_attribute_ids || [];
+                                                                                const next = checked
+                                                                                    ? [...current, attr.id]
+                                                                                    : current.filter(id => id !== attr.id);
+
+                                                                                try {
+                                                                                    await axios.put(`${API}/admin/products/${baseProd.id}`, {
+                                                                                        ...baseProd,
+                                                                                        allowed_attribute_ids: next
+                                                                                    });
+                                                                                    toast.success(`Atributo ${attr.name} vinculado`);
+                                                                                    fetchAllData();
+                                                                                } catch (e) {
+                                                                                    toast.error("Error al actualizar");
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                        <label
+                                                                            htmlFor={`base-${baseProd.id}-attr-${attr.id}`}
+                                                                            className="text-sm font-medium cursor-pointer"
+                                                                        >
+                                                                            {attr.name}
+                                                                        </label>
+                                                                    </div>
+                                                                ))}
+                                                                {attributes.length === 0 && <p className="text-xs text-slate-400 italic">No hay atributos definidos. Créalos en 'Datos Base > Atributos'.</p>}
+                                                            </div>
+                                                        </div>
+                                                    </AccordionContent>
+                                                </AccordionItem>
+                                            ))}
+                                        </Accordion>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -1217,7 +1163,6 @@ const AdminPage = () => {
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span className="font-medium text-slate-800">{p.name}</span>
                                                         <Badge variant="outline">{p.category_name || "Sin categoria"}</Badge>
-                                                        <Badge variant="outline">{p.brand_name || "Sin marca"}</Badge>
                                                     </div>
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         {(unitNamesByProduct[p.id] || []).map((u) => (
@@ -1290,81 +1235,33 @@ const AdminPage = () => {
             {/* Diálogos */}
             <Dialog open={productDialog} onOpenChange={setProductDialog}>
                 <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Producto</DialogTitle></DialogHeader>
-                    <div className="space-y-6 pt-4">
-                        <div className="space-y-3">
-                            <Label className="text-sm font-semibold">Tipo de Producto</Label>
-                            <RadioGroup
-                                value={productForm.is_base ? "base" : "independent"}
-                                onValueChange={(val) => {
-                                    if (val === "base") setProductForm({...productForm, is_base: true, base_product_id: "", brand_id: ""});
-                                    else setProductForm({...productForm, is_base: false, base_product_id: "", attribute_values: {}});
-                                }}
-                                className="flex flex-col gap-2"
-                            >
-                                <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-slate-50 transition-colors">
-                                    <RadioGroupItem value="base" id="r-base" />
-                                    <div className="grid gap-1.5 leading-none">
-                                        <Label htmlFor="r-base" className="font-medium cursor-pointer">Producto Conceptual (Base)</Label>
-                                        <p className="text-xs text-slate-500 italic">Ej: Yogur, Pan. Define qué atributos pueden tener sus variantes de marca.</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center space-x-2 rounded-lg border p-3 hover:bg-slate-50 transition-colors">
-                                    <RadioGroupItem value="independent" id="r-independent" />
-                                    <div className="grid gap-1.5 leading-none">
-                                        <Label htmlFor="r-independent" className="font-medium cursor-pointer">Producto Final (Estándar)</Label>
-                                        <p className="text-xs text-slate-500 italic">Producto único que no requiere variantes.</p>
-                                    </div>
-                                </div>
-                            </RadioGroup>
+                    <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Producto Conceptual</DialogTitle></DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                            <Label>Nombre del Producto</Label>
+                            <Input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} placeholder="Ej: Yogur, Pan, Leche..." />
+                            <p className="text-[10px] text-slate-500 italic">Define el concepto general. Las marcas y variantes se gestionan en los catálogos correspondientes.</p>
                         </div>
 
-                        <div className="space-y-4 pt-2 border-t">
-                            <div className="space-y-2">
-                                <Label>Nombre del Producto</Label>
-                                <Input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} placeholder="Ej: Yogur Natural" />
-                            </div>
-
-                            {!productForm.is_base && !productForm.base_product_id && (
-                                <>
-                                    <div className="space-y-2">
-                                        <Label>Categoría</Label>
-                                        <Select value={productForm.category_id} onValueChange={v => setProductForm({ ...productForm, category_id: v })}>
-                                            <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
-                                            <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                    </div>
-                                    <div className="space-y-2">
-                                        <Label>Marca (Opcional)</Label>
-                                        <Select value={productForm.brand_id || "none"} onValueChange={v => setProductForm({ ...productForm, brand_id: v === "none" ? "" : v })}>
-                                            <SelectTrigger><SelectValue placeholder="Sin marca específica" /></SelectTrigger>
-                                            <SelectContent>
-                                                <SelectItem value="none">Sin marca</SelectItem>
-                                                {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                </>
-                            )}
-
-                            {productForm.is_base && (
-                                <div className="space-y-4">
-                                    <div className="space-y-2">
-                                        <Label>Categoría Sugerida</Label>
-                                        <Select value={productForm.category_id} onValueChange={v => setProductForm({ ...productForm, category_id: v })}>
-                                            <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
-                                            <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
-                                        </Select>
-                                    </div>
-                                    <p className="text-xs text-blue-600 bg-blue-50 p-2 rounded">
-                                        Nota: Los atributos se asignan ahora desde la pestaña "Catálogos > Catálogo Atributos".
-                                    </p>
-                                </div>
-                            )}
-
+                        <div className="space-y-2">
+                            <Label>Categoría</Label>
+                            <Select value={productForm.category_id} onValueChange={v => setProductForm({ ...productForm, category_id: v })}>
+                                <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+                                <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
+                            </Select>
                         </div>
 
-                        <Button onClick={handleSaveProduct} className="w-full bg-emerald-500" data-testid="save-product-btn">Guardar Producto</Button>
+                        <div className="space-y-2">
+                            <Label>Código de Barras Genérico (Opcional)</Label>
+                            <Input value={productForm.barcode || ""} onChange={e => setProductForm({ ...productForm, barcode: e.target.value })} placeholder="Barcode" />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Imagen Genérica (URL)</Label>
+                            <Input value={productForm.image_url || ""} onChange={e => setProductForm({ ...productForm, image_url: e.target.value })} placeholder="https://..." />
+                        </div>
+
+                        <Button onClick={handleSaveProduct} className="w-full bg-emerald-500" data-testid="save-product-btn">Guardar Concepto de Producto</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1486,13 +1383,26 @@ const AdminPage = () => {
                                         key={brand.id}
                                         variant={isLinked ? "secondary" : "outline"}
                                         className={`justify-start h-auto py-2 px-3 ${isLinked ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}`}
-                                        onClick={() => {
+                                        onClick={async () => {
                                             if (isLinked) {
-                                                toast.info("Esta marca ya tiene productos vinculados. Elimina los productos para desvincular la marca.");
+                                                toast.info("Esta marca ya está vinculada.");
                                             } else {
-                                            setSellableForm({ ...sellableForm, brand_id: brand.id, catalog_entry_ids: [] });
-                                                setSupermarketBrandDialog(false);
-                                                setSellableDialog(true);
+                                                if (window.confirm(`¿Quieres vincular AUTOMÁTICAMENTE todos los productos activos de ${brand.name}?`)) {
+                                                    try {
+                                                        await axios.post(`${API}/admin/sellable-products/bulk`, {
+                                                            supermarket_id: sellableForm.supermarket_id,
+                                                            brand_id: brand.id,
+                                                            catalog_entry_ids: [] // Empty means all active
+                                                        });
+                                                        toast.success("Marca y productos vinculados");
+                                                        fetchAllData();
+                                                        setSupermarketBrandDialog(false);
+                                                    } catch (e) { toast.error("Error al vincular marca"); }
+                                                } else {
+                                                    setSellableForm({ ...sellableForm, brand_id: brand.id, catalog_entry_ids: [] });
+                                                    setSupermarketBrandDialog(false);
+                                                    setSellableDialog(true);
+                                                }
                                             }
                                         }}
                                     >
@@ -1586,10 +1496,10 @@ const AdminPage = () => {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={catalogDialog} onOpenChange={(val) => { setCatalogDialog(val); if (!val) setProductSearch(""); }}>
+            <Dialog open={catalogDialog} onOpenChange={(val) => { setCatalogDialog(val); if (!val) { setProductSearch(""); setAttributeSelection({}); } }}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle>Gestionar Catálogo de Marca (Bulk)</DialogTitle></DialogHeader>
-                    <div className="space-y-4 pt-4">
+                    <DialogHeader><DialogTitle>Gestionar Catálogo de Marca</DialogTitle></DialogHeader>
+                    <div className="space-y-6 pt-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Marca</Label>
@@ -1599,36 +1509,31 @@ const AdminPage = () => {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label>Estado Conceptual</Label>
+                                <Label>Estado</Label>
                                 <Select value={catalogForm.status} onValueChange={v => setCatalogForm({ ...catalogForm, status: v })}>
                                     <SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="planned">Planned (Planeado)</SelectItem>
-                                        <SelectItem value="active">Active (Activo)</SelectItem>
-                                        <SelectItem value="discontinued">Discontinued (Descatalogado)</SelectItem>
+                                        <SelectItem value="active">Activo</SelectItem>
+                                        <SelectItem value="planned">Planeado</SelectItem>
+                                        <SelectItem value="discontinued">Descatalogado</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
                         </div>
 
                         {catalogForm.brand_id && (
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <Label>Productos para añadir al catálogo</Label>
-                                    <Input
-                                        placeholder="Filtrar productos..."
-                                        className="w-1/2 h-8"
-                                        value={productSearch}
-                                        onChange={e => setProductSearch(e.target.value)}
-                                    />
-                                </div>
-                                <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto bg-slate-50">
-                                    {products
-                                        .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-                                        .map(p => {
-                                            const currentEntry = brandCatalog.find(bc => bc.brand_id === catalogForm.brand_id && bc.product_id === p.id);
-                                            return (
-                                                <div key={p.id} className="flex items-center space-x-2 p-1 hover:bg-white rounded transition-colors">
+                            <>
+                                <div className="space-y-3">
+                                    <Label className="font-bold">1. Seleccionar Productos Conceptuales</Label>
+                                    <div className="relative">
+                                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                        <Input placeholder="Buscar concepto (ej: Yogur)..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="pl-9 h-9" />
+                                    </div>
+                                    <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-48 overflow-y-auto bg-slate-50 shadow-inner">
+                                        {products
+                                            .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
+                                            .map(p => (
+                                                <div key={p.id} className="flex items-center space-x-2 p-1 hover:bg-white rounded transition-colors border border-transparent hover:border-slate-200">
                                                     <Checkbox
                                                         id={`cat-${p.id}`}
                                                         checked={catalogForm.product_ids.includes(p.id)}
@@ -1637,55 +1542,51 @@ const AdminPage = () => {
                                                             else setCatalogForm({ ...catalogForm, product_ids: catalogForm.product_ids.filter(id => id !== p.id) });
                                                         }}
                                                     />
-                                                    <label htmlFor={`cat-${p.id}`} className="text-sm cursor-pointer flex-1">
-                                                        {p.name}
-                                                        {currentEntry && <span className="ml-1 text-[10px] text-blue-600 font-bold">({currentEntry.status})</span>}
-                                                    </label>
+                                                    <label htmlFor={`cat-${p.id}`} className="text-sm cursor-pointer flex-1 truncate">{p.name}</label>
                                                 </div>
-                                            );
-                                        })
-                                    }
+                                            ))
+                                        }
+                                    </div>
                                 </div>
-                                <p className="text-xs text-slate-500">{catalogForm.product_ids.length} productos seleccionados</p>
-                            </div>
+
+                                <div className="space-y-3 pt-4 border-t">
+                                    <Label className="font-bold">2. Variantes de Atributos (Multiselección)</Label>
+                                    <p className="text-xs text-slate-500">Se generarán todas las combinaciones posibles de los valores seleccionados.</p>
+
+                                    <div className="space-y-4 max-h-60 overflow-y-auto pr-2">
+                                        {attributes.map(attr => (
+                                            <div key={attr.id} className="space-y-2 p-3 border rounded-lg bg-slate-50">
+                                                <Label className="text-xs uppercase font-bold text-slate-400 tracking-widest">{attr.name}</Label>
+                                                <div className="flex flex-wrap gap-2">
+                                                    {attr.values?.map(val => (
+                                                        <div key={val} className="flex items-center space-x-1.5 bg-white border rounded px-2 py-1 shadow-sm">
+                                                            <Checkbox
+                                                                id={`val-${attr.id}-${val}`}
+                                                                checked={attributeSelection[attr.id]?.includes(val)}
+                                                                onCheckedChange={(checked) => {
+                                                                    const current = attributeSelection[attr.id] || [];
+                                                                    const next = checked ? [...current, val] : current.filter(v => v !== val);
+                                                                    setAttributeSelection({ ...attributeSelection, [attr.id]: next });
+                                                                }}
+                                                            />
+                                                            <label htmlFor={`val-${attr.id}-${val}`} className="text-xs cursor-pointer">{val}</label>
+                                                        </div>
+                                                    ))}
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </div>
+                            </>
                         )}
 
-                        <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500 mt-4">Actualizar Catálogo Masivo</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={sellableEditDialog} onOpenChange={setSellableEditDialog}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Editar Vinculo Operativo</DialogTitle></DialogHeader>
-                    <div className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                            <Label>Supermercado</Label>
-                            <Select value={sellableEditForm.supermarket_id} onValueChange={(v) => setSellableEditForm({ ...sellableEditForm, supermarket_id: v })}>
-                                <SelectTrigger><SelectValue placeholder="Seleccionar supermercado" /></SelectTrigger>
-                                <SelectContent>{supermarkets.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Marca</Label>
-                            <Select value={sellableEditForm.brand_id} onValueChange={(v) => setSellableEditForm({ ...sellableEditForm, brand_id: v })}>
-                                <SelectTrigger><SelectValue placeholder="Seleccionar marca" /></SelectTrigger>
-                                <SelectContent>{brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Producto</Label>
-                            <Select value={sellableEditForm.product_id} onValueChange={(v) => setSellableEditForm({ ...sellableEditForm, product_id: v })}>
-                                <SelectTrigger><SelectValue placeholder="Seleccionar producto" /></SelectTrigger>
-                                <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                        <Button onClick={handleSaveSellableEdit} disabled={sellableEditSaving} className="w-full bg-emerald-500">
-                            {sellableEditSaving ? "Guardando..." : "Guardar Cambios"}
+                        <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500 mt-2 h-11 text-base font-semibold shadow-lg shadow-emerald-100" disabled={catalogForm.product_ids.length === 0 || !catalogForm.brand_id}>
+                            Generar y Actualizar Catálogo
                         </Button>
                     </div>
                 </DialogContent>
             </Dialog>
+
 
             <Dialog open={catalogStatusDialog} onOpenChange={setCatalogStatusDialog}>
                 <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
@@ -1757,6 +1658,44 @@ const AdminPage = () => {
                         </div>
 
                         <Button onClick={handleSaveCatalogStatus} className="w-full bg-emerald-500">Guardar Cambios</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={addSupermarketToCatalogDialog} onOpenChange={setAddSupermarketToCatalogDialog}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Añadir Supermercado al Catálogo</DialogTitle></DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <Label>Selecciona Supermercado</Label>
+                        <Select onValueChange={(v) => {
+                            setSellableForm({ ...sellableForm, supermarket_id: v, brand_id: "", catalog_entry_ids: [] });
+                            setAddSupermarketToCatalogDialog(false);
+                            setSupermarketBrandDialog(true);
+                        }}>
+                            <SelectTrigger><SelectValue placeholder="Supermercado..." /></SelectTrigger>
+                            <SelectContent>
+                                {supermarkets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={addBrandToCatalogDialog} onOpenChange={setAddBrandToCatalogDialog}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Gestionar Catálogo de Marca</DialogTitle></DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <Label>Selecciona Marca</Label>
+                        <Select onValueChange={(v) => {
+                            setCatalogForm({ ...catalogForm, brand_id: v, product_ids: [], status: "active", attribute_combinations: [] });
+                            setAddBrandToCatalogDialog(false);
+                            setCatalogDialog(true);
+                        }}>
+                            <SelectTrigger><SelectValue placeholder="Marca..." /></SelectTrigger>
+                            <SelectContent>
+                                {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
                     </div>
                 </DialogContent>
             </Dialog>

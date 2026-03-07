@@ -29,6 +29,7 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ShoppingListPage = () => {
     const [lists, setLists] = useState([]);
     const [products, setProducts] = useState([]);
+    const [attributes, setAttributes] = useState([]);
     const [supermarkets, setSupermarkets] = useState([]);
     const [units, setUnits] = useState([]);
     const [brands, setBrands] = useState([]);
@@ -48,33 +49,73 @@ const ShoppingListPage = () => {
 
     // New item form
     const [newItemProduct, setNewItemProduct] = useState("");
+    const [newItemBrandId, setNewItemBrandId] = useState("");
+    const [newItemAttrValues, setNewItemAttrValues] = useState({});
     const [newItemSellable, setNewItemSellable] = useState("");
     const [newItemQuantity, setNewItemQuantity] = useState("1");
     const [newItemUnit, setNewItemUnit] = useState("");
 
     // Filtered selection states
-    const [availableBrands, setAvailableBrands] = useState([]);
+    const [availableBrandsForProduct, setAvailableBrandsForProduct] = useState([]);
     const [availableUnits, setAvailableUnits] = useState([]);
 
     useEffect(() => {
         fetchData();
     }, []);
 
-    // Selection logic for 4-step flow
+    // 1. When product changes, find available brands in this supermarket
     useEffect(() => {
         if (newItemProduct && selectedList) {
-            const filtered = sellableProducts.filter(sp =>
-                sp.product_id === newItemProduct && sp.supermarket_id === selectedList.supermarket_id
-            );
-            setAvailableBrands(filtered);
-            if (filtered.length === 1) {
-                setNewItemSellable(filtered[0].id);
-            }
-        } else {
-            setAvailableBrands([]);
+            const brandIds = Array.from(new Set(
+                sellableProducts
+                    .filter(sp => sp.product_id === newItemProduct && sp.supermarket_id === selectedList.supermarket_id)
+                    .map(sp => sp.brand_id)
+            ));
+            const filteredBrands = brands.filter(b => brandIds.includes(b.id));
+            setAvailableBrandsForProduct(filteredBrands);
+
+            setNewItemBrandId("");
+            setNewItemAttrValues({});
             setNewItemSellable("");
+        } else {
+            setAvailableBrandsForProduct([]);
+            setNewItemBrandId("");
         }
-    }, [newItemProduct, selectedList, sellableProducts]);
+    }, [newItemProduct, selectedList, sellableProducts, brands]);
+
+    // 2. When Brand or Attributes change, try to resolve to a specific SellableProduct
+    useEffect(() => {
+        if (newItemProduct && newItemBrandId && selectedList) {
+            // Filter out empty attribute values for comparison
+            const cleanedAttrs = Object.fromEntries(
+                Object.entries(newItemAttrValues).filter(([_, v]) => v !== "" && v !== null)
+            );
+
+            const match = sellableProducts.find(sp =>
+                sp.product_id === newItemProduct &&
+                sp.brand_id === newItemBrandId &&
+                sp.supermarket_id === selectedList.supermarket_id &&
+                JSON.stringify(sp.attribute_values || {}) === JSON.stringify(cleanedAttrs)
+            );
+
+            if (match) {
+                setNewItemSellable(match.id);
+            } else {
+                const variants = sellableProducts.filter(sp =>
+                    sp.product_id === newItemProduct &&
+                    sp.brand_id === newItemBrandId &&
+                    sp.supermarket_id === selectedList.supermarket_id
+                );
+                // If only one variant exists and user hasn't started picking attributes, auto-select it
+                if (variants.length === 1 && Object.keys(cleanedAttrs).length === 0) {
+                    setNewItemSellable(variants[0].id);
+                    setNewItemAttrValues(variants[0].attribute_values || {});
+                } else {
+                    setNewItemSellable("");
+                }
+            }
+        }
+    }, [newItemBrandId, newItemAttrValues, newItemProduct, selectedList, sellableProducts]);
 
     useEffect(() => {
         const fetchUnits = async () => {
@@ -97,10 +138,12 @@ const ShoppingListPage = () => {
             }
         };
         fetchUnits();
-    }, [newItemBrand, newItemProduct, selectedList, sellableProducts]);
+    }, [newItemSellable, newItemProduct, selectedList, sellableProducts]);
 
     const resetNewItemForm = () => {
         setNewItemProduct("");
+        setNewItemBrandId("");
+        setNewItemAttrValues({});
         setNewItemSellable("");
         setNewItemQuantity("1");
         setNewItemUnit("");
@@ -112,6 +155,7 @@ const ShoppingListPage = () => {
             // Fetch everything but individually to be more robust
             const fetchLists = axios.get(`${API}/shopping-lists`).then(r => setLists(r.data)).catch(e => console.error("Lists fetch error", e));
             const fetchProducts = axios.get(`${API}/public/products`).then(r => setProducts(r.data)).catch(e => console.error("Products fetch error", e));
+            const fetchAttributes = axios.get(`${API}/admin/attributes`).then(r => setAttributes(r.data)).catch(e => console.error("Attributes fetch error", e));
             const fetchSupermarkets = axios.get(`${API}/admin/supermarkets`).then(r => setSupermarkets(r.data)).catch(e => console.error("Supermarkets fetch error", e));
             const fetchUnits = axios.get(`${API}/admin/units`).then(r => {
                 setUnits(r.data);
@@ -120,7 +164,7 @@ const ShoppingListPage = () => {
             const fetchBrands = axios.get(`${API}/admin/brands`).then(r => setBrands(r.data)).catch(e => console.error("Brands fetch error", e));
             const fetchSellable = axios.get(`${API}/admin/sellable-products`).then(r => setSellableProducts(r.data)).catch(e => console.error("Sellable fetch error", e));
 
-            await Promise.allSettled([fetchLists, fetchProducts, fetchSupermarkets, fetchUnits, fetchBrands, fetchSellable]);
+            await Promise.allSettled([fetchLists, fetchProducts, fetchAttributes, fetchSupermarkets, fetchUnits, fetchBrands, fetchSellable]);
         } catch (error) {
             console.error("General error in fetchData:", error);
         } finally {
@@ -469,7 +513,7 @@ const ShoppingListPage = () => {
                                                     <RefreshCcw className="w-4 h-4" />
                                                     <span className="hidden sm:inline">Reiniciar</span>
                                                 </Button>
-                                                <Dialog open={addItemDialogOpen} onOpenChange={setAddItemDialogOpen}>
+                                                <Dialog open={addItemDialogOpen} onOpenChange={(val) => { setAddItemDialogOpen(val); if (!val) resetNewItemForm(); }}>
                                                     <DialogTrigger asChild>
                                                         <Button className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white" data-testid="add-item-btn">
                                                             <Plus className="w-4 h-4" />
@@ -500,31 +544,65 @@ const ShoppingListPage = () => {
 
                                                             {newItemProduct && (
                                                                 <div className="space-y-2">
-                                                                    <Label>2. Marca y Variante *</Label>
-                                                                    <Select value={newItemSellable} onValueChange={setNewItemSellable}>
+                                                                    <Label>2. Marca *</Label>
+                                                                    <Select value={newItemBrandId} onValueChange={setNewItemBrandId}>
                                                                         <SelectTrigger data-testid="add-item-brand-select">
-                                                                            <SelectValue placeholder="Selecciona marca/variante" />
+                                                                            <SelectValue placeholder="Selecciona marca" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
-                                                                            {availableBrands.map((sp) => {
-                                                                                const attrText = sp.attribute_values && Object.entries(sp.attribute_values).length > 0
-                                                                                    ? " (" + Object.values(sp.attribute_values).join(", ") + ")"
-                                                                                    : "";
-                                                                                return (
-                                                                                    <SelectItem key={sp.id} value={sp.id}>
-                                                                                        {sp.brand_name}{attrText}
-                                                                                    </SelectItem>
-                                                                                );
-                                                                            })}
+                                                                            {availableBrandsForProduct.map((b) => (
+                                                                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                                                                            ))}
                                                                         </SelectContent>
                                                                     </Select>
                                                                 </div>
                                                             )}
 
+                                                            {newItemBrandId && (() => {
+                                                                const product = products.find(p => p.id === newItemProduct);
+                                                                if (!product || !product.allowed_attribute_ids?.length) return null;
+
+                                                                return (
+                                                                    <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-dashed">
+                                                                        <Label className="text-xs font-bold text-slate-500 uppercase">3. Atributos (Variante)</Label>
+                                                                        {product.allowed_attribute_ids.map(attrId => {
+                                                                            const attr = attributes.find(a => a.id === attrId);
+                                                                            // Get unique values for THIS product+brand+attribute in THIS supermarket
+                                                                            const possibleVals = Array.from(new Set(
+                                                                                sellableProducts
+                                                                                    .filter(sp => sp.product_id === newItemProduct && sp.brand_id === newItemBrandId && sp.supermarket_id === selectedList.supermarket_id)
+                                                                                    .map(sp => sp.attribute_values?.[attrId])
+                                                                                    .filter(Boolean)
+                                                                            ));
+
+                                                                            if (possibleVals.length === 0) return null;
+
+                                                                            return (
+                                                                                <div key={attrId} className="space-y-1">
+                                                                                    <Label className="text-[10px]">{attr?.name}</Label>
+                                                                                    <Select
+                                                                                        value={newItemAttrValues[attrId] || "none"}
+                                                                                        onValueChange={v => setNewItemAttrValues({...newItemAttrValues, [attrId]: v === "none" ? "" : v})}
+                                                                                    >
+                                                                                        <SelectTrigger className="h-8 text-xs">
+                                                                                            <SelectValue placeholder={`Cualquier ${attr?.name}`} />
+                                                                                        </SelectTrigger>
+                                                                                        <SelectContent>
+                                                                                            <SelectItem value="none">Seleccionar...</SelectItem>
+                                                                                            {possibleVals.map(val => <SelectItem key={val} value={val}>{val}</SelectItem>)}
+                                                                                        </SelectContent>
+                                                                                    </Select>
+                                                                                </div>
+                                                                            );
+                                                                        })}
+                                                                    </div>
+                                                                );
+                                                            })()}
+
                                                             {newItemSellable && (
                                                                 <div className="grid grid-cols-2 gap-4">
                                                                     <div className="space-y-2">
-                                                                        <Label>3. Unidad *</Label>
+                                                                        <Label>Unidad *</Label>
                                                                         <Select value={newItemUnit} onValueChange={setNewItemUnit}>
                                                                             <SelectTrigger data-testid="add-item-unit-select">
                                                                                 <SelectValue placeholder="Unidad" />
@@ -539,7 +617,7 @@ const ShoppingListPage = () => {
                                                                         </Select>
                                                                     </div>
                                                                     <div className="space-y-2">
-                                                                        <Label>4. Cantidad</Label>
+                                                                        <Label>Cantidad</Label>
                                                                         <Input
                                                                             type="number"
                                                                             min="0.1"
