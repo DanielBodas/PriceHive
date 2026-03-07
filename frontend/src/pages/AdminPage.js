@@ -53,6 +53,7 @@ const AdminPage = () => {
     const [catalogDialog, setCatalogDialog] = useState(false);
     const [addSupermarketToCatalogDialog, setAddSupermarketToCatalogDialog] = useState(false);
     const [addBrandToCatalogDialog, setAddBrandToCatalogDialog] = useState(false);
+    const [addBrandGlobalDialog, setAddBrandGlobalDialog] = useState(false);
 
     // Edit states
     const [editingItem, setEditingItem] = useState(null);
@@ -201,10 +202,18 @@ const AdminPage = () => {
     }, {});
 
     const filteredRelationProducts = getFilteredProducts(relationProductSearch)
-        .map((p) => ({
-            ...p,
-            allowed_units_count: productUnitCountByProduct[p.id] || 0,
-        }))
+        .map((p) => {
+            const linkedBrands = brandCatalog
+                .filter(bc => bc.product_id === p.id)
+                .map(bc => bc.brand_name)
+                .filter((v, i, a) => v && a.indexOf(v) === i);
+
+            return {
+                ...p,
+                linked_brands: linkedBrands,
+                allowed_units_count: productUnitCountByProduct[p.id] || 0,
+            };
+        })
         .filter((p) => !relationOnlyMissingUnits || p.allowed_units_count === 0)
         .sort((a, b) => {
             if (a.allowed_units_count === 0 && b.allowed_units_count > 0) return -1;
@@ -252,7 +261,8 @@ const AdminPage = () => {
         filteredSellableTable.reduce((acc, row) => {
             const supermarketId = row.supermarket_id || row.supermarket_name || "unknown-supermarket";
             const brandId = row.brand_id || row.brand_name || "unknown-brand";
-            const productId = row.product_id || row.product_name || row.id;
+            const productId = row.product_id || row.product_name || "unknown-product";
+
             if (!acc[supermarketId]) {
                 acc[supermarketId] = { id: supermarketId, name: row.supermarket_name || "Sin supermercado", brands: {} };
             }
@@ -265,13 +275,14 @@ const AdminPage = () => {
                     name: row.product_name || "Sin producto",
                     brand_id: row.brand_id,
                     product_id: row.product_id,
-                    brand_name: row.brand_name,
-                    product_name: row.product_name,
-                    status: brandCatalogStatusByBrandProduct[`${row.brand_id || ""}::${row.product_id || ""}`] || "missing",
-                    sellable_ids: [],
+                    variants: []
                 };
             }
-            acc[supermarketId].brands[brandId].products[productId].sellable_ids.push(row.id);
+            acc[supermarketId].brands[brandId].products[productId].variants.push({
+                id: row.id,
+                attribute_values: row.attribute_values || {},
+                status: brandCatalogStatusByBrandProduct[`${row.brand_id || ""}::${row.product_id || ""}`] || "missing"
+            });
             return acc;
         }, {})
     )
@@ -300,21 +311,30 @@ const AdminPage = () => {
     const brandCatalogTree = Object.values(
         filteredCatalogTable.reduce((acc, row) => {
             const brandId = row.brand_id || row.brand_name || "unknown-brand";
-            const productId = row.product_id || row.product_name || row.id;
+            const productId = row.product_id || row.product_name || "unknown-product";
             const key = `${row.brand_id || ""}::${row.product_id || ""}`;
+
             if (!acc[brandId]) {
                 acc[brandId] = { id: brandId, name: row.brand_name || "Sin marca", products: {} };
             }
-            acc[brandId].products[productId] = {
-                id: productId,
-                name: row.product_name || "Sin producto",
-                status: row.status || "unknown",
-                brand_id: row.brand_id,
-                product_id: row.product_id,
-                brand_name: row.brand_name,
-                product_name: row.product_name,
-                supermarkets: Object.values(supermarketsByBrandProduct[key] || {}).sort((a, b) => a.localeCompare(b)),
-            };
+
+            if (!acc[brandId].products[productId]) {
+                acc[brandId].products[productId] = {
+                    id: productId,
+                    name: row.product_name || "Sin producto",
+                    brand_id: row.brand_id,
+                    product_id: row.product_id,
+                    variants: [],
+                    supermarkets: Object.values(supermarketsByBrandProduct[key] || {}).sort((a, b) => a.localeCompare(b)),
+                };
+            }
+
+            acc[brandId].products[productId].variants.push({
+                id: row.id,
+                status: row.status,
+                attribute_values: row.attribute_values || {}
+            });
+
             return acc;
         }, {})
     )
@@ -642,11 +662,15 @@ const AdminPage = () => {
 
     const handleSaveCatalogStatus = async () => {
         try {
+            const cleanedAttrs = Object.fromEntries(
+                Object.entries(catalogStatusForm.attribute_values || {}).filter(([_, v]) => v !== "" && v !== "none")
+            );
+
             await axios.post(`${API}/admin/brand-catalog`, {
                 brand_id: catalogStatusForm.brand_id,
                 product_id: catalogStatusForm.product_id,
                 status: catalogStatusForm.status,
-                attribute_values: catalogStatusForm.attribute_values
+                attribute_values: cleanedAttrs
             });
             toast.success("Catálogo actualizado");
             setCatalogStatusDialog(false);
@@ -977,17 +1001,43 @@ const AdminPage = () => {
                                                                     </AccordionTrigger>
                                                                     <AccordionContent className="px-0 pb-0">
                                                                         <div className="divide-y">
+                                                                            <div className="px-4 py-2 bg-rose-50/30 flex justify-end">
+                                                                                <Button variant="ghost" size="sm" className="text-rose-600 h-7 text-[10px] uppercase font-bold" onClick={async (e) => {
+                                                                                    e.stopPropagation();
+                                                                                    if (window.confirm(`¿Seguro que quieres quitar la marca ${brand.name} de este supermercado? Se borrarán todos sus productos.`)) {
+                                                                                        try {
+                                                                                            await axios.delete(`${API}/admin/supermarkets/${supermarket.id}/brands/${brand.id}`);
+                                                                                            toast.success("Marca eliminada del supermercado");
+                                                                                            fetchAllData();
+                                                                                        } catch (e) { toast.error("Error al eliminar marca"); }
+                                                                                    }
+                                                                                }}><Trash2 className="w-3 h-3 mr-1" /> Eliminar Marca del Súper</Button>
+                                                                            </div>
                                                                             {brand.products.map((product) => {
-                                                                                const statusMeta = getCatalogStatusMeta(product.status);
                                                                                 return (
-                                                                                    <div key={`${supermarket.id}-${brand.id}-${product.id}`} className="px-4 py-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                                                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                                                            <span className="font-medium text-slate-800">{product.name}</span>
-                                                                                            <Badge className={statusMeta.className}>{statusMeta.label}</Badge>
-                                                                                            {product.sellable_ids.length > 1 && <Badge variant="outline">{product.sellable_ids.length} vinculos</Badge>}
+                                                                                    <div key={`${supermarket.id}-${brand.id}-${product.id}`} className="px-4 py-3 space-y-2">
+                                                                                        <div className="flex items-center justify-between">
+                                                                                            <span className="font-bold text-slate-700 text-sm">{product.name}</span>
+                                                                                            <Badge variant="outline" className="text-[10px]">{product.variants.length} variantes</Badge>
                                                                                         </div>
-                                                                                        <div className="flex items-center gap-2">
-                                                                                            <Button variant="ghost" size="sm" className="text-rose-600" onClick={() => handleDeleteSellableGroup(product.sellable_ids)}><Trash2 className="w-4 h-4 mr-2" /> Eliminar</Button>
+                                                                                        <div className="grid gap-1">
+                                                                                            {product.variants.map((variant) => {
+                                                                                                return (
+                                                                                                    <div key={variant.id} className="flex items-center justify-between p-2 rounded bg-slate-50/50 border border-transparent hover:border-slate-100">
+                                                                                                        <div className="flex flex-wrap items-center gap-2 overflow-hidden">
+                                                                                                            {Object.entries(variant.attribute_values).length > 0 ? (
+                                                                                                                Object.entries(variant.attribute_values).map(([attrId, val]) => {
+                                                                                                                    const attr = attributes.find(a => a.id === attrId);
+                                                                                                                    return <Badge key={attrId} variant="secondary" className="text-[9px] h-4 font-normal px-1">{attr?.name}: {val}</Badge>
+                                                                                                                })
+                                                                                                            ) : (
+                                                                                                                <span className="text-[10px] text-slate-400 italic">Estándar</span>
+                                                                                                            )}
+                                                                                                        </div>
+                                                                                                        <Button variant="ghost" size="icon" className="h-6 w-6 text-rose-400 hover:text-rose-600" onClick={() => handleDeleteSellable(variant.id)}><Trash2 className="w-3.5 h-3.5" /></Button>
+                                                                                                    </div>
+                                                                                                );
+                                                                                            })}
                                                                                         </div>
                                                                                     </div>
                                                                                 );
@@ -1013,7 +1063,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Catalogo Marca</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">Portfolio conceptual de marca con estado editable</p>
                                             </div>
-                                            <Button onClick={() => setAddBrandToCatalogDialog(true)} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Añadir Marca</Button>
+                                            <Button onClick={() => setAddBrandGlobalDialog(true)} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Gestionar Marcas</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1030,25 +1080,51 @@ const AdminPage = () => {
                                                             <Badge variant="secondary">{brand.products_count} productos</Badge>
                                                         </div>
                                                     </AccordionTrigger>
-                                                    <AccordionContent>
-                                                        <div className="space-y-2">
+                                                    <AccordionContent className="pt-2">
+                                                        <div className="space-y-3">
+                                                            <div className="flex justify-end mb-2">
+                                                                <Button size="sm" variant="ghost" className="h-8 text-emerald-600" onClick={(e) => { e.stopPropagation(); setCatalogForm({ ...catalogForm, brand_id: brand.id, product_ids: [], status: "active", attribute_combinations: [] }); setCatalogDialog(true); }}>
+                                                                    <Plus className="w-4 h-4 mr-1" /> Gestionar Productos
+                                                                </Button>
+                                                            </div>
                                                             {brand.products.map((product) => {
-                                                                const statusMeta = getCatalogStatusMeta(product.status);
                                                                 return (
-                                                                    <div key={`${brand.id}-${product.id}`} className="rounded-lg border px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                                                        <div className="space-y-2">
-                                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                                <span className="font-medium text-slate-800">{product.name}</span>
-                                                                                <Badge className={statusMeta.className}>{statusMeta.label}</Badge>
+                                                                    <div key={`${brand.id}-${product.id}`} className="rounded-lg border bg-white shadow-sm overflow-hidden">
+                                                                        <div className="bg-slate-50/50 px-4 py-2 border-b flex items-center justify-between">
+                                                                            <div className="flex items-center gap-2">
+                                                                                <span className="font-bold text-slate-700">{product.name}</span>
+                                                                                <Badge variant="outline" className="bg-white">{product.variants.length} variantes</Badge>
                                                                             </div>
-                                                                            <div className="flex items-center gap-2 flex-wrap text-xs text-slate-600">
-                                                                                <span>Operativo en:</span>
-                                                                                {product.supermarkets.length > 0 ? product.supermarkets.map((name) => <Badge key={`${brand.id}-${product.id}-${name}`} variant="outline" className="text-xs">{name}</Badge>) : <Badge variant="outline" className="text-xs">Sin supermercados</Badge>}
+                                                                            <div className="flex items-center gap-2 text-[10px] text-slate-500">
+                                                                                <Store className="w-3 h-3" />
+                                                                                <span className="truncate max-w-[200px]">
+                                                                                    {product.supermarkets.length > 0 ? product.supermarkets.join(", ") : "No operativo"}
+                                                                                </span>
                                                                             </div>
                                                                         </div>
-                                                                        <div className="flex gap-2">
-                                                                            <Button variant="outline" size="sm" onClick={() => openCatalogStatusEditor(product)}><Pencil className="w-4 h-4 mr-2" /> Editar</Button>
-                                                                            <Button variant="ghost" size="sm" className="text-rose-600" onClick={() => handleDeleteCatalogEntry(product.id)}><Trash2 className="w-4 h-4" /></Button>
+                                                                        <div className="p-3 space-y-2">
+                                                                            {product.variants.map((variant) => {
+                                                                                const statusMeta = getCatalogStatusMeta(variant.status);
+                                                                                return (
+                                                                                    <div key={variant.id} className="flex items-center justify-between gap-4 p-2 rounded-md hover:bg-slate-50 transition-colors border border-transparent hover:border-slate-100">
+                                                                                        <div className="flex flex-wrap items-center gap-2 flex-1">
+                                                                                            <Badge className={statusMeta.className}>{statusMeta.label}</Badge>
+                                                                                            {Object.entries(variant.attribute_values).length > 0 ? (
+                                                                                                Object.entries(variant.attribute_values).map(([attrId, val]) => {
+                                                                                                    const attr = attributes.find(a => a.id === attrId);
+                                                                                                    return <Badge key={attrId} variant="secondary" className="text-[10px] font-normal">{attr?.name}: {val}</Badge>
+                                                                                                })
+                                                                                            ) : (
+                                                                                                <span className="text-xs text-slate-400 italic">Producto estándar (sin atributos)</span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                        <div className="flex gap-1">
+                                                                                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openCatalogStatusEditor({ ...variant, brand_name: brand.name, product_name: product.name, brand_id: brand.id, product_id: product.product_id })}><Pencil className="w-3 h-3" /></Button>
+                                                                                            <Button variant="ghost" size="icon" className="h-7 w-7 text-rose-500" onClick={() => handleDeleteCatalogEntry(variant.id)}><Trash2 className="w-3 h-3" /></Button>
+                                                                                        </div>
+                                                                                    </div>
+                                                                                );
+                                                                            })}
                                                                         </div>
                                                                     </div>
                                                                 );
@@ -1163,6 +1239,12 @@ const AdminPage = () => {
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span className="font-medium text-slate-800">{p.name}</span>
                                                         <Badge variant="outline">{p.category_name || "Sin categoria"}</Badge>
+                                                        {p.linked_brands?.length > 0 && (
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[10px] text-slate-400 ml-2">Marcas:</span>
+                                                                {p.linked_brands.map(b => <Badge key={b} variant="ghost" className="text-[9px] h-4 px-1 border-slate-100">{b}</Badge>)}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         {(unitNamesByProduct[p.id] || []).map((u) => (
@@ -1379,38 +1461,56 @@ const AdminPage = () => {
                             {brands.filter(b => b.name.toLowerCase().includes(productSearch.toLowerCase())).map(brand => {
                                 const isLinked = sellableProducts.some(sp => sp.supermarket_id === sellableForm.supermarket_id && sp.brand_id === brand.id);
                                 return (
-                                    <Button
-                                        key={brand.id}
-                                        variant={isLinked ? "secondary" : "outline"}
-                                        className={`justify-start h-auto py-2 px-3 ${isLinked ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}`}
-                                        onClick={async () => {
-                                            if (isLinked) {
-                                                toast.info("Esta marca ya está vinculada.");
-                                            } else {
-                                                if (window.confirm(`¿Quieres vincular AUTOMÁTICAMENTE todos los productos activos de ${brand.name}?`)) {
-                                                    try {
-                                                        await axios.post(`${API}/admin/sellable-products/bulk`, {
-                                                            supermarket_id: sellableForm.supermarket_id,
-                                                            brand_id: brand.id,
-                                                            catalog_entry_ids: [] // Empty means all active
-                                                        });
-                                                        toast.success("Marca y productos vinculados");
-                                                        fetchAllData();
-                                                        setSupermarketBrandDialog(false);
-                                                    } catch (e) { toast.error("Error al vincular marca"); }
+                                    <div key={brand.id} className="relative group">
+                                        <Button
+                                            variant={isLinked ? "secondary" : "outline"}
+                                            className={`w-full justify-start h-auto py-2 px-3 pr-8 ${isLinked ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}`}
+                                            onClick={async () => {
+                                                if (isLinked) {
+                                                    toast.info("Esta marca ya está vinculada.");
                                                 } else {
-                                                    setSellableForm({ ...sellableForm, brand_id: brand.id, catalog_entry_ids: [] });
-                                                    setSupermarketBrandDialog(false);
-                                                    setSellableDialog(true);
+                                                    if (window.confirm(`¿Quieres vincular AUTOMÁTICAMENTE todos los productos activos de ${brand.name}?`)) {
+                                                        try {
+                                                            await axios.post(`${API}/admin/sellable-products/bulk`, {
+                                                                supermarket_id: sellableForm.supermarket_id,
+                                                                brand_id: brand.id,
+                                                                catalog_entry_ids: [] // Empty means all active
+                                                            });
+                                                            toast.success("Marca y productos vinculados");
+                                                            fetchAllData();
+                                                            setSupermarketBrandDialog(false);
+                                                        } catch (e) { toast.error("Error al vincular marca"); }
+                                                    } else {
+                                                        setSellableForm({ ...sellableForm, brand_id: brand.id, catalog_entry_ids: [] });
+                                                        setSupermarketBrandDialog(false);
+                                                        setSellableDialog(true);
+                                                    }
                                                 }
-                                            }
-                                        }}
-                                    >
-                                        <div className="flex flex-col items-start text-left">
-                                            <span className="font-medium text-sm">{brand.name}</span>
-                                            {isLinked && <span className="text-[10px] uppercase font-bold tracking-tighter">Vinculada</span>}
-                                        </div>
-                                    </Button>
+                                            }}
+                                        >
+                                            <div className="flex flex-col items-start text-left">
+                                                <span className="font-medium text-sm">{brand.name}</span>
+                                                {isLinked && <span className="text-[10px] uppercase font-bold tracking-tighter">Vinculada</span>}
+                                            </div>
+                                        </Button>
+                                        {isLinked && (
+                                            <button
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`¿Seguro que quieres quitar la marca ${brand.name} de este supermercado? Se borrarán todos sus productos.`)) {
+                                                        try {
+                                                            await axios.delete(`${API}/admin/supermarkets/${sellableForm.supermarket_id}/brands/${brand.id}`);
+                                                            toast.success("Marca eliminada del supermercado");
+                                                            fetchAllData();
+                                                        } catch (err) { toast.error("Error al eliminar"); }
+                                                    }
+                                                }}
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
                                 );
                             })}
                         </div>
@@ -1681,21 +1781,55 @@ const AdminPage = () => {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={addBrandToCatalogDialog} onOpenChange={setAddBrandToCatalogDialog}>
+            <Dialog open={addBrandGlobalDialog} onOpenChange={setAddBrandGlobalDialog}>
                 <DialogContent>
-                    <DialogHeader><DialogTitle>Gestionar Catálogo de Marca</DialogTitle></DialogHeader>
+                    <DialogHeader><DialogTitle>Gestionar Marcas en el Catálogo</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <Label>Selecciona Marca</Label>
-                        <Select onValueChange={(v) => {
-                            setCatalogForm({ ...catalogForm, brand_id: v, product_ids: [], status: "active", attribute_combinations: [] });
-                            setAddBrandToCatalogDialog(false);
-                            setCatalogDialog(true);
-                        }}>
-                            <SelectTrigger><SelectValue placeholder="Marca..." /></SelectTrigger>
-                            <SelectContent>
-                                {brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}
-                            </SelectContent>
-                        </Select>
+                        <div className="relative">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Input placeholder="Buscar marca..." value={brandTableSearch} onChange={e => setBrandTableSearch(e.target.value)} className="pl-9" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1">
+                            {brands.filter(b => b.name.toLowerCase().includes(brandTableSearch.toLowerCase())).map(brand => {
+                                const isLinked = brandCatalog.some(bc => bc.brand_id === brand.id);
+                                return (
+                                    <div key={brand.id} className="relative group">
+                                        <Button
+                                            variant={isLinked ? "secondary" : "outline"}
+                                            className={`w-full justify-start h-auto py-2 px-3 pr-8 ${isLinked ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}`}
+                                            onClick={() => {
+                                                setCatalogForm({ ...catalogForm, brand_id: brand.id, product_ids: [], status: "active", attribute_combinations: [] });
+                                                setAddBrandGlobalDialog(false);
+                                                setCatalogDialog(true);
+                                            }}
+                                        >
+                                            <div className="flex flex-col items-start text-left">
+                                                <span className="font-medium text-sm">{brand.name}</span>
+                                                {isLinked && <span className="text-[10px] uppercase font-bold tracking-tighter">En catálogo</span>}
+                                            </div>
+                                        </Button>
+                                        {isLinked && (
+                                            <button
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`¿Seguro que quieres quitar la marca ${brand.name} del catálogo? Se borrarán todas sus variantes.`)) {
+                                                        const entries = brandCatalog.filter(bc => bc.brand_id === brand.id);
+                                                        try {
+                                                            await Promise.all(entries.map(e => axios.delete(`${API}/admin/brand-catalog/${e.id}`)));
+                                                            toast.success("Marca eliminada del catálogo");
+                                                            fetchAllData();
+                                                        } catch (err) { toast.error("Error al eliminar"); }
+                                                    }
+                                                }}
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>

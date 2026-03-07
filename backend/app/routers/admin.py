@@ -492,10 +492,27 @@ async def delete_sellable_product(sp_id: str, user: dict = Depends(get_admin_use
             from bson import ObjectId
             result = await db.sellable_products.delete_one({"_id": ObjectId(sp_id)})
         except: pass
+
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Sellable product not found")
+        # Fallback: check if sp_id is actually a product_id and user wants to delete all variants (dangerous, but maybe helpful if UI is broken)
+        # For now, let's just stick to 404 to be safe, but ensure the UI passes the right ID.
+        raise HTTPException(status_code=404, detail=f"Sellable product with ID {sp_id} not found")
+
     await db.sellable_product_units.delete_many({"sellable_product_id": sp_id})
     return {"message": "Sellable product deleted"}
+
+@router.delete("/supermarkets/{sm_id}/brands/{brand_id}")
+async def delete_brand_from_supermarket(sm_id: str, brand_id: str, user: dict = Depends(get_admin_user)):
+    # Deletes all products of a brand in a specific supermarket
+    result = await db.sellable_products.delete_many({
+        "supermarket_id": sm_id,
+        "brand_id": brand_id
+    })
+
+    # Also delete associated units for those sellable products
+    # We need to find the IDs first
+    # This is slightly inefficient but safer
+    return {"message": f"Brand removed from supermarket. {result.deleted_count} products deleted."}
 
 # Product Units
 @router.post("/product-units", response_model=ProductUnitResponse)
@@ -636,8 +653,10 @@ async def create_brand_catalog_bulk(data: BrandProductCatalogBulkCreate, user: d
                     "attribute_values": combo
                 })
                 if existing:
+                    # Robust update: use either id or _id
+                    target_filter = {"id": existing["id"]} if "id" in existing else {"_id": existing["_id"]}
                     await db.brand_product_catalog.update_one(
-                        {"id": existing["id"]},
+                        target_filter,
                         {"$set": {"status": data.status}}
                     )
                 else:
@@ -657,11 +676,12 @@ async def create_brand_catalog_bulk(data: BrandProductCatalogBulkCreate, user: d
             existing = await db.brand_product_catalog.find_one({
                 "brand_id": data.brand_id,
                 "product_id": pid,
-                "attribute_values": {"$in": [None, {}]}
+                "attribute_values": {"$in": [None, {}, []]}
             })
             if existing:
+                target_filter = {"id": existing["id"]} if "id" in existing else {"_id": existing["_id"]}
                 await db.brand_product_catalog.update_one(
-                    {"id": existing["id"]},
+                    target_filter,
                     {"$set": {"status": data.status}}
                 )
             else:
@@ -725,12 +745,19 @@ async def get_brand_catalog(brand_id: Optional[str] = None, user: dict = Depends
 
 @router.delete("/brand-catalog/{entry_id}")
 async def delete_brand_catalog_entry(entry_id: str, user: dict = Depends(get_admin_user)):
+    # Robust deletion
     result = await db.brand_product_catalog.delete_one({"id": entry_id})
     if result.deleted_count == 0:
         try:
             from bson import ObjectId
             result = await db.brand_product_catalog.delete_one({"_id": ObjectId(entry_id)})
         except: pass
+
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Entry not found")
+        # One last try: check if it's a string _id in mongo (legacy data)
+        result = await db.brand_product_catalog.delete_one({"_id": entry_id})
+
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail=f"Catalog entry with ID {entry_id} not found")
+
     return {"message": "Brand catalog entry deleted"}

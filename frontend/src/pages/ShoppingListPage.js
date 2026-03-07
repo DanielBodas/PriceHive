@@ -73,40 +73,40 @@ const ShoppingListPage = () => {
             ));
             const filteredBrands = brands.filter(b => brandIds.includes(b.id));
             setAvailableBrandsForProduct(filteredBrands);
-
-            setNewItemBrandId("");
-            setNewItemAttrValues({});
-            setNewItemSellable("");
         } else {
             setAvailableBrandsForProduct([]);
-            setNewItemBrandId("");
         }
     }, [newItemProduct, selectedList, sellableProducts, brands]);
 
-    // 2. When Brand or Attributes change, try to resolve to a specific SellableProduct
+    // 2. Clear brand and attributes when product changes
+    useEffect(() => {
+        setNewItemBrandId("");
+        setNewItemAttrValues({});
+        setNewItemSellable("");
+    }, [newItemProduct]);
+
+    // 3. Resolve sellable product when brand or attributes change
     useEffect(() => {
         if (newItemProduct && newItemBrandId && selectedList) {
-            // Filter out empty attribute values for comparison
             const cleanedAttrs = Object.fromEntries(
-                Object.entries(newItemAttrValues).filter(([_, v]) => v !== "" && v !== null)
+                Object.entries(newItemAttrValues).filter(([_, v]) => v !== "" && v !== null && v !== "none")
             );
 
-            const match = sellableProducts.find(sp =>
+            // Filter variants that match ALL selected attributes
+            const variants = sellableProducts.filter(sp =>
                 sp.product_id === newItemProduct &&
                 sp.brand_id === newItemBrandId &&
-                sp.supermarket_id === selectedList.supermarket_id &&
+                sp.supermarket_id === selectedList.supermarket_id
+            );
+
+            const match = variants.find(sp =>
                 JSON.stringify(sp.attribute_values || {}) === JSON.stringify(cleanedAttrs)
             );
 
             if (match) {
                 setNewItemSellable(match.id);
             } else {
-                const variants = sellableProducts.filter(sp =>
-                    sp.product_id === newItemProduct &&
-                    sp.brand_id === newItemBrandId &&
-                    sp.supermarket_id === selectedList.supermarket_id
-                );
-                // If only one variant exists and user hasn't started picking attributes, auto-select it
+                // If no exact match, but only one variant exists overall for this brand/product, auto-fill it
                 if (variants.length === 1 && Object.keys(cleanedAttrs).length === 0) {
                     setNewItemSellable(variants[0].id);
                     setNewItemAttrValues(variants[0].attribute_values || {});
@@ -545,11 +545,16 @@ const ShoppingListPage = () => {
                                                             {newItemProduct && (
                                                                 <div className="space-y-2">
                                                                     <Label>2. Marca *</Label>
-                                                                    <Select value={newItemBrandId} onValueChange={setNewItemBrandId}>
+                                                                    <Select value={newItemBrandId || "none"} onValueChange={(v) => {
+                                                                        setNewItemBrandId(v === "none" ? "" : v);
+                                                                        setNewItemAttrValues({});
+                                                                        setNewItemSellable("");
+                                                                    }}>
                                                                         <SelectTrigger data-testid="add-item-brand-select">
                                                                             <SelectValue placeholder="Selecciona marca" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
+                                                                            <SelectItem value="none">Seleccionar marca...</SelectItem>
                                                                             {availableBrandsForProduct.map((b) => (
                                                                                 <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                                                                             ))}
@@ -568,9 +573,19 @@ const ShoppingListPage = () => {
                                                                         {product.allowed_attribute_ids.map(attrId => {
                                                                             const attr = attributes.find(a => a.id === attrId);
                                                                             // Get unique values for THIS product+brand+attribute in THIS supermarket
+                                                                            // Filtered by other currently selected attributes
+                                                                            const otherAttrs = Object.fromEntries(
+                                                                                Object.entries(newItemAttrValues).filter(([id, v]) => id !== attrId && v !== "" && v !== "none")
+                                                                            );
+
                                                                             const possibleVals = Array.from(new Set(
                                                                                 sellableProducts
-                                                                                    .filter(sp => sp.product_id === newItemProduct && sp.brand_id === newItemBrandId && sp.supermarket_id === selectedList.supermarket_id)
+                                                                                    .filter(sp =>
+                                                                                        sp.product_id === newItemProduct &&
+                                                                                        sp.brand_id === newItemBrandId &&
+                                                                                        sp.supermarket_id === selectedList.supermarket_id &&
+                                                                                        Object.entries(otherAttrs).every(([oid, ov]) => sp.attribute_values?.[oid] === ov)
+                                                                                    )
                                                                                     .map(sp => sp.attribute_values?.[attrId])
                                                                                     .filter(Boolean)
                                                                             ));
