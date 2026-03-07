@@ -41,10 +41,10 @@ const Layout = ({ children }) => {
     const [unreadCount, setUnreadCount] = useState(0);
 
     const baseNavItems = [
-        { path: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
-        { path: "/feed", label: "Muro", icon: <MessageSquare className="w-5 h-5" /> },
-        { path: "/shopping-list", label: "Lista de Compra", icon: <ShoppingCart className="w-5 h-5" /> },
-        { path: "/analytics", label: "Análisis", icon: <BarChart3 className="w-5 h-5" /> },
+        { path: "/dashboard", label: "Dashboard", shortLabel: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
+        { path: "/feed", label: "Muro", shortLabel: "Muro", icon: <MessageSquare className="w-5 h-5" /> },
+        { path: "/shopping-list", label: "Lista de Compra", shortLabel: "Lista", icon: <ShoppingCart className="w-5 h-5" /> },
+        { path: "/analytics", label: "Análisis", shortLabel: "Análisis", icon: <BarChart3 className="w-5 h-5" /> },
     ];
 
     const navItems = baseNavItems;
@@ -74,7 +74,7 @@ const Layout = ({ children }) => {
         <div className="min-h-screen bg-slate-50 pb-20 md:pb-0">
             {/* Top Navigation */}
             <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm">
-                <div className="max-w-7xl mx-auto px-4 sm:px-4 lg:px-6">
+                <div className="max-w-[1400px] mx-auto px-4 sm:px-4 lg:px-6">
                     <div className="flex items-center justify-between h-14 md:h-16">
                         {/* Logo */}
                         <div className="flex items-center gap-2 flex-shrink-0">
@@ -224,7 +224,7 @@ const Layout = ({ children }) => {
                                 <div className={`p-1.5 rounded-lg transition-colors ${isActive ? "bg-emerald-50" : ""}`}>
                                     {item.icon}
                                 </div>
-                                <span className="text-[10px] font-bold uppercase tracking-wider">{item.label.split(' ')[0]}</span>
+                                <span className="text-[10px] font-bold uppercase tracking-wider">{item.shortLabel || item.label}</span>
                                 {item.path === "/alerts" && unreadCount > 0 && (
                                     <span className="absolute top-2 ml-5 w-2 h-2 rounded-full bg-rose-500 border-2 border-white"></span>
                                 )}
@@ -236,7 +236,7 @@ const Layout = ({ children }) => {
 
             {/* Main Content */}
             <main className="pt-14 md:pt-16 min-h-screen">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 md:py-8">
+                <div className="max-w-[1400px] mx-auto px-4 sm:px-6 py-6 md:py-8">
                     {children}
                 </div>
             </main>
