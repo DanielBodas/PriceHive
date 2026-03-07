@@ -83,11 +83,12 @@ class SellableProductCreate(BaseModel):
     supermarket_id: str
     product_id: str
     brand_id: str
+    attribute_values: Optional[Dict[str, str]] = None
 
 class SellableProductBulkCreate(BaseModel):
     supermarket_id: str
     brand_id: str
-    product_ids: List[str]
+    catalog_entry_ids: List[str]
 
 class SellableProductResponse(BaseModel):
     id: str
@@ -97,6 +98,7 @@ class SellableProductResponse(BaseModel):
     product_name: Optional[str] = None
     brand_id: str
     brand_name: Optional[str] = None
+    attribute_values: Optional[Dict[str, str]] = None
     warning: Optional[str] = None
 
 class ProductUnitCreate(BaseModel):
@@ -123,6 +125,7 @@ class BrandProductCatalogCreate(BaseModel):
     brand_id: str
     product_id: str
     status: str = "active"
+    attribute_values: Optional[Dict[str, str]] = None
 
 class BrandProductCatalogBulkCreate(BaseModel):
     brand_id: str
@@ -136,3 +139,4 @@ class BrandProductCatalogResponse(BaseModel):
     product_id: str
     product_name: Optional[str] = None
     status: str
+    attribute_values: Optional[Dict[str, str]] = None

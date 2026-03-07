@@ -48,7 +48,7 @@ const ShoppingListPage = () => {
 
     // New item form
     const [newItemProduct, setNewItemProduct] = useState("");
-    const [newItemBrand, setNewItemBrand] = useState("");
+    const [newItemSellable, setNewItemSellable] = useState("");
     const [newItemQuantity, setNewItemQuantity] = useState("1");
     const [newItemUnit, setNewItemUnit] = useState("");
 
@@ -68,22 +68,18 @@ const ShoppingListPage = () => {
             );
             setAvailableBrands(filtered);
             if (filtered.length === 1) {
-                setNewItemBrand(filtered[0].brand_id);
+                setNewItemSellable(filtered[0].id);
             }
         } else {
             setAvailableBrands([]);
-            setNewItemBrand("");
+            setNewItemSellable("");
         }
     }, [newItemProduct, selectedList, sellableProducts]);
 
     useEffect(() => {
         const fetchUnits = async () => {
-            if (newItemProduct && newItemBrand && selectedList) {
-                const sp = sellableProducts.find(sp =>
-                    sp.product_id === newItemProduct &&
-                    sp.supermarket_id === selectedList.supermarket_id &&
-                    sp.brand_id === newItemBrand
-                );
+            if (newItemProduct && newItemSellable && selectedList) {
+                const sp = sellableProducts.find(sp => sp.id === newItemSellable);
                 if (sp) {
                     try {
                         const res = await axios.get(`${API}/admin/sellable-product-units/${sp.id}`);
@@ -105,7 +101,7 @@ const ShoppingListPage = () => {
 
     const resetNewItemForm = () => {
         setNewItemProduct("");
-        setNewItemBrand("");
+        setNewItemSellable("");
         setNewItemQuantity("1");
         setNewItemUnit("");
     };
@@ -154,19 +150,15 @@ const ShoppingListPage = () => {
     };
 
     const handleAddItem = async () => {
-        if (!newItemProduct || !newItemBrand || !newItemUnit) {
+        if (!newItemProduct || !newItemSellable || !newItemUnit) {
             toast.error("Completa todos los campos");
             return;
         }
 
-        const sp = sellableProducts.find(sp =>
-            sp.product_id === newItemProduct &&
-            sp.supermarket_id === selectedList.supermarket_id &&
-            sp.brand_id === newItemBrand
-        );
+        const sp = sellableProducts.find(sp => sp.id === newItemSellable);
 
         if (!sp) {
-            toast.error("Producto no disponible en este supermercado");
+            toast.error("Producto no disponible");
             return;
         }
 
@@ -508,23 +500,28 @@ const ShoppingListPage = () => {
 
                                                             {newItemProduct && (
                                                                 <div className="space-y-2">
-                                                                    <Label>2. Marca *</Label>
-                                                                    <Select value={newItemBrand} onValueChange={setNewItemBrand}>
+                                                                    <Label>2. Marca y Variante *</Label>
+                                                                    <Select value={newItemSellable} onValueChange={setNewItemSellable}>
                                                                         <SelectTrigger data-testid="add-item-brand-select">
-                                                                            <SelectValue placeholder="Selecciona marca" />
+                                                                            <SelectValue placeholder="Selecciona marca/variante" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
-                                                                            {availableBrands.map((sp) => (
-                                                                                <SelectItem key={sp.brand_id} value={sp.brand_id}>
-                                                                                    {sp.brand_name}
-                                                                                </SelectItem>
-                                                                            ))}
+                                                                            {availableBrands.map((sp) => {
+                                                                                const attrText = sp.attribute_values && Object.entries(sp.attribute_values).length > 0
+                                                                                    ? " (" + Object.values(sp.attribute_values).join(", ") + ")"
+                                                                                    : "";
+                                                                                return (
+                                                                                    <SelectItem key={sp.id} value={sp.id}>
+                                                                                        {sp.brand_name}{attrText}
+                                                                                    </SelectItem>
+                                                                                );
+                                                                            })}
                                                                         </SelectContent>
                                                                     </Select>
                                                                 </div>
                                                             )}
 
-                                                            {newItemBrand && (
+                                                            {newItemSellable && (
                                                                 <div className="grid grid-cols-2 gap-4">
                                                                     <div className="space-y-2">
                                                                         <Label>3. Unidad *</Label>
@@ -603,7 +600,14 @@ const ShoppingListPage = () => {
                                                                             </h3>
                                                                         </div>
                                                                         <div className="flex items-center gap-2 mt-0.5">
-                                                                            <p className="text-xs text-slate-500 truncate max-w-[120px]">{item.brand_name}</p>
+                                                                            <p className="text-xs text-slate-500 truncate max-w-[120px]">
+                                                                                {item.brand_name}
+                                                                                {item.attribute_values && Object.entries(item.attribute_values).length > 0 && (
+                                                                                    <span className="ml-1 italic">
+                                                                                        ({Object.values(item.attribute_values).join(", ")})
+                                                                                    </span>
+                                                                                )}
+                                                                            </p>
                                                                         </div>
                                                                     </div>
 

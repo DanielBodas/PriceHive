@@ -27,6 +27,7 @@ class ShoppingListItemResponse(BaseModel):
     purchased: bool
     brand_id: Optional[str] = None
     brand_name: Optional[str] = None
+    attribute_values: Optional[dict] = None
 
 class ShoppingListResponse(BaseModel):
     id: str
