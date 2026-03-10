@@ -738,3 +738,48 @@ async def delete_brand_catalog_entry(entry_id: str, user: dict = Depends(get_adm
         raise HTTPException(status_code=404, detail=f"Catalog entry with ID {entry_id} not found")
 
     return {"message": "Brand catalog entry deleted"}
+
+@router.get("/export")
+async def export_data(user: dict = Depends(get_admin_user)):
+    collections = [
+        "categories", "brands", "supermarkets", "attributes", "units",
+        "products", "brand_product_catalog", "sellable_products",
+        "product_units", "sellable_product_units"
+    ]
+    data = {}
+    for coll in collections:
+        items = await db[coll].find({}).to_list(10000)
+        # Use a list comprehension to avoid modifying original items in-place if needed,
+        # but here we just want to ensure id is present and _id is removed for the JSON
+        exported_items = []
+        for item in items:
+            item["id"] = str(item.get("id") or item.get("_id"))
+            if "_id" in item:
+                del item["_id"]
+            exported_items.append(item)
+        data[coll] = exported_items
+    return data
+
+@router.post("/import")
+async def import_data(data: dict, user: dict = Depends(get_admin_user)):
+    collections = [
+        "categories", "brands", "supermarkets", "attributes", "units",
+        "products", "brand_product_catalog", "sellable_products",
+        "product_units", "sellable_product_units"
+    ]
+    summary = {}
+    for coll in collections:
+        if coll in data and isinstance(data[coll], list):
+            await db[coll].delete_many({})
+            if data[coll]:
+                # Prepare items for insertion
+                to_insert = []
+                for item in data[coll]:
+                    if "_id" in item:
+                        del item["_id"]
+                    to_insert.append(item)
+                await db[coll].insert_many(to_insert)
+                summary[coll] = len(to_insert)
+            else:
+                summary[coll] = 0
+    return {"message": "Importación completada con éxito", "summary": summary}
