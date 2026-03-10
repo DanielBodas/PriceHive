@@ -115,7 +115,7 @@ async def create_shopping_list(data: ShoppingListCreate, user: dict = Depends(ge
             purchased=item.purchased,
             brand_id=sp["brand_id"],
             brand_name=brand["name"] if brand else None,
-            attribute_values=sp.get("attribute_values")
+            attribute_values=item.attribute_values
         ))
 
     doc = {
@@ -204,7 +204,7 @@ async def get_shopping_lists(user: dict = Depends(get_current_user)):
                 purchased=item.get("purchased", False),
                 brand_id=sp["brand_id"],
                 brand_name=brands.get(sp["brand_id"]),
-                attribute_values=sp.get("attribute_values")
+                attribute_values=item.get("attribute_values")
             ))
 
         result.append(ShoppingListResponse(
@@ -289,7 +289,7 @@ async def get_shopping_list(list_id: str, user: dict = Depends(get_current_user)
             purchased=item.get("purchased", False),
             brand_id=sp["brand_id"],
             brand_name=brands.get(sp["brand_id"]),
-            attribute_values=sp.get("attribute_values")
+            attribute_values=item.get("attribute_values")
         ))
 
     return ShoppingListResponse(
