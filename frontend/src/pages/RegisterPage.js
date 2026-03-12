@@ -35,15 +35,15 @@ const RegisterPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6 py-12">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
             <div className="w-full max-w-md">
-                <Link to="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 mb-8 transition-colors">
+                <Link to="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 mb-6 sm:mb-8 transition-colors">
                     <ArrowLeft className="w-4 h-4" />
                     Volver al inicio
                 </Link>
                 
                 <Card className="border-slate-200 shadow-xl">
-                    <CardHeader className="text-center pb-2">
+                    <CardHeader className="text-center pb-2 px-4 sm:px-6">
                         <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center mx-auto mb-4">
                             <Tag className="w-8 h-8 text-white" />
                         </div>
@@ -54,7 +54,7 @@ const RegisterPage = () => {
                             Únete a la comunidad PriceHive
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="pt-6">
+                    <CardContent className="pt-6 px-4 sm:px-6">
                         <form onSubmit={handleSubmit} className="space-y-5">
                             <div className="space-y-2">
                                 <Label htmlFor="name" className="text-slate-700">Nombre</Label>

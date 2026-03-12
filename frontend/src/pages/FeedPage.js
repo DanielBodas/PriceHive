@@ -150,7 +150,7 @@ const FeedPage = () => {
 
     return (
         <Layout>
-            <div className="max-w-2xl mx-auto space-y-6" data-testid="feed-page">
+            <div className="max-w-2xl mx-auto space-y-4 sm:space-y-6" data-testid="feed-page">
                 {/* Header */}
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
@@ -246,7 +246,7 @@ const FeedPage = () => {
                                     <p className="text-slate-700 whitespace-pre-wrap mb-4">{post.content}</p>
 
                                     {/* Reactions */}
-                                    <div className="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-4">
+                                    <div className="flex items-center gap-2 sm:gap-4 flex-wrap border-t border-slate-100 pt-4">
                                         {reactionButtons.map((btn) => (
                                             <Button
                                                 key={btn.type}
