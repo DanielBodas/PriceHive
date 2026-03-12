@@ -21,7 +21,8 @@ Se ha eliminado la clave secreta hardcodeada en el código fuente.
 ### ⚠️ Acción Requerida: Configuración de Variables de Entorno
 **El backend NO iniciará o fallará al validar tokens si no se configura explícitamente el secreto.**
 
-Para un despliegue exitoso, asegúrese de configurar las siguientes variables en su entorno de producción (ej. Docker, Heroku, AWS, etc.):
+Para un despliegue exitoso, asegúrese de configurar las siguientes variables en su entorno de producción (ej. Docker, Heroku, AWS, etc.) o en un archivo `.env` ubicado en la raíz del backend (`backend/.env`) o en la carpeta `app/` (`backend/app/.env`).
+
 
 | Variable | Descripción | Recomendación |
 |----------|-------------|---------------|

@@ -3,7 +3,9 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 ROOT_DIR = Path(__file__).parent.parent.parent
+# Intentamos cargar .env desde la raíz del backend o desde la carpeta app/
 load_dotenv(ROOT_DIR / '.env')
+load_dotenv(ROOT_DIR / 'app' / '.env')
 
 class Settings:
     PROJECT_NAME: str = "PriceHive API"
