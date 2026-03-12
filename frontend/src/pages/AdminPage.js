@@ -25,7 +25,10 @@ import {
     Scale,
     BookOpen,
     Search,
-    Link2
+    Link2,
+    ChevronDown,
+    ChevronRight,
+    RefreshCw
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -82,6 +85,9 @@ const AdminPage = () => {
     const [sellableTableSearch, setSellableTableSearch] = useState("");
     const [catalogTableSearch, setCatalogTableSearch] = useState("");
     const [allProductUnits, setAllProductUnits] = useState([]);
+    // Track which brand-product cards are expanded in the brand catalog
+    const [expandedCatalogProducts, setExpandedCatalogProducts] = useState({});
+    const toggleCatalogProduct = (key) => setExpandedCatalogProducts(prev => ({ ...prev, [key]: !prev[key] }));
 
     // Product-units catalog
     const [relationProductSearch, setRelationProductSearch] = useState("");
@@ -582,6 +588,27 @@ const AdminPage = () => {
         }
     };
 
+    // Sync: create sellable products for all catalog entries of a brand in a supermarket
+    const handleSyncBrandInSupermarket = async (supermarketId, brandId, brandName, supermarketName) => {
+        // Get catalog entries for this brand
+        const catalogEntries = brandCatalog.filter(bc => bc.brand_id === brandId && bc.status !== 'discontinued');
+        if (catalogEntries.length === 0) {
+            toast.error(`${brandName} no tiene productos activos en el catálogo de marca`);
+            return;
+        }
+        try {
+            const res = await axios.post(`${API}/admin/sellable-products/bulk`, {
+                supermarket_id: supermarketId,
+                brand_id: brandId,
+                catalog_entry_ids: catalogEntries.map(e => e.id)
+            });
+            toast.success(res.data?.message || `Sincronizados productos de ${brandName} en ${supermarketName}`);
+            await fetchAllData();
+        } catch (e) {
+            toast.error("Error al sincronizar");
+        }
+    };
+
 
     const handleSaveCatalog = async () => {
         try {
@@ -943,9 +970,11 @@ const AdminPage = () => {
                                                                     <Badge variant="secondary" className="bg-emerald-50 text-emerald-600">{supermarket.total_products_count} productos activos</Badge>
                                                                 </div>
                                                             </div>
-                                                            <Button size="sm" variant="outline" className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={(e) => { e.stopPropagation(); setSellableForm({ ...sellableForm, supermarket_id: supermarket.id, brand_id: "", catalog_entry_ids: [] }); setSupermarketBrandDialog(true); }}>
-                                                                <Plus className="w-3.5 h-3.5 mr-1.5" /> Añadir Marca
-                                                            </Button>
+                                                            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                                                <Button size="sm" variant="outline" className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={(e) => { e.stopPropagation(); setSellableForm({ ...sellableForm, supermarket_id: supermarket.id, brand_id: "", catalog_entry_ids: [] }); setSupermarketBrandDialog(true); }}>
+                                                                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Añadir Marca
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </AccordionTrigger>
                                                     <AccordionContent className="pt-2 pb-4">
@@ -962,23 +991,34 @@ const AdminPage = () => {
                                                                                 <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{brand.products_count} productos operativos</p>
                                                                             </div>
                                                                         </div>
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
-                                                                            onClick={async (e) => {
-                                                                                e.stopPropagation();
-                                                                                if (window.confirm(`¿Quitar ${brand.name} de ${supermarket.name}? Todos sus productos dejarán de estar operativos en este súper.`)) {
-                                                                                    try {
-                                                                                        await axios.delete(`${API}/admin/supermarkets/${supermarket.id}/brands/${brand.id}`);
-                                                                                        toast.success("Marca eliminada del supermercado");
-                                                                                        fetchAllData();
-                                                                                    } catch (e) { toast.error("Error al eliminar"); }
-                                                                                }
-                                                                            }}
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4" />
-                                                                        </Button>
+                                                                         <div className="flex flex-col gap-1 items-end">
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                onClick={async (e) => {
+                                                                                    e.stopPropagation();
+                                                                                    if (window.confirm(`¿Quitar ${brand.name} de ${supermarket.name}? Todos sus productos dejarán de estar operativos en este súper.`)) {
+                                                                                        try {
+                                                                                            await axios.delete(`${API}/admin/supermarkets/${supermarket.id}/brands/${brand.id}`);
+                                                                                            toast.success("Marca eliminada del supermercado");
+                                                                                            fetchAllData();
+                                                                                        } catch (e) { toast.error("Error al eliminar"); }
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </Button>
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="sm"
+                                                                                className="h-7 px-2 text-[10px] text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                title="Sincronizar productos del catálogo de marca"
+                                                                                onClick={(e) => { e.stopPropagation(); handleSyncBrandInSupermarket(supermarket.id, brand.id, brand.name, supermarket.name); }}
+                                                                            >
+                                                                                <RefreshCw className="w-3 h-3" /> Sync
+                                                                            </Button>
+                                                                        </div>
                                                                     </div>
                                                                     <div className="mt-3 flex flex-wrap gap-1 max-h-16 overflow-y-auto no-scrollbar">
                                                                         {brand.products.map(p => (
@@ -987,6 +1027,7 @@ const AdminPage = () => {
                                                                             </Badge>
                                                                         ))}
                                                                     </div>
+
                                                                 </div>
                                                             ))}
                                                             {supermarket.brands.length === 0 && (
@@ -1028,49 +1069,59 @@ const AdminPage = () => {
                                                                 <span className="font-semibold text-slate-800">{brand.name}</span>
                                                                 <Badge variant="secondary" className="bg-slate-100 text-slate-600">{brand.products_count} productos</Badge>
                                                             </div>
-                                                            <Button
-                                                                variant="ghost"
-                                                                size="icon"
-                                                                className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-full"
-                                                                onClick={async (e) => {
-                                                                    e.stopPropagation();
-                                                                    if (window.confirm(`¿Seguro que quieres quitar la marca ${brand.name} del catálogo?`)) {
-                                                                        const entries = brandCatalog.filter(bc => bc.brand_id === brand.id);
-                                                                        try {
-                                                                            await Promise.all(entries.map(ent => axios.delete(`${API}/admin/brand-catalog/${ent.id}`)));
-                                                                            toast.success("Marca eliminada del catálogo");
-                                                                            fetchAllData();
-                                                                        } catch (err) { toast.error("Error al eliminar"); }
-                                                                    }
-                                                                }}
-                                                            >
-                                                                <Trash2 className="w-4 h-4" />
-                                                            </Button>
+                                                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-1.5"
+                                                                    onClick={(e) => { e.stopPropagation(); setCatalogForm({ ...catalogForm, brand_id: brand.id, product_ids: [], status: "active" }); setCatalogDialog(true); }}
+                                                                >
+                                                                    <Plus className="w-3.5 h-3.5" /> Añadir Productos
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-full"
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        if (window.confirm(`¿Seguro que quieres quitar la marca ${brand.name} del catálogo?`)) {
+                                                                            const entries = brandCatalog.filter(bc => bc.brand_id === brand.id);
+                                                                            try {
+                                                                                await Promise.all(entries.map(ent => axios.delete(`${API}/admin/brand-catalog/${ent.id}`)));
+                                                                                toast.success("Marca eliminada del catálogo");
+                                                                                fetchAllData();
+                                                                            } catch (err) { toast.error("Error al eliminar"); }
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </AccordionTrigger>
                                                     <AccordionContent className="pt-2 pb-6 px-1">
                                                         <div className="space-y-4">
-                                                            <div className="flex justify-between items-center bg-emerald-50/50 p-3 rounded-lg border border-emerald-100">
-                                                                <p className="text-xs text-emerald-700 font-medium">Gestiona el portfolio de productos para esta marca.</p>
-                                                                <Button size="sm" className="bg-emerald-500 hover:bg-emerald-600 h-8" onClick={() => { setCatalogForm({ ...catalogForm, brand_id: brand.id, product_ids: [], status: "active" }); setCatalogDialog(true); }}>
-                                                                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Añadir Productos
-                                                                </Button>
-                                                            </div>
-
-                                                            <div className="grid gap-3">
+                                                            <div className="grid gap-2">
                                                                 {brand.products.map((product) => {
                                                                     const statusMeta = getCatalogStatusMeta(product.status);
                                                                     const productConcept = products.find(p => p.id === product.product_id);
+                                                                    const expandKey = `${brand.id}::${product.product_id}`;
+                                                                    const isExpanded = !!expandedCatalogProducts[expandKey];
 
                                                                     return (
                                                                         <div key={product.id} className="rounded-xl border bg-white shadow-sm overflow-hidden group">
-                                                                            <div className="px-4 py-3 border-b flex items-center justify-between bg-slate-50/30 group-hover:bg-slate-50/80 transition-colors">
+                                                                            {/* ── Header row – always visible ── */}
+                                                                            <div
+                                                                                className="px-4 py-3 flex items-center justify-between bg-slate-50/30 hover:bg-slate-50/80 transition-colors cursor-pointer select-none"
+                                                                                onClick={() => toggleCatalogProduct(expandKey)}
+                                                                            >
                                                                                 <div className="flex items-center gap-3">
-                                                                                    <div className="w-8 h-8 rounded-lg bg-white border flex items-center justify-center text-slate-400">
-                                                                                        <Package className="w-4 h-4" />
-                                                                                    </div>
+                                                                                    {isExpanded
+                                                                                        ? <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                                                                                        : <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                                                                                    }
                                                                                     <div>
-                                                                                        <span className="font-bold text-slate-800">{product.name}</span>
+                                                                                        <span className="font-semibold text-slate-800">{product.name}</span>
                                                                                         <div className="flex items-center gap-2 mt-0.5">
                                                                                             <Badge className={`${statusMeta.className} text-[9px] h-4 px-1.5`}>{statusMeta.label}</Badge>
                                                                                             {product.supermarkets.length > 0 && (
@@ -1078,94 +1129,107 @@ const AdminPage = () => {
                                                                                                     <Store className="w-2.5 h-2.5" /> {product.supermarkets.join(", ")}
                                                                                                 </span>
                                                                                             )}
+                                                                                            {productConcept?.allowed_attribute_ids?.length > 0 && (
+                                                                                                <span className="text-[10px] text-slate-400">
+                                                                                                    · {productConcept.allowed_attribute_ids.length} atrib.
+                                                                                                </span>
+                                                                                            )}
                                                                                         </div>
                                                                                     </div>
                                                                                 </div>
-                                                                                <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                                                                                    <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-400 hover:text-rose-600" onClick={() => handleDeleteCatalogEntry(product.id)}><Trash2 className="w-4 h-4" /></Button>
-                                                                                </div>
+                                                                                <Button
+                                                                                    variant="ghost" size="icon"
+                                                                                    className="h-8 w-8 text-rose-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteCatalogEntry(product.id); }}
+                                                                                >
+                                                                                    <Trash2 className="w-4 h-4" />
+                                                                                </Button>
                                                                             </div>
 
-                                                                            <div className="p-4 space-y-4">
-                                                                                {productConcept?.allowed_attribute_ids?.length > 0 ? (
-                                                                                    <div className="grid sm:grid-cols-2 gap-4">
-                                                                                        {productConcept.allowed_attribute_ids.map(attrId => {
-                                                                                            const attr = attributes.find(a => a.id === attrId);
-                                                                                            if (!attr) return null;
+                                                                            {/* ── Expandable body ── */}
+                                                                            {isExpanded && (
+                                                                                <div className="p-4 space-y-4 border-t">
+                                                                                    {productConcept?.allowed_attribute_ids?.length > 0 ? (
+                                                                                        <div className="grid sm:grid-cols-2 gap-4">
+                                                                                            {productConcept.allowed_attribute_ids.map(attrId => {
+                                                                                                const attr = attributes.find(a => a.id === attrId);
+                                                                                                if (!attr) return null;
 
-                                                                                            return (
-                                                                                                <div key={attrId} className="space-y-2">
-                                                                                                    <Label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{attr.name}</Label>
-                                                                                                    <div className="flex flex-wrap gap-1.5">
-                                                                                                        {attr.values?.map(val => (
-                                                                                                            <div
-                                                                                                                key={val}
-                                                                                                                className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs cursor-pointer transition-all ${
-                                                                                                                    product.allowed_attributes?.[attrId]?.includes(val)
-                                                                                                                    ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
-                                                                                                                    : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
-                                                                                                                }`}
-                                                                                                                onClick={async () => {
-                                                                                                                    const current = product.allowed_attributes?.[attrId] || [];
-                                                                                                                    const next = current.includes(val) ? current.filter(v => v !== val) : [...current, val];
-                                                                                                                    const updatedAttrs = { ...product.allowed_attributes, [attrId]: next };
-
-                                                                                                                    try {
-                                                                                                                        await axios.post(`${API}/admin/brand-catalog`, {
-                                                                                                                            brand_id: product.brand_id,
-                                                                                                                            product_id: product.product_id,
-                                                                                                                            status: product.status,
-                                                                                                                            allowed_attributes: updatedAttrs
-                                                                                                                        });
-                                                                                                                        fetchAllData();
-                                                                                                                    } catch (e) { toast.error("Error al actualizar"); }
-                                                                                                                }}
-                                                                                                            >
-                                                                                                                <div className={`w-2 h-2 rounded-full ${product.allowed_attributes?.[attrId]?.includes(val) ? 'bg-emerald-500' : 'bg-slate-200'}`} />
-                                                                                                                {val}
-                                                                                                            </div>
-                                                                                                        ))}
+                                                                                                return (
+                                                                                                    <div key={attrId} className="space-y-2">
+                                                                                                        <Label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{attr.name}</Label>
+                                                                                                        <div className="flex flex-wrap gap-1.5">
+                                                                                                            {attr.values?.map(val => (
+                                                                                                                <div
+                                                                                                                    key={val}
+                                                                                                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs cursor-pointer transition-all ${
+                                                                                                                        product.allowed_attributes?.[attrId]?.includes(val)
+                                                                                                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
+                                                                                                                        : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                                                                                                    }`}
+                                                                                                                    onClick={async (e) => {
+                                                                                                                        e.stopPropagation();
+                                                                                                                        const current = product.allowed_attributes?.[attrId] || [];
+                                                                                                                        const next = current.includes(val) ? current.filter(v => v !== val) : [...current, val];
+                                                                                                                        const updatedAttrs = { ...product.allowed_attributes, [attrId]: next };
+                                                                                                                        try {
+                                                                                                                            await axios.post(`${API}/admin/brand-catalog`, {
+                                                                                                                                brand_id: product.brand_id,
+                                                                                                                                product_id: product.product_id,
+                                                                                                                                status: product.status,
+                                                                                                                                allowed_attributes: updatedAttrs
+                                                                                                                            });
+                                                                                                                            fetchAllData();
+                                                                                                                        } catch (e) { toast.error("Error al actualizar"); }
+                                                                                                                    }}
+                                                                                                                >
+                                                                                                                    <div className={`w-2 h-2 rounded-full ${product.allowed_attributes?.[attrId]?.includes(val) ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                                                                                                                    {val}
+                                                                                                                </div>
+                                                                                                            ))}
+                                                                                                        </div>
                                                                                                     </div>
-                                                                                                </div>
-                                                                                            );
-                                                                                        })}
-                                                                                    </div>
-                                                                                ) : (
-                                                                                    <div className="flex flex-col items-center justify-center py-4 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
-                                                                                        <Tag className="w-5 h-5 text-slate-300 mb-1" />
-                                                                                        <p className="text-[11px] text-slate-400 italic">No hay atributos configurados para este producto.</p>
-                                                                                    </div>
-                                                                                )}
+                                                                                                );
+                                                                                            })}
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div className="flex flex-col items-center justify-center py-3 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+                                                                                            <Tag className="w-4 h-4 text-slate-300 mb-1" />
+                                                                                            <p className="text-[11px] text-slate-400 italic">Sin atributos configurados.</p>
+                                                                                        </div>
+                                                                                    )}
 
-                                                                                <div className="pt-2 border-t flex justify-between items-center">
-                                                                                    <Label className="text-[10px] font-medium text-slate-500">Estado del producto:</Label>
-                                                                                    <div className="flex gap-2">
-                                                                                        {["active", "planned", "discontinued"].map(st => (
-                                                                                            <button
-                                                                                                key={st}
-                                                                                                onClick={async () => {
-                                                                                                    try {
-                                                                                                        await axios.post(`${API}/admin/brand-catalog`, {
-                                                                                                            brand_id: product.brand_id,
-                                                                                                            product_id: product.product_id,
-                                                                                                            status: st,
-                                                                                                            allowed_attributes: product.allowed_attributes
-                                                                                                        });
-                                                                                                        fetchAllData();
-                                                                                                    } catch (e) { toast.error("Error"); }
-                                                                                                }}
-                                                                                                className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold transition-colors ${
-                                                                                                    product.status === st
-                                                                                                    ? 'bg-slate-800 text-white'
-                                                                                                    : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                                                                                                }`}
-                                                                                            >
-                                                                                                {st === 'active' ? 'Activo' : st === 'planned' ? 'Planeado' : 'Desc.'}
-                                                                                            </button>
-                                                                                        ))}
+                                                                                    <div className="pt-2 border-t flex justify-between items-center">
+                                                                                        <Label className="text-[10px] font-medium text-slate-500">Estado:</Label>
+                                                                                        <div className="flex gap-2">
+                                                                                            {["active", "planned", "discontinued"].map(st => (
+                                                                                                <button
+                                                                                                    key={st}
+                                                                                                    onClick={async (e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        try {
+                                                                                                            await axios.post(`${API}/admin/brand-catalog`, {
+                                                                                                                brand_id: product.brand_id,
+                                                                                                                product_id: product.product_id,
+                                                                                                                status: st,
+                                                                                                                allowed_attributes: product.allowed_attributes
+                                                                                                            });
+                                                                                                            fetchAllData();
+                                                                                                        } catch (e) { toast.error("Error"); }
+                                                                                                    }}
+                                                                                                    className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold transition-colors ${
+                                                                                                        product.status === st
+                                                                                                        ? 'bg-slate-800 text-white'
+                                                                                                        : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                                                                                    }`}
+                                                                                                >
+                                                                                                    {st === 'active' ? 'Activo' : st === 'planned' ? 'Planeado' : 'Desc.'}
+                                                                                                </button>
+                                                                                            ))}
+                                                                                        </div>
                                                                                     </div>
                                                                                 </div>
-                                                                            </div>
+                                                                            )}
                                                                         </div>
                                                                     );
                                                                 })}

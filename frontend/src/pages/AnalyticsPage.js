@@ -5,7 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar } from "recharts";
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from "recharts";
 import { toast } from "sonner";
 import { 
     BarChart3, 
@@ -13,7 +13,9 @@ import {
     TrendingDown,
     Store,
     Package,
-    Search
+    Search,
+    Tag,
+    Layers
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -22,14 +24,16 @@ const AnalyticsPage = () => {
     const [products, setProducts] = useState([]);
     const [supermarkets, setSupermarkets] = useState([]);
     const [categories, setCategories] = useState([]);
+    const [brands, setBrands] = useState([]);
+    const [sellableProducts, setSellableProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     
     const [searchQuery, setSearchQuery] = useState("");
     const [selectedCategory, setSelectedCategory] = useState("all");
-    const [filteredProducts, setFilteredProducts] = useState([]);
     
     const [selectedProduct, setSelectedProduct] = useState("");
     const [selectedSupermarket, setSelectedSupermarket] = useState("all");
+    const [selectedBrand, setSelectedBrand] = useState("all");
     const [productAnalytics, setProductAnalytics] = useState(null);
     const [comparison, setComparison] = useState(null);
     const [analyticsLoading, setAnalyticsLoading] = useState(false);
@@ -41,53 +45,85 @@ const AnalyticsPage = () => {
     useEffect(() => {
         setProductAnalytics(null);
         setComparison(null);
-    }, [selectedProduct, selectedSupermarket]);
+    }, [selectedProduct, selectedSupermarket, selectedBrand]);
 
-    useEffect(() => {
-        // Filter products based on search and category
+    const fetchBaseData = async () => {
+        try {
+            const [productsRes, supermarketsRes, categoriesRes, brandsRes, sellableRes] = await Promise.all([
+                axios.get(`${API}/admin/products`),
+                axios.get(`${API}/admin/supermarkets`),
+                axios.get(`${API}/public/categories`),
+                axios.get(`${API}/admin/brands`),
+                axios.get(`${API}/admin/sellable-products`)
+            ]);
+            setProducts(productsRes.data);
+            setSupermarkets(supermarketsRes.data);
+            setCategories(categoriesRes.data);
+            setBrands(brandsRes.data);
+            setSellableProducts(sellableRes.data);
+        } catch (error) {
+            console.error("Error fetching data:", error);
+            toast.error("Error al cargar datos");
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    // Filter base products only (those that have sellable entries) for the selector
+    const filteredProducts = useMemo(() => {
         let filtered = products;
-        
+
+        // Only show products that have at least one sellable product entry
+        const productsWithSellable = new Set(sellableProducts.map(sp => sp.product_id));
+        filtered = filtered.filter(p => productsWithSellable.has(p.id));
+
         if (searchQuery) {
             filtered = filtered.filter(p => 
                 p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                p.brand_name?.toLowerCase().includes(searchQuery.toLowerCase())
+                p.category_name?.toLowerCase().includes(searchQuery.toLowerCase())
             );
         }
         
         if (selectedCategory && selectedCategory !== "all") {
             filtered = filtered.filter(p => p.category_id === selectedCategory);
         }
-        
-        setFilteredProducts(filtered);
-    }, [searchQuery, selectedCategory, products]);
 
-    const fetchBaseData = async () => {
-        try {
-            const [productsRes, supermarketsRes, categoriesRes] = await Promise.all([
-                axios.get(`${API}/public/products`),
-                axios.get(`${API}/public/supermarkets`),
-                axios.get(`${API}/public/categories`)
-            ]);
-            setProducts(productsRes.data);
-            setFilteredProducts(productsRes.data);
-            setSupermarkets(supermarketsRes.data);
-            setCategories(categoriesRes.data);
-        } catch (error) {
-            console.error("Error fetching data:", error);
-        } finally {
-            setLoading(false);
+        return filtered;
+    }, [searchQuery, selectedCategory, products, sellableProducts]);
+
+    // Brands available for selected product
+    const availableBrandsForProduct = useMemo(() => {
+        if (!selectedProduct) return [];
+        const brandIds = new Set(
+            sellableProducts
+                .filter(sp => sp.product_id === selectedProduct)
+                .map(sp => sp.brand_id)
+        );
+        return brands.filter(b => brandIds.has(b.id));
+    }, [selectedProduct, sellableProducts, brands]);
+
+    // Supermarkets available for selected product (and optionally brand)
+    const availableSupermarketsForProduct = useMemo(() => {
+        if (!selectedProduct) return supermarkets;
+        let sps = sellableProducts.filter(sp => sp.product_id === selectedProduct);
+        if (selectedBrand && selectedBrand !== "all") {
+            sps = sps.filter(sp => sp.brand_id === selectedBrand);
         }
-    };
+        const smIds = new Set(sps.map(sp => sp.supermarket_id));
+        return supermarkets.filter(sm => smIds.has(sm.id));
+    }, [selectedProduct, selectedBrand, sellableProducts, supermarkets]);
 
     const fetchProductAnalytics = async () => {
         if (!selectedProduct) {
             toast.error("Selecciona un producto");
             return;
         }
-        const params = selectedSupermarket && selectedSupermarket !== "all"
-            ? `?supermarket_id=${selectedSupermarket}`
-            : "";
-        const response = await axios.get(`${API}/analytics/product/${selectedProduct}${params}`);
+        const params = new URLSearchParams();
+        if (selectedSupermarket && selectedSupermarket !== "all") {
+            params.append("supermarket_id", selectedSupermarket);
+        }
+        const queryStr = params.toString() ? `?${params.toString()}` : "";
+        const response = await axios.get(`${API}/analytics/product/${selectedProduct}${queryStr}`);
         return response.data;
     };
 
@@ -152,7 +188,7 @@ const AnalyticsPage = () => {
         });
     };
 
-    const formatCurrency = (value) => `${Number(value || 0).toFixed(2)} EUR`;
+    const formatCurrency = (value) => `${Number(value || 0).toFixed(2)} €`;
 
     const daysBetween = (fromDateString, toDate = new Date()) => {
         if (!fromDateString) return null;
@@ -184,20 +220,46 @@ const AnalyticsPage = () => {
         return daysBetween(historyData[0].date, new Date(historyData[historyData.length - 1].date));
     }, [historyData]);
 
+    // Build enriched comparison: add brand info from sellable products
+    const comparisonEnriched = useMemo(() => {
+        if (!comparison?.comparison) return [];
+        return comparison.comparison.map(item => {
+            // Find a matching sellable product to get brand info
+            const sp = sellableProducts.find(
+                sp => sp.supermarket_id === item.supermarket_id &&
+                    sp.product_id === selectedProduct &&
+                    (selectedBrand === "all" || sp.brand_id === selectedBrand)
+            );
+            const brand = brands.find(b => b.id === sp?.brand_id);
+            return {
+                ...item,
+                brand_id: sp?.brand_id,
+                brand_name: brand?.name || sp?.brand_name || null,
+                label: brand?.name 
+                    ? `${item.supermarket_name} · ${brand.name}`
+                    : item.supermarket_name
+            };
+        });
+    }, [comparison, sellableProducts, brands, selectedProduct, selectedBrand]);
+
     const comparisonSorted = useMemo(() => {
-        const rows = [...(comparison?.comparison || [])];
+        // Filter by brand if selected
+        let rows = [...comparisonEnriched];
+        if (selectedBrand && selectedBrand !== "all") {
+            rows = rows.filter(r => r.brand_id === selectedBrand);
+        }
         return rows.sort((a, b) => a.price - b.price);
-    }, [comparison]);
+    }, [comparisonEnriched, selectedBrand]);
 
     const bestPrice = comparisonSorted.length > 0 ? comparisonSorted[0] : null;
     const worstPrice = comparisonSorted.length > 0 ? comparisonSorted[comparisonSorted.length - 1] : null;
 
     const priceSpread = useMemo(() => {
-        if (!bestPrice || !worstPrice) return null;
+        if (!bestPrice || !worstPrice || comparisonSorted.length < 2) return null;
         const delta = worstPrice.price - bestPrice.price;
         const deltaPct = bestPrice.price > 0 ? (delta / bestPrice.price) * 100 : 0;
         return { delta, deltaPct };
-    }, [bestPrice, worstPrice]);
+    }, [bestPrice, worstPrice, comparisonSorted]);
 
     const selectedSupermarketRow = useMemo(() => {
         if (selectedSupermarket === "all") return null;
@@ -260,6 +322,13 @@ const AnalyticsPage = () => {
         return null;
     };
 
+    const selectedProductData = useMemo(() => {
+        return products.find(p => p.id === selectedProduct);
+    }, [products, selectedProduct]);
+
+    // Color palette for bar chart
+    const BAR_COLORS = ["#10b981", "#34d399", "#6ee7b7", "#a7f3d0", "#059669", "#047857"];
+
     return (
         <Layout>
             <div className="space-y-6" data-testid="analytics-page">
@@ -274,6 +343,7 @@ const AnalyticsPage = () => {
                 {/* Search & Filters */}
                 <Card className="border-slate-200" data-testid="search-card">
                     <CardContent className="p-6">
+                        {/* Row 1: Search + Category */}
                         <div className="grid md:grid-cols-3 gap-4 mb-4">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -296,61 +366,125 @@ const AnalyticsPage = () => {
                                     ))}
                                 </SelectContent>
                             </Select>
-                            <div className="text-sm text-slate-500 flex items-center">
-                                {filteredProducts.length} productos encontrados
+                            <div className="text-sm text-slate-500 flex items-center gap-2">
+                                <Package className="w-4 h-4" />
+                                {filteredProducts.length} productos con datos
                             </div>
                         </div>
                         
+                        {/* Row 2: Product + Brand + Supermarket + Action buttons */}
                         <div className="grid md:grid-cols-4 gap-4 items-end">
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Producto</label>
-                                <Select value={selectedProduct} onValueChange={setSelectedProduct}>
+                                <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                                    <Package className="w-3.5 h-3.5" />
+                                    Producto
+                                </label>
+                                <Select value={selectedProduct} onValueChange={(v) => {
+                                    setSelectedProduct(v);
+                                    setSelectedBrand("all");
+                                    setSelectedSupermarket("all");
+                                }}>
                                     <SelectTrigger data-testid="product-select">
                                         <SelectValue placeholder="Selecciona producto" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         {filteredProducts.map((p) => (
                                             <SelectItem key={p.id} value={p.id}>
-                                                {p.name} ({p.brand_name})
+                                                <span className="font-medium">{p.name}</span>
+                                                {p.category_name && (
+                                                    <span className="text-slate-400 ml-1.5 text-xs">({p.category_name})</span>
+                                                )}
                                             </SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
+
                             <div className="space-y-2">
-                                <label className="text-sm font-medium text-slate-700">Supermercado (opcional)</label>
-                                <Select value={selectedSupermarket} onValueChange={setSelectedSupermarket}>
+                                <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                                    <Tag className="w-3.5 h-3.5" />
+                                    Marca (opcional)
+                                </label>
+                                <Select 
+                                    value={selectedBrand} 
+                                    onValueChange={setSelectedBrand}
+                                    disabled={!selectedProduct || availableBrandsForProduct.length === 0}
+                                >
+                                    <SelectTrigger data-testid="brand-select">
+                                        <SelectValue placeholder="Todas las marcas" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="all">Todas las marcas</SelectItem>
+                                        {availableBrandsForProduct.map((b) => (
+                                            <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+
+                            <div className="space-y-2">
+                                <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
+                                    <Store className="w-3.5 h-3.5" />
+                                    Supermercado (opcional)
+                                </label>
+                                <Select 
+                                    value={selectedSupermarket} 
+                                    onValueChange={setSelectedSupermarket}
+                                    disabled={!selectedProduct}
+                                >
                                     <SelectTrigger data-testid="supermarket-select">
                                         <SelectValue placeholder="Todos" />
                                     </SelectTrigger>
                                     <SelectContent>
                                         <SelectItem value="all">Todos</SelectItem>
-                                        {supermarkets.map((sm) => (
+                                        {availableSupermarketsForProduct.map((sm) => (
                                             <SelectItem key={sm.id} value={sm.id}>{sm.name}</SelectItem>
                                         ))}
                                     </SelectContent>
                                 </Select>
                             </div>
-                            <Button 
-                                onClick={runAnalysis}
-                                disabled={analyticsLoading || !selectedProduct}
-                                className="bg-emerald-500 hover:bg-emerald-600 gap-2"
-                                data-testid="analyze-btn"
-                            >
-                                <TrendingUp className="w-4 h-4" />
-                                Analizar
-                            </Button>
-                            <Button 
-                                onClick={runComparisonOnly}
-                                disabled={analyticsLoading || !selectedProduct}
-                                variant="outline"
-                                className="gap-2"
-                                data-testid="compare-btn"
-                            >
-                                <BarChart3 className="w-4 h-4" />
-                                Solo Comparativa
-                            </Button>
+
+                            <div className="flex gap-2">
+                                <Button 
+                                    onClick={runAnalysis}
+                                    disabled={analyticsLoading || !selectedProduct}
+                                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 gap-2"
+                                    data-testid="analyze-btn"
+                                >
+                                    <TrendingUp className="w-4 h-4" />
+                                    Analizar
+                                </Button>
+                                <Button 
+                                    onClick={runComparisonOnly}
+                                    disabled={analyticsLoading || !selectedProduct}
+                                    variant="outline"
+                                    className="flex-1 gap-2"
+                                    data-testid="compare-btn"
+                                >
+                                    <BarChart3 className="w-4 h-4" />
+                                    Comparar
+                                </Button>
+                            </div>
                         </div>
+
+                        {/* Selected product info banner */}
+                        {selectedProductData && (
+                            <div className="mt-4 pt-4 border-t border-slate-100 flex items-center gap-3 text-sm text-slate-600">
+                                <Layers className="w-4 h-4 text-slate-400 shrink-0" />
+                                <span className="font-medium text-slate-800">{selectedProductData.name}</span>
+                                {selectedProductData.category_name && (
+                                    <span className="bg-slate-100 text-slate-600 px-2 py-0.5 rounded text-xs">{selectedProductData.category_name}</span>
+                                )}
+                                <span className="text-slate-400">·</span>
+                                <span className="text-slate-500">
+                                    {availableBrandsForProduct.length} marca{availableBrandsForProduct.length !== 1 ? 's' : ''} disponible{availableBrandsForProduct.length !== 1 ? 's' : ''}
+                                </span>
+                                <span className="text-slate-400">·</span>
+                                <span className="text-slate-500">
+                                    {availableSupermarketsForProduct.length} supermercado{availableSupermarketsForProduct.length !== 1 ? 's' : ''}
+                                </span>
+                            </div>
+                        )}
                     </CardContent>
                 </Card>
 
@@ -364,6 +498,12 @@ const AnalyticsPage = () => {
                                 <p className="text-2xl font-bold text-slate-900">
                                     {productAnalytics?.current_price != null ? formatCurrency(productAnalytics.current_price) : "-"}
                                 </p>
+                                {productAnalytics?.supermarket_name && (
+                                    <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
+                                        <Store className="w-3 h-3" />
+                                        {productAnalytics.supermarket_name}
+                                    </p>
+                                )}
                             </CardContent>
                         </Card>
 
@@ -398,7 +538,7 @@ const AnalyticsPage = () => {
                             <CardContent>
                                 {productAnalytics?.min_price != null && productAnalytics?.max_price != null ? (
                                     <p className="text-sm font-mono text-slate-900">
-                                        {formatCurrency(productAnalytics.min_price)} - {formatCurrency(productAnalytics.max_price)}
+                                        {formatCurrency(productAnalytics.min_price)} — {formatCurrency(productAnalytics.max_price)}
                                     </p>
                                 ) : (
                                     <p className="text-sm text-slate-500">Sin datos</p>
@@ -412,7 +552,10 @@ const AnalyticsPage = () => {
                             </CardHeader>
                             <CardContent>
                                 {priceSpread ? (
-                                    <p className="text-2xl font-bold text-emerald-600">{formatCurrency(priceSpread.delta)}</p>
+                                    <>
+                                        <p className="text-2xl font-bold text-emerald-600">{formatCurrency(priceSpread.delta)}</p>
+                                        <p className="text-xs text-slate-400 mt-1">entre el más barato y más caro</p>
+                                    </>
                                 ) : (
                                     <p className="text-sm text-slate-500">Sin comparativa</p>
                                 )}
@@ -489,7 +632,7 @@ const AnalyticsPage = () => {
                                                     />
                                                     <YAxis 
                                                         tick={{ fontSize: 12, fill: '#64748b' }}
-                                                        tickFormatter={(v) => `${v} EUR`}
+                                                        tickFormatter={(v) => `${v} €`}
                                                     />
                                                     <Tooltip content={<CustomTooltip />} />
                                                     <Line 
@@ -509,6 +652,7 @@ const AnalyticsPage = () => {
                                         <div className="text-center">
                                             <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                                             <p className="text-slate-500">Sin datos de precios</p>
+                                            <p className="text-xs text-slate-400 mt-1">Registra precios desde la lista de compra</p>
                                         </div>
                                     </div>
                                 )}
@@ -526,8 +670,14 @@ const AnalyticsPage = () => {
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
-                                <div className="mb-4">
+                                <div className="mb-4 flex items-center justify-between">
                                     <h3 className="font-semibold text-slate-900">{comparison.product_name}</h3>
+                                    {selectedBrand !== "all" && (
+                                        <span className="text-xs bg-slate-100 text-slate-600 px-2 py-1 rounded-full flex items-center gap-1">
+                                            <Tag className="w-3 h-3" />
+                                            {brands.find(b => b.id === selectedBrand)?.name}
+                                        </span>
+                                    )}
                                 </div>
 
                                 {comparisonSorted.length > 0 ? (
@@ -539,6 +689,12 @@ const AnalyticsPage = () => {
                                                     <div>
                                                         <p className="text-sm text-emerald-600 font-medium">Mejor Precio</p>
                                                         <p className="font-semibold text-slate-900">{bestPrice.supermarket_name}</p>
+                                                        {bestPrice.brand_name && (
+                                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
+                                                                <Tag className="w-3 h-3" />
+                                                                {bestPrice.brand_name}
+                                                            </p>
+                                                        )}
                                                         <p className="text-xs text-slate-500">Actualizado: {formatDateTime(bestPrice.updated_at)}</p>
                                                         {priceSpread && (
                                                             <p className="text-xs text-slate-500 mt-1">
@@ -556,34 +712,50 @@ const AnalyticsPage = () => {
                                         )}
 
                                         {/* Bar Chart */}
-                                        <div className="h-64">
+                                        <div className="h-56">
                                             <ResponsiveContainer width="100%" height="100%">
-                                                <BarChart data={comparisonSorted} layout="vertical">
+                                                <BarChart 
+                                                    data={comparisonSorted} 
+                                                    layout="vertical"
+                                                    margin={{ right: 16 }}
+                                                >
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
                                                     <XAxis 
                                                         type="number" 
-                                                        tick={{ fontSize: 12, fill: '#64748b' }}
-                                                        tickFormatter={(v) => `${v} EUR`}
+                                                        tick={{ fontSize: 11, fill: '#64748b' }}
+                                                        tickFormatter={(v) => `${v} €`}
                                                     />
                                                     <YAxis 
                                                         type="category" 
-                                                        dataKey="supermarket_name" 
-                                                        tick={{ fontSize: 12, fill: '#64748b' }}
-                                                        width={100}
+                                                        dataKey="label" 
+                                                        tick={{ fontSize: 11, fill: '#64748b' }}
+                                                        width={130}
                                                     />
                                                     <Tooltip 
-                                                        formatter={(value) => [formatCurrency(value), "Precio"]}
+                                                        formatter={(value, name, props) => [
+                                                            formatCurrency(value),
+                                                            "Precio"
+                                                        ]}
+                                                        labelFormatter={(label) => label}
                                                         contentStyle={{ 
                                                             backgroundColor: 'rgba(255,255,255,0.95)',
                                                             border: '1px solid #e2e8f0',
-                                                            borderRadius: '8px'
+                                                            borderRadius: '8px',
+                                                            fontSize: '12px'
                                                         }}
                                                     />
                                                     <Bar 
                                                         dataKey="price" 
-                                                        fill="#10b981"
                                                         radius={[0, 4, 4, 0]}
-                                                    />
+                                                    >
+                                                        {comparisonSorted.map((entry, index) => (
+                                                            <Cell 
+                                                                key={`cell-${index}`} 
+                                                                fill={index === 0 ? "#10b981" : BAR_COLORS[index % BAR_COLORS.length]}
+                                                                opacity={index === 0 ? 1 : 0.8}
+                                                            />
+                                                        ))}
+                                                    </Bar>
                                                 </BarChart>
                                             </ResponsiveContainer>
                                         </div>
@@ -594,17 +766,25 @@ const AnalyticsPage = () => {
                                                 <div 
                                                     key={index}
                                                     className={`flex items-center justify-between p-3 rounded-lg ${
-                                                        index === 0 ? 'bg-emerald-50' : 'bg-slate-50'
+                                                        index === 0 ? 'bg-emerald-50 border border-emerald-100' : 'bg-slate-50'
                                                     }`}
                                                 >
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2">
                                                             {index === 0 && <TrendingDown className="w-4 h-4 text-emerald-600" />}
-                                                            <span className="text-slate-700">{item.supermarket_name}</span>
+                                                            <span className="text-slate-700 font-medium">{item.supermarket_name}</span>
                                                         </div>
-                                                        <span className="text-xs text-slate-500">
-                                                            {index === 0 ? "Referencia mas barata" : `+${formatCurrency(item.price - bestPrice.price)} vs mejor`}
-                                                        </span>
+                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                            {item.brand_name && (
+                                                                <span className="text-xs text-slate-400 flex items-center gap-1">
+                                                                    <Tag className="w-2.5 h-2.5" />
+                                                                    {item.brand_name}
+                                                                </span>
+                                                            )}
+                                                            <span className="text-xs text-slate-400">
+                                                                {index === 0 ? "Referencia más barata" : `+${formatCurrency(item.price - bestPrice.price)} vs mejor`}
+                                                            </span>
+                                                        </div>
                                                     </div>
                                                     <span className={`font-mono font-semibold ${
                                                         index === 0 ? 'text-emerald-600' : 'text-slate-900'
@@ -620,6 +800,9 @@ const AnalyticsPage = () => {
                                         <div className="text-center">
                                             <Store className="w-12 h-12 text-slate-300 mx-auto mb-3" />
                                             <p className="text-slate-500">Sin datos comparativos</p>
+                                            <p className="text-xs text-slate-400 mt-1">
+                                                {selectedBrand !== "all" ? "Prueba sin filtrar por marca" : "Registra precios desde la lista de compra"}
+                                            </p>
                                         </div>
                                     </div>
                                 )}
@@ -664,6 +847,11 @@ const AnalyticsPage = () => {
                             <BarChart3 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
                             <p className="text-slate-500 text-lg">Selecciona un producto</p>
                             <p className="text-sm text-slate-400 mt-1">Pulsa en Analizar para ver evolucion y comparativa</p>
+                            {!loading && products.length === 0 && (
+                                <p className="text-xs text-amber-500 mt-3 bg-amber-50 border border-amber-100 rounded-lg p-3 max-w-sm mx-auto">
+                                    No hay productos con datos operativos. Configura el catálogo desde el Panel de Administración.
+                                </p>
+                            )}
                         </CardContent>
                     </Card>
                 )}
