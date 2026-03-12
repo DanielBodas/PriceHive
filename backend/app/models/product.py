@@ -1,5 +1,16 @@
 from pydantic import BaseModel
-from typing import Optional, List
+from typing import Optional, List, Dict
+
+class AttributeCreate(BaseModel):
+    name: str
+    description: Optional[str] = None
+    values: List[str] = []
+
+class AttributeResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    values: List[str] = []
 
 class CategoryCreate(BaseModel):
     name: str
@@ -44,6 +55,10 @@ class ProductCreate(BaseModel):
     unit_id: Optional[str] = None
     barcode: Optional[str] = None
     image_url: Optional[str] = None
+    is_base: bool = False
+    allowed_attribute_ids: List[str] = []
+    base_product_id: Optional[str] = None
+    attribute_values: Optional[Dict[str, str]] = None
 
 class ProductResponse(BaseModel):
     id: str
@@ -57,17 +72,23 @@ class ProductResponse(BaseModel):
     barcode: Optional[str] = None
     image_url: Optional[str] = None
     latest_price: Optional[float] = None
+    is_base: bool = False
+    allowed_attribute_ids: List[str] = []
+    base_product_id: Optional[str] = None
+    base_product_name: Optional[str] = None
+    attribute_values: Optional[Dict[str, str]] = None
 
 # Operational Models
 class SellableProductCreate(BaseModel):
     supermarket_id: str
     product_id: str
     brand_id: str
+    attribute_values: Optional[Dict[str, str]] = None
 
 class SellableProductBulkCreate(BaseModel):
     supermarket_id: str
     brand_id: str
-    product_ids: List[str]
+    catalog_entry_ids: List[str]
 
 class SellableProductResponse(BaseModel):
     id: str
@@ -77,6 +98,7 @@ class SellableProductResponse(BaseModel):
     product_name: Optional[str] = None
     brand_id: str
     brand_name: Optional[str] = None
+    attribute_values: Optional[Dict[str, str]] = None
     warning: Optional[str] = None
 
 class ProductUnitCreate(BaseModel):
@@ -103,6 +125,8 @@ class BrandProductCatalogCreate(BaseModel):
     brand_id: str
     product_id: str
     status: str = "active"
+    # New format: {attr_id: [val1, val2]}
+    allowed_attributes: Optional[Dict[str, List[str]]] = None
 
 class BrandProductCatalogBulkCreate(BaseModel):
     brand_id: str
@@ -116,3 +140,4 @@ class BrandProductCatalogResponse(BaseModel):
     product_id: str
     product_name: Optional[str] = None
     status: str
+    allowed_attributes: Optional[Dict[str, List[str]]] = None

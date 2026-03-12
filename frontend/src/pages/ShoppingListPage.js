@@ -21,7 +21,8 @@ import {
     Sparkles,
     Eye,
     AlertTriangle,
-    Zap
+    Zap,
+    PanelLeft
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -29,9 +30,11 @@ const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 const ShoppingListPage = () => {
     const [lists, setLists] = useState([]);
     const [products, setProducts] = useState([]);
+    const [attributes, setAttributes] = useState([]);
     const [supermarkets, setSupermarkets] = useState([]);
     const [units, setUnits] = useState([]);
     const [brands, setBrands] = useState([]);
+    const [brandCatalog, setBrandCatalog] = useState([]);
     const [sellableProducts, setSellableProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedList, setSelectedList] = useState(null);
@@ -48,42 +51,72 @@ const ShoppingListPage = () => {
 
     // New item form
     const [newItemProduct, setNewItemProduct] = useState("");
-    const [newItemBrand, setNewItemBrand] = useState("");
+    const [newItemBrandId, setNewItemBrandId] = useState("");
+    const [newItemAttrValues, setNewItemAttrValues] = useState({});
+    const [newItemSellable, setNewItemSellable] = useState("");
     const [newItemQuantity, setNewItemQuantity] = useState("1");
     const [newItemUnit, setNewItemUnit] = useState("");
+    const [editingItemIndex, setEditingItemIndex] = useState(null);
 
     // Filtered selection states
-    const [availableBrands, setAvailableBrands] = useState([]);
+    const [availableBrandsForProduct, setAvailableBrandsForProduct] = useState([]);
     const [availableUnits, setAvailableUnits] = useState([]);
 
     useEffect(() => {
         fetchData();
     }, []);
 
-    // Selection logic for 4-step flow
+    // 1. When product changes, find available brands in this supermarket
     useEffect(() => {
         if (newItemProduct && selectedList) {
-            const filtered = sellableProducts.filter(sp =>
-                sp.product_id === newItemProduct && sp.supermarket_id === selectedList.supermarket_id
-            );
-            setAvailableBrands(filtered);
-            if (filtered.length === 1) {
-                setNewItemBrand(filtered[0].brand_id);
-            }
+            const brandIds = Array.from(new Set(
+                sellableProducts
+                    .filter(sp => sp.product_id === newItemProduct && sp.supermarket_id === selectedList.supermarket_id)
+                    .map(sp => sp.brand_id)
+            ));
+            const filteredBrands = brands.filter(b => brandIds.includes(b.id));
+            setAvailableBrandsForProduct(filteredBrands);
         } else {
-            setAvailableBrands([]);
-            setNewItemBrand("");
+            setAvailableBrandsForProduct([]);
         }
-    }, [newItemProduct, selectedList, sellableProducts]);
+    }, [newItemProduct, selectedList, sellableProducts, brands]);
+
+    // 2. Clear brand and attributes when product changes
+    useEffect(() => {
+        setNewItemBrandId("");
+        setNewItemAttrValues({});
+        setNewItemSellable("");
+    }, [newItemProduct]);
+
+    // 3. Resolve sellable product when brand or attributes change
+    useEffect(() => {
+        if (newItemProduct && newItemBrandId && selectedList) {
+            const cleanedAttrs = Object.fromEntries(
+                Object.entries(newItemAttrValues).filter(([_, v]) => v !== "" && v !== null && v !== "none")
+            );
+
+            // Our new logic:
+            // A sellable product represents a BRAND'S product in a SUPERMARKET.
+            // We only need the ID of that sellable product.
+            // Attributes are just metadata for the list item now.
+            const match = sellableProducts.find(sp =>
+                sp.product_id === newItemProduct &&
+                sp.brand_id === newItemBrandId &&
+                sp.supermarket_id === selectedList.supermarket_id
+            );
+
+            if (match) {
+                setNewItemSellable(match.id);
+            } else {
+                setNewItemSellable("");
+            }
+        }
+    }, [newItemBrandId, newItemAttrValues, newItemProduct, selectedList, sellableProducts]);
 
     useEffect(() => {
         const fetchUnits = async () => {
-            if (newItemProduct && newItemBrand && selectedList) {
-                const sp = sellableProducts.find(sp =>
-                    sp.product_id === newItemProduct &&
-                    sp.supermarket_id === selectedList.supermarket_id &&
-                    sp.brand_id === newItemBrand
-                );
+            if (newItemProduct && newItemSellable && selectedList) {
+                const sp = sellableProducts.find(sp => sp.id === newItemSellable);
                 if (sp) {
                     try {
                         const res = await axios.get(`${API}/admin/sellable-product-units/${sp.id}`);
@@ -101,13 +134,16 @@ const ShoppingListPage = () => {
             }
         };
         fetchUnits();
-    }, [newItemBrand, newItemProduct, selectedList, sellableProducts]);
+    }, [newItemSellable, newItemProduct, selectedList, sellableProducts]);
 
     const resetNewItemForm = () => {
         setNewItemProduct("");
-        setNewItemBrand("");
+        setNewItemBrandId("");
+        setNewItemAttrValues({});
+        setNewItemSellable("");
         setNewItemQuantity("1");
         setNewItemUnit("");
+        setEditingItemIndex(null);
     };
 
     const fetchData = async () => {
@@ -116,15 +152,17 @@ const ShoppingListPage = () => {
             // Fetch everything but individually to be more robust
             const fetchLists = axios.get(`${API}/shopping-lists`).then(r => setLists(r.data)).catch(e => console.error("Lists fetch error", e));
             const fetchProducts = axios.get(`${API}/public/products`).then(r => setProducts(r.data)).catch(e => console.error("Products fetch error", e));
+            const fetchAttributes = axios.get(`${API}/admin/attributes`).then(r => setAttributes(r.data)).catch(e => console.error("Attributes fetch error", e));
             const fetchSupermarkets = axios.get(`${API}/admin/supermarkets`).then(r => setSupermarkets(r.data)).catch(e => console.error("Supermarkets fetch error", e));
             const fetchUnits = axios.get(`${API}/admin/units`).then(r => {
                 setUnits(r.data);
                 if (r.data.length > 0) setNewItemUnit(r.data[0].id);
             }).catch(e => console.error("Units fetch error", e));
             const fetchBrands = axios.get(`${API}/admin/brands`).then(r => setBrands(r.data)).catch(e => console.error("Brands fetch error", e));
+            const fetchBrandCatalog = axios.get(`${API}/admin/brand-catalog`).then(r => setBrandCatalog(r.data)).catch(e => console.error("Brand Catalog fetch error", e));
             const fetchSellable = axios.get(`${API}/admin/sellable-products`).then(r => setSellableProducts(r.data)).catch(e => console.error("Sellable fetch error", e));
 
-            await Promise.allSettled([fetchLists, fetchProducts, fetchSupermarkets, fetchUnits, fetchBrands, fetchSellable]);
+            await Promise.allSettled([fetchLists, fetchProducts, fetchAttributes, fetchSupermarkets, fetchUnits, fetchBrands, fetchBrandCatalog, fetchSellable]);
         } catch (error) {
             console.error("General error in fetchData:", error);
         } finally {
@@ -154,50 +192,60 @@ const ShoppingListPage = () => {
     };
 
     const handleAddItem = async () => {
-        if (!newItemProduct || !newItemBrand || !newItemUnit) {
+        if (!newItemProduct || !newItemSellable || !newItemUnit) {
             toast.error("Completa todos los campos");
             return;
         }
 
-        const sp = sellableProducts.find(sp =>
-            sp.product_id === newItemProduct &&
-            sp.supermarket_id === selectedList.supermarket_id &&
-            sp.brand_id === newItemBrand
-        );
+        const sp = sellableProducts.find(sp => sp.id === newItemSellable);
 
         if (!sp) {
-            toast.error("Producto no disponible en este supermercado");
+            toast.error("Producto no disponible");
             return;
         }
 
         try {
+            const cleanedAttrs = Object.fromEntries(
+                Object.entries(newItemAttrValues).filter(([_, v]) => v !== "" && v !== null && v !== "none")
+            );
+
             const currentItems = selectedList.items.map(item => ({
                 sellable_product_id: item.sellable_product_id,
                 quantity: item.quantity,
                 unit_id: item.unit_id,
                 price: item.price,
-                purchased: item.purchased
+                purchased: item.purchased,
+                attribute_values: item.attribute_values
             }));
 
             const newItem = {
                 sellable_product_id: sp.id,
                 quantity: parseFloat(newItemQuantity) || 1,
                 unit_id: newItemUnit,
-                price: null,
-                purchased: false
+                price: editingItemIndex !== null ? currentItems[editingItemIndex].price : null,
+                purchased: editingItemIndex !== null ? currentItems[editingItemIndex].purchased : false,
+                attribute_values: cleanedAttrs
             };
 
+            let updatedItems;
+            if (editingItemIndex !== null) {
+                updatedItems = [...currentItems];
+                updatedItems[editingItemIndex] = newItem;
+            } else {
+                updatedItems = [...currentItems, newItem];
+            }
+
             const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
-                items: [...currentItems, newItem]
+                items: updatedItems
             });
 
             setSelectedList(response.data);
             setLists(lists.map(l => l.id === selectedList.id ? response.data : l));
             resetNewItemForm();
             setAddItemDialogOpen(false);
-            toast.success("Producto añadido");
+            toast.success(editingItemIndex !== null ? "Producto actualizado" : "Producto añadido");
         } catch (error) {
-            toast.error("Error al añadir producto");
+            toast.error("Error al guardar producto");
         }
     };
 
@@ -216,7 +264,8 @@ const ShoppingListPage = () => {
                 quantity: item.quantity,
                 unit_id: item.unit_id,
                 price: item.price,
-                purchased: item.purchased
+                purchased: item.purchased,
+                attribute_values: item.attribute_values
             }));
 
             const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
@@ -268,9 +317,21 @@ const ShoppingListPage = () => {
         }
     };
 
-    const handleConfirmEstimate = () => {
+    const handleConfirmEstimate = async () => {
         setConfirmEstimateOpen(false);
-        setShowEstimated(true);
+        try {
+            const response = await axios.post(`${API}/shopping-lists/${selectedList.id}/estimate`);
+            setSelectedList(response.data);
+            setLists(lists.map(l => l.id === selectedList.id ? response.data : l));
+            setShowEstimated(true);
+            toast.success("Precios estimados calculados");
+        } catch (error) {
+            if (error.response?.status === 402) {
+                toast.error(error.response.data.detail || "Créditos insuficientes");
+            } else {
+                toast.error("Error al calcular estimaciones");
+            }
+        }
     };
 
     const handleResetList = async () => {
@@ -309,11 +370,22 @@ const ShoppingListPage = () => {
                 <div className="space-y-6" data-testid="shopping-list-page">
                     {/* Header */}
                     <div className="flex items-center justify-between">
-                        <div>
-                            <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                                Lista de Compra
-                            </h1>
-                            <p className="text-slate-500 mt-1">Planifica tu compra y registra precios</p>
+                        <div className="flex items-center gap-4">
+                            <Button
+                                variant="outline"
+                                size="icon"
+                                onClick={() => setListsExpanded(!listsExpanded)}
+                                className={`h-10 w-10 shrink-0 hidden lg:flex transition-colors ${listsExpanded ? 'text-slate-900 bg-slate-100 border-slate-200 hover:bg-slate-200' : 'text-slate-500 hover:text-slate-900 border-slate-200'}`}
+                                title={listsExpanded ? "Ocultar mis listas" : "Mostrar mis listas"}
+                            >
+                                <PanelLeft className="w-5 h-5" />
+                            </Button>
+                            <div>
+                                <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                                    Lista de Compra
+                                </h1>
+                                <p className="text-slate-500 mt-1">Planifica tu compra y registra precios</p>
+                            </div>
                         </div>
                         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                             <DialogTrigger asChild>
@@ -359,18 +431,11 @@ const ShoppingListPage = () => {
 
                     <div className="flex gap-0 relative">
                         {/* Lists Sidebar */}
-                        <div className={`transition-all duration-300 flex shrink-0 ${listsExpanded ? 'w-full lg:w-64' : 'w-0 lg:w-10'} overflow-hidden`}>
+                        <div className={`transition-all duration-300 flex shrink-0 ${listsExpanded ? 'w-full lg:w-64' : 'w-0'} overflow-hidden`}>
                             <div className={`${listsExpanded ? 'w-full lg:w-64' : 'w-0'} overflow-hidden transition-all duration-300`}>
                                 <div className="w-full lg:w-64 pr-0 lg:pr-3">
                                     <div className="flex items-center justify-between mb-3">
                                         <h2 className="font-semibold text-slate-900 text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>Mis Listas</h2>
-                                        <button
-                                            onClick={() => setListsExpanded(false)}
-                                            className="h-7 w-7 rounded-md flex items-center justify-center text-slate-400 hover:bg-slate-100 hover:text-slate-600 transition-colors"
-                                            title="Ocultar listas"
-                                        >
-                                            <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M15 18l-6-6 6-6" /></svg>
-                                        </button>
                                     </div>
                                     {loading ? (
                                         <div className="text-slate-500 text-sm">Cargando...</div>
@@ -419,15 +484,6 @@ const ShoppingListPage = () => {
                             </div>
                         </div>
 
-                        {/* Collapse toggle tab (always visible) */}
-                        <button
-                            onClick={() => setListsExpanded(!listsExpanded)}
-                            className={`hidden lg:flex items-center justify-center w-5 self-stretch shrink-0 hover:bg-slate-100 transition-colors group rounded-sm ${listsExpanded ? 'border-r border-slate-200' : ''}`}
-                            title={listsExpanded ? 'Ocultar listas' : 'Mostrar listas'}
-                        >
-                            <svg className={`w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 transition-transform ${!listsExpanded ? 'rotate-180' : ''}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><path d="M15 18l-6-6 6-6" /></svg>
-                        </button>
-
                         {/* List Detail Column */}
                         <div className="flex-1 min-w-0">
                             {selectedList ? (
@@ -438,10 +494,11 @@ const ShoppingListPage = () => {
                                                 <Button
                                                     variant="ghost"
                                                     size="icon"
-                                                    onClick={() => setListsExpanded(true)}
-                                                    className="lg:hidden h-9 w-9 -ml-2 text-slate-500 hover:bg-slate-100"
+                                                    onClick={() => setListsExpanded(!listsExpanded)}
+                                                    className={`h-9 w-9 -ml-2 text-slate-500 hover:bg-slate-100 transition-colors ${listsExpanded ? 'lg:hidden' : 'flex'}`}
+                                                    title={listsExpanded ? 'Ocultar listas' : 'Mostrar listas'}
                                                 >
-                                                    <Store className="w-5 h-5" />
+                                                    <PanelLeft className="w-5 h-5" />
                                                 </Button>
                                                 <div>
                                                     <CardTitle style={{ fontFamily: 'Manrope, sans-serif' }}>{selectedList.name}</CardTitle>
@@ -477,7 +534,7 @@ const ShoppingListPage = () => {
                                                     <RefreshCcw className="w-4 h-4" />
                                                     <span className="hidden sm:inline">Reiniciar</span>
                                                 </Button>
-                                                <Dialog open={addItemDialogOpen} onOpenChange={setAddItemDialogOpen}>
+                                                <Dialog open={addItemDialogOpen} onOpenChange={(val) => { setAddItemDialogOpen(val); if (!val) resetNewItemForm(); }}>
                                                     <DialogTrigger asChild>
                                                         <Button className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white" data-testid="add-item-btn">
                                                             <Plus className="w-4 h-4" />
@@ -486,7 +543,7 @@ const ShoppingListPage = () => {
                                                     </DialogTrigger>
                                                     <DialogContent className="max-h-[90vh] overflow-y-auto">
                                                         <DialogHeader>
-                                                            <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>Añadir Producto</DialogTitle>
+                                                            <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>{editingItemIndex !== null ? "Editar Producto" : "Añadir Producto"}</DialogTitle>
                                                         </DialogHeader>
                                                         <div className="space-y-4 pt-4">
                                                             <div className="space-y-2">
@@ -509,25 +566,77 @@ const ShoppingListPage = () => {
                                                             {newItemProduct && (
                                                                 <div className="space-y-2">
                                                                     <Label>2. Marca *</Label>
-                                                                    <Select value={newItemBrand} onValueChange={setNewItemBrand}>
+                                                                    <Select value={newItemBrandId || "none"} onValueChange={(v) => {
+                                                                        setNewItemBrandId(v === "none" ? "" : v);
+                                                                        setNewItemAttrValues({});
+                                                                        setNewItemSellable("");
+                                                                    }}>
                                                                         <SelectTrigger data-testid="add-item-brand-select">
                                                                             <SelectValue placeholder="Selecciona marca" />
                                                                         </SelectTrigger>
                                                                         <SelectContent>
-                                                                            {availableBrands.map((sp) => (
-                                                                                <SelectItem key={sp.brand_id} value={sp.brand_id}>
-                                                                                    {sp.brand_name}
-                                                                                </SelectItem>
+                                                                            <SelectItem value="none">Seleccionar marca...</SelectItem>
+                                                                            {availableBrandsForProduct.map((b) => (
+                                                                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
                                                                             ))}
                                                                         </SelectContent>
                                                                     </Select>
                                                                 </div>
                                                             )}
 
-                                                            {newItemBrand && (
+                                                            {newItemBrandId && (() => {
+                                                                const product = products.find(p => p.id === newItemProduct);
+                                                                if (!product || !product.allowed_attribute_ids?.length) return null;
+
+                                                                // Check if any attributes have values to show
+                                                                const attrBlocks = product.allowed_attribute_ids.map(attrId => {
+                                                                    const attr = attributes.find(a => a.id === attrId);
+                                                                    if (!attr) return null; // attribute definition not found
+
+                                                                    // Find the catalog entry for THIS brand and product to see allowed attribute values
+                                                                    const catalogEntry = brandCatalog.find(bc => bc.brand_id === newItemBrandId && bc.product_id === newItemProduct);
+                                                                    // Use catalog-specific values if configured, otherwise fall back to all values defined on the attribute
+                                                                    const catalogVals = catalogEntry?.allowed_attributes?.[attrId];
+                                                                    const possibleVals = (catalogVals && catalogVals.length > 0)
+                                                                        ? catalogVals
+                                                                        : (attr?.values || []);
+
+                                                                    if (possibleVals.length === 0) return null;
+
+                                                                    return (
+                                                                        <div key={attrId} className="space-y-1">
+                                                                            <Label className="text-[10px] font-medium text-slate-600">{attr.name}</Label>
+                                                                            <Select
+                                                                                value={newItemAttrValues[attrId] || "none"}
+                                                                                onValueChange={v => setNewItemAttrValues({...newItemAttrValues, [attrId]: v === "none" ? "" : v})}
+                                                                            >
+                                                                                <SelectTrigger className="h-8 text-xs">
+                                                                                    <SelectValue placeholder={`Seleccionar ${attr.name}`} />
+                                                                                </SelectTrigger>
+                                                                                <SelectContent>
+                                                                                    <SelectItem value="none">Cualquier {attr.name}</SelectItem>
+                                                                                    {possibleVals.map(val => <SelectItem key={val} value={val}>{val}</SelectItem>)}
+                                                                                </SelectContent>
+                                                                            </Select>
+                                                                        </div>
+                                                                    );
+                                                                }).filter(Boolean);
+
+                                                                if (attrBlocks.length === 0) return null;
+
+                                                                return (
+                                                                    <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-dashed">
+                                                                        <Label className="text-xs font-bold text-slate-500 uppercase">3. Variante / Atributos</Label>
+                                                                        {attrBlocks}
+                                                                    </div>
+                                                                );
+                                                            })()}
+
+
+                                                            {newItemSellable && (
                                                                 <div className="grid grid-cols-2 gap-4">
                                                                     <div className="space-y-2">
-                                                                        <Label>3. Unidad *</Label>
+                                                                        <Label>Unidad *</Label>
                                                                         <Select value={newItemUnit} onValueChange={setNewItemUnit}>
                                                                             <SelectTrigger data-testid="add-item-unit-select">
                                                                                 <SelectValue placeholder="Unidad" />
@@ -542,7 +651,7 @@ const ShoppingListPage = () => {
                                                                         </Select>
                                                                     </div>
                                                                     <div className="space-y-2">
-                                                                        <Label>4. Cantidad</Label>
+                                                                        <Label>Cantidad</Label>
                                                                         <Input
                                                                             type="number"
                                                                             min="0.1"
@@ -602,8 +711,24 @@ const ShoppingListPage = () => {
                                                                                 {item.product_name}
                                                                             </h3>
                                                                         </div>
-                                                                        <div className="flex items-center gap-2 mt-0.5">
-                                                                            <p className="text-xs text-slate-500 truncate max-w-[120px]">{item.brand_name}</p>
+                                                                        <div className="flex flex-col gap-1 mt-0.5">
+                                                                            {item.brand_name && (
+                                                                                <p className="text-xs text-slate-500 truncate max-w-[180px]">
+                                                                                    {item.brand_name}
+                                                                                </p>
+                                                                            )}
+                                                                            {item.attribute_values && Object.entries(item.attribute_values).length > 0 && (
+                                                                                <div className="flex flex-wrap gap-1">
+                                                                                    {Object.entries(item.attribute_values).map(([attrId, val]) => (
+                                                                                        <span
+                                                                                            key={attrId}
+                                                                                            className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                                                                        >
+                                                                                            {val}
+                                                                                        </span>
+                                                                                    ))}
+                                                                                </div>
+                                                                            )}
                                                                         </div>
                                                                     </div>
 
@@ -640,12 +765,32 @@ const ShoppingListPage = () => {
                                                                             <span className="text-xs text-slate-500 pr-3 font-medium border-l border-slate-200 pl-2 bg-transparent">{item.unit_name}</span>
                                                                         </div>
 
-                                                                        {/* Mobile only delete icon */}
+                                                                        {/* Edit icon */}
+                                                                        <Button
+                                                                            variant="ghost"
+                                                                            size="icon"
+                                                                            onClick={() => {
+                                                                                setNewItemProduct(item.product_id);
+                                                                                setNewItemBrandId(item.brand_id);
+                                                                                setNewItemAttrValues(item.attribute_values || {});
+                                                                                setNewItemQuantity(item.quantity.toString());
+                                                                                setNewItemUnit(item.unit_id);
+                                                                                setEditingItemIndex(index);
+                                                                                setAddItemDialogOpen(true);
+                                                                            }}
+                                                                            className="h-8 w-8 text-slate-400 hover:text-indigo-600 shrink-0"
+                                                                            title="Editar"
+                                                                        >
+                                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
+                                                                        </Button>
+
+                                                                        {/* Delete icon */}
                                                                         <Button
                                                                             variant="ghost"
                                                                             size="icon"
                                                                             onClick={() => handleRemoveItem(index)}
-                                                                            className="sm:hidden h-8 w-8 text-slate-400 hover:text-rose-600 shrink-0"
+                                                                            className="h-8 w-8 text-slate-400 hover:text-rose-600 shrink-0"
+                                                                            title="Eliminar"
                                                                         >
                                                                             <Trash2 className="w-4 h-4" />
                                                                         </Button>
@@ -732,10 +877,15 @@ const ShoppingListPage = () => {
                                 </Card>
                             ) : (
                                 <Card className="border-slate-200">
-                                    <CardContent className="p-12 text-center">
+                                    <CardContent className="p-12 text-center flex flex-col items-center">
                                         <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                                        <p className="text-slate-500 text-lg">Selecciona una lista</p>
-                                        <p className="text-sm text-slate-400 mt-1">O crea una nueva para empezar</p>
+                                        <p className="text-slate-600 text-lg font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>Selecciona una lista configurada</p>
+                                        <p className="text-sm text-slate-400 mt-2 mb-6 max-w-sm">Abre el panel lateral para elegir una lista de compra existente o crea una nueva.</p>
+                                        {!listsExpanded && (
+                                            <Button onClick={() => setListsExpanded(true)} variant="outline" className="gap-2 border-slate-200 text-slate-600 hover:text-slate-900">
+                                                <PanelLeft className="w-4 h-4" /> Ver mis listas
+                                            </Button>
+                                        )}
                                     </CardContent>
                                 </Card>
                             )}

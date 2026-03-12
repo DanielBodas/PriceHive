@@ -9,7 +9,8 @@ from ..models.product import (
     ProductCreate, ProductResponse, SellableProductCreate, SellableProductResponse,
     SellableProductBulkCreate, ProductUnitCreate, ProductUnitResponse,
     SellableProductUnitCreate, SellableProductUnitResponse,
-    BrandProductCatalogCreate, BrandProductCatalogBulkCreate, BrandProductCatalogResponse
+    BrandProductCatalogCreate, BrandProductCatalogBulkCreate, BrandProductCatalogResponse,
+    AttributeCreate, AttributeResponse
 )
 
 router = APIRouter(prefix="/admin", tags=["admin"])
@@ -178,6 +179,44 @@ async def delete_supermarket(sm_id: str, user: dict = Depends(get_admin_user)):
         raise HTTPException(status_code=404, detail="Supermarket not found")
     return {"message": "Supermarket deleted"}
 
+# Attributes
+@router.post("/attributes", response_model=AttributeResponse)
+async def create_attribute(data: AttributeCreate, user: dict = Depends(get_admin_user)):
+    attr_id = str(uuid.uuid4())
+    doc = {"id": attr_id, "name": data.name, "description": data.description, "values": data.values}
+    await db.attributes.insert_one(doc)
+    return AttributeResponse(**doc)
+
+@router.get("/attributes", response_model=List[AttributeResponse])
+async def get_attributes(user: dict = Depends(get_current_user)):
+    attrs = await db.attributes.find({}).to_list(1000)
+    return [AttributeResponse(**map_id(a)) for a in attrs]
+
+@router.put("/attributes/{attr_id}", response_model=AttributeResponse)
+async def update_attribute(attr_id: str, data: AttributeCreate, user: dict = Depends(get_admin_user)):
+    update_data = {"name": data.name, "description": data.description, "values": data.values}
+    result = await db.attributes.update_one({"id": attr_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        try:
+            from bson import ObjectId
+            result = await db.attributes.update_one({"_id": ObjectId(attr_id)}, {"$set": update_data})
+        except: pass
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Attribute not found")
+    return AttributeResponse(id=attr_id, **update_data)
+
+@router.delete("/attributes/{attr_id}")
+async def delete_attribute(attr_id: str, user: dict = Depends(get_admin_user)):
+    result = await db.attributes.delete_one({"id": attr_id})
+    if result.deleted_count == 0:
+        try:
+            from bson import ObjectId
+            result = await db.attributes.delete_one({"_id": ObjectId(attr_id)})
+        except: pass
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Attribute not found")
+    return {"message": "Attribute deleted"}
+
 # Units
 @router.post("/units", response_model=UnitResponse)
 async def create_unit(data: UnitCreate, user: dict = Depends(get_admin_user)):
@@ -226,19 +265,25 @@ async def create_product(data: ProductCreate, user: dict = Depends(get_admin_use
         "category_id": data.category_id,
         "unit_id": data.unit_id,
         "barcode": data.barcode,
-        "image_url": data.image_url
+        "image_url": data.image_url,
+        "is_base": data.is_base,
+        "allowed_attribute_ids": data.allowed_attribute_ids,
+        "base_product_id": data.base_product_id,
+        "attribute_values": data.attribute_values
     }
     await db.products.insert_one(doc)
 
     brand = await db.brands.find_one({"id": data.brand_id}, {"_id": 0}) if data.brand_id else None
     category = await db.categories.find_one({"id": data.category_id}, {"_id": 0})
     unit = await db.units.find_one({"id": data.unit_id}, {"_id": 0}) if data.unit_id else None
+    base_product = await db.products.find_one({"id": data.base_product_id}, {"_id": 0}) if data.base_product_id else None
 
     return ProductResponse(
         **map_id(doc),
         brand_name=brand["name"] if brand else None,
         category_name=category["name"] if category else None,
-        unit_name=unit["name"] if unit else None
+        unit_name=unit["name"] if unit else None,
+        base_product_name=base_product["name"] if base_product else None
     )
 
 @router.get("/products", response_model=List[ProductResponse])
@@ -248,14 +293,37 @@ async def get_products(user: dict = Depends(get_current_user)):
     categories = {c.get("id") or str(c.get("_id")): c["name"] for c in await db.categories.find({}).to_list(1000)}
     units = {u.get("id") or str(u.get("_id")): u["name"] for u in await db.units.find({}).to_list(1000)}
 
+    # Pre-map base products for inheritance
+    base_prods = {p.get("id") or str(p.get("_id")): p for p in products_raw if p.get("is_base")}
+
     result = []
     for p in products_raw:
         p = map_id(p)
+        base_id = p.get("base_product_id")
+        base_p = base_prods.get(base_id) if base_id else None
+
+        # Inherit Brand and Category if not set on variant
+        # Note: If variant, p might not have brand_id, so it inherits from base if base has it.
+        inherited_brand_id = p.get("brand_id") or (base_p.get("brand_id") if base_p else None)
+        inherited_category_id = p.get("category_id") or (base_p.get("category_id") if base_p else None)
+        inherited_unit_id = p.get("unit_id") or (base_p.get("unit_id") if base_p else None)
+
+        # Build clean response dict
+        # We explicitly pop the fields we are overriding to avoid duplicate arguments error in Pydantic
+        resp_dict = dict(p)
+        resp_dict.pop("brand_id", None)
+        resp_dict.pop("category_id", None)
+        resp_dict.pop("unit_id", None)
+
         result.append(ProductResponse(
-            **p,
-            brand_name=brands.get(p.get("brand_id")),
-            category_name=categories.get(p.get("category_id")),
-            unit_name=units.get(p.get("unit_id"))
+            **resp_dict,
+            brand_id=inherited_brand_id,
+            brand_name=brands.get(inherited_brand_id),
+            category_id=inherited_category_id or "",
+            category_name=categories.get(inherited_category_id),
+            unit_id=inherited_unit_id,
+            unit_name=units.get(inherited_unit_id),
+            base_product_name=base_p.get("name") if base_p else None
         ))
     return result
 
@@ -267,7 +335,11 @@ async def update_product(prod_id: str, data: ProductCreate, user: dict = Depends
         "category_id": data.category_id,
         "unit_id": data.unit_id,
         "barcode": data.barcode,
-        "image_url": data.image_url
+        "image_url": data.image_url,
+        "is_base": data.is_base,
+        "allowed_attribute_ids": data.allowed_attribute_ids,
+        "base_product_id": data.base_product_id,
+        "attribute_values": data.attribute_values
     }
     result = await db.products.update_one({"id": prod_id}, {"$set": update_data})
     if result.matched_count == 0:
@@ -281,13 +353,15 @@ async def update_product(prod_id: str, data: ProductCreate, user: dict = Depends
     brand = await db.brands.find_one({"id": data.brand_id}, {"_id": 0}) if data.brand_id else None
     category = await db.categories.find_one({"id": data.category_id}, {"_id": 0})
     unit = await db.units.find_one({"id": data.unit_id}, {"_id": 0}) if data.unit_id else None
+    base_product = await db.products.find_one({"id": data.base_product_id}, {"_id": 0}) if data.base_product_id else None
 
     return ProductResponse(
         id=prod_id,
         **update_data,
         brand_name=brand["name"] if brand else None,
         category_name=category["name"] if category else None,
-        unit_name=unit["name"] if unit else None
+        unit_name=unit["name"] if unit else None,
+        base_product_name=base_product["name"] if base_product else None
     )
 
 @router.delete("/products/{prod_id}")
@@ -306,13 +380,25 @@ async def delete_product(prod_id: str, user: dict = Depends(get_admin_user)):
 @router.post("/sellable-products/bulk")
 async def create_sellable_products_bulk(data: SellableProductBulkCreate, user: dict = Depends(get_admin_user)):
     results = []
-    for pid in data.product_ids:
-        # Check if already exists
+
+    # Always link all active products of the brand to the supermarket
+    brand_entries = await db.brand_product_catalog.find({
+        "brand_id": data.brand_id,
+        "status": "active"
+    }).to_list(1000)
+
+    for entry in brand_entries:
+        pid = entry["product_id"]
+        # We don't store variant attributes in sellable_products anymore
+        # as availability is defined at Brand-Product level, and variants
+        # are just combinations of allowed attributes.
+
         existing = await db.sellable_products.find_one({
             "supermarket_id": data.supermarket_id,
             "product_id": pid,
             "brand_id": data.brand_id
         })
+
         if not existing:
             sp_id = str(uuid.uuid4())
             doc = {
@@ -328,7 +414,7 @@ async def create_sellable_products_bulk(data: SellableProductBulkCreate, user: d
             existing_sp_id = existing.get("id") or str(existing.get("_id"))
             if existing_sp_id:
                 await _sync_product_units_to_sellable_product(existing_sp_id, pid)
-    return {"message": f"{len(results)} productos vinculados correctamente", "product_ids": results}
+    return {"message": f"Marca vinculada. {len(results)} productos operativos añadidos.", "product_ids": results}
 
 @router.post("/sellable-products", response_model=SellableProductResponse)
 async def create_sellable_product(data: SellableProductCreate, user: dict = Depends(get_admin_user)):
@@ -337,7 +423,8 @@ async def create_sellable_product(data: SellableProductCreate, user: dict = Depe
         "id": sp_id,
         "supermarket_id": data.supermarket_id,
         "product_id": data.product_id,
-        "brand_id": data.brand_id
+        "brand_id": data.brand_id,
+        "attribute_values": data.attribute_values
     }
 
     warning = None
@@ -397,10 +484,36 @@ async def delete_sellable_product(sp_id: str, user: dict = Depends(get_admin_use
             from bson import ObjectId
             result = await db.sellable_products.delete_one({"_id": ObjectId(sp_id)})
         except: pass
+
     if result.deleted_count == 0:
-        raise HTTPException(status_code=404, detail="Sellable product not found")
+        # Fallback: check if sp_id is actually a product_id and user wants to delete all variants (dangerous, but maybe helpful if UI is broken)
+        # For now, let's just stick to 404 to be safe, but ensure the UI passes the right ID.
+        raise HTTPException(status_code=404, detail=f"Sellable product with ID {sp_id} not found")
+
     await db.sellable_product_units.delete_many({"sellable_product_id": sp_id})
     return {"message": "Sellable product deleted"}
+
+@router.delete("/supermarkets/{sm_id}/brands/{brand_id}")
+async def delete_brand_from_supermarket(sm_id: str, brand_id: str, user: dict = Depends(get_admin_user)):
+    # Find all sellable products for this brand in this supermarket to clean up units
+    sps = await db.sellable_products.find({
+        "supermarket_id": sm_id,
+        "brand_id": brand_id
+    }).to_list(1000)
+
+    sp_ids = [sp.get("id") or str(sp.get("_id")) for sp in sps]
+
+    # Delete associated units
+    if sp_ids:
+        await db.sellable_product_units.delete_many({"sellable_product_id": {"$in": sp_ids}})
+
+    # Deletes all products of the brand in the supermarket
+    result = await db.sellable_products.delete_many({
+        "supermarket_id": sm_id,
+        "brand_id": brand_id
+    })
+
+    return {"message": f"Brand removed from supermarket. {result.deleted_count} products deleted."}
 
 # Product Units
 @router.post("/product-units", response_model=ProductUnitResponse)
@@ -530,31 +643,57 @@ async def delete_sellable_product_unit(spu_id: str, user: dict = Depends(get_adm
 async def create_brand_catalog_bulk(data: BrandProductCatalogBulkCreate, user: dict = Depends(get_admin_user)):
     results = []
     for pid in data.product_ids:
-        existing = await db.brand_product_catalog.find_one({"brand_id": data.brand_id, "product_id": pid})
+        existing = await db.brand_product_catalog.find_one({
+            "brand_id": data.brand_id,
+            "product_id": pid
+        })
         if existing:
+            target_filter = {"id": existing["id"]} if "id" in existing else {"_id": existing["_id"]}
             await db.brand_product_catalog.update_one(
-                {"brand_id": data.brand_id, "product_id": pid},
+                target_filter,
                 {"$set": {"status": data.status}}
             )
         else:
             bc_id = str(uuid.uuid4())
-            doc = {"id": bc_id, "brand_id": data.brand_id, "product_id": pid, "status": data.status}
+            doc = {
+                "id": bc_id,
+                "brand_id": data.brand_id,
+                "product_id": pid,
+                "status": data.status,
+                "allowed_attributes": {}
+            }
             await db.brand_product_catalog.insert_one(doc)
         results.append(pid)
-    return {"message": f"{len(results)} productos actualizados en el catálogo", "product_ids": results}
+
+    return {"message": f"{len(results)} productos añadidos al catálogo de marca", "product_ids": results}
 
 @router.post("/brand-catalog", response_model=BrandProductCatalogResponse)
 async def create_brand_catalog_entry(data: BrandProductCatalogCreate, user: dict = Depends(get_admin_user)):
-    existing = await db.brand_product_catalog.find_one({"brand_id": data.brand_id, "product_id": data.product_id})
+    query = {
+        "brand_id": data.brand_id,
+        "product_id": data.product_id
+    }
+    existing = await db.brand_product_catalog.find_one(query)
+
     if existing:
+        target_filter = {"id": existing["id"]} if "id" in existing else {"_id": existing["_id"]}
         await db.brand_product_catalog.update_one(
-            {"brand_id": data.brand_id, "product_id": data.product_id},
-            {"$set": {"status": data.status}}
+            target_filter,
+            {"$set": {
+                "status": data.status,
+                "allowed_attributes": data.allowed_attributes
+            }}
         )
-        doc = {**existing, "status": data.status}
+        doc = {**existing, "status": data.status, "allowed_attributes": data.allowed_attributes}
     else:
         bc_id = str(uuid.uuid4())
-        doc = {"id": bc_id, "brand_id": data.brand_id, "product_id": data.product_id, "status": data.status}
+        doc = {
+            "id": bc_id,
+            "brand_id": data.brand_id,
+            "product_id": data.product_id,
+            "status": data.status,
+            "allowed_attributes": data.allowed_attributes
+        }
         await db.brand_product_catalog.insert_one(doc)
 
     brand = await db.brands.find_one({"id": data.brand_id}, {"_id": 0})
@@ -580,3 +719,22 @@ async def get_brand_catalog(brand_id: Optional[str] = None, user: dict = Depends
         brand_name=brands.get(item.get("brand_id")),
         product_name=products.get(item.get("product_id"))
     ) for item in items]
+
+@router.delete("/brand-catalog/{entry_id}")
+async def delete_brand_catalog_entry(entry_id: str, user: dict = Depends(get_admin_user)):
+    # Robust deletion
+    result = await db.brand_product_catalog.delete_one({"id": entry_id})
+    if result.deleted_count == 0:
+        try:
+            from bson import ObjectId
+            result = await db.brand_product_catalog.delete_one({"_id": ObjectId(entry_id)})
+        except: pass
+
+    if result.deleted_count == 0:
+        # One last try: check if it's a string _id in mongo (legacy data)
+        result = await db.brand_product_catalog.delete_one({"_id": entry_id})
+
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail=f"Catalog entry with ID {entry_id} not found")
+
+    return {"message": "Brand catalog entry deleted"}

@@ -60,6 +60,7 @@ async def compare_product_prices(product_id: str, user: dict = Depends(get_curre
 
     sps = await db.sellable_products.find({"product_id": product_id}).to_list(1000)
     supermarkets = {s.get("id") or str(s.get("_id")): s["name"] for s in await db.supermarkets.find({}).to_list(1000)}
+    brands = {b.get("id") or str(b.get("_id")): b["name"] for b in await db.brands.find({}).to_list(1000)}
 
     comparison = []
     for sp in sps:
@@ -70,9 +71,12 @@ async def compare_product_prices(product_id: str, user: dict = Depends(get_curre
             sort=[("created_at", -1)]
         )
         if latest:
+            brand_id = sp.get("brand_id")
             comparison.append({
                 "supermarket_id": sp["supermarket_id"],
                 "supermarket_name": supermarkets.get(sp["supermarket_id"]),
+                "brand_id": brand_id,
+                "brand_name": brands.get(brand_id),
                 "price": latest["price"],
                 "updated_at": latest["created_at"]
             })

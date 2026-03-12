@@ -12,6 +12,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from ".
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "../components/ui/accordion";
 import { Badge } from "../components/ui/badge";
 import { Checkbox } from "../components/ui/checkbox";
+import { RadioGroup, RadioGroupItem } from "../components/ui/radio-group";
 import { toast } from "sonner";
 import {
     Plus,
@@ -24,13 +25,17 @@ import {
     Scale,
     BookOpen,
     Search,
-    Link2
+    Link2,
+    ChevronDown,
+    ChevronRight,
+    RefreshCw
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 const AdminPage = () => {
     const [categories, setCategories] = useState([]);
+    const [attributes, setAttributes] = useState([]);
     const [brands, setBrands] = useState([]);
     const [supermarkets, setSupermarkets] = useState([]);
     const [units, setUnits] = useState([]);
@@ -41,35 +46,48 @@ const AdminPage = () => {
 
     // Dialog states
     const [categoryDialog, setCategoryDialog] = useState(false);
+    const [attributeDialog, setAttributeDialog] = useState(false);
     const [brandDialog, setBrandDialog] = useState(false);
     const [supermarketDialog, setSupermarketDialog] = useState(false);
     const [unitDialog, setUnitDialog] = useState(false);
     const [productDialog, setProductDialog] = useState(false);
     const [sellableDialog, setSellableDialog] = useState(false);
+    const [supermarketBrandDialog, setSupermarketBrandDialog] = useState(false);
     const [catalogDialog, setCatalogDialog] = useState(false);
+    const [addSupermarketToCatalogDialog, setAddSupermarketToCatalogDialog] = useState(false);
+    const [addBrandToCatalogDialog, setAddBrandToCatalogDialog] = useState(false);
+    const [addBrandGlobalDialog, setAddBrandGlobalDialog] = useState(false);
 
     // Edit states
     const [editingItem, setEditingItem] = useState(null);
 
     // Form states
     const [categoryForm, setCategoryForm] = useState({ name: "", description: "" });
+    const [attributeForm, setAttributeForm] = useState({ name: "", description: "", values: [] });
+    const [newAttributeValue, setNewAttributeValue] = useState("");
     const [brandForm, setBrandForm] = useState({ name: "", logo_url: "" });
     const [supermarketForm, setSupermarketForm] = useState({ name: "", logo_url: "" });
     const [unitForm, setUnitForm] = useState({ name: "", abbreviation: "" });
     const [productForm, setProductForm] = useState({
-        name: "", brand_id: "", category_id: "", unit_id: "", barcode: "", image_url: ""
+        name: "", category_id: "", barcode: "", image_url: "",
+        is_base: true, allowed_attribute_ids: []
     });
-    const [sellableForm, setSellableForm] = useState({ supermarket_id: "", brand_id: "", product_ids: [] });
-    const [catalogForm, setCatalogForm] = useState({ brand_id: "", product_ids: [], status: "active" });
+    const [sellableForm, setSellableForm] = useState({ supermarket_id: "", brand_id: "", catalog_entry_ids: [] });
+    const [catalogForm, setCatalogForm] = useState({ brand_id: "", product_ids: [], status: "active", attribute_combinations: [] });
+    const [attributeSelection, setAttributeSelection] = useState({}); // { attrId: [val1, val2] }
     const [productSearch, setProductSearch] = useState("");
     const [productTableSearch, setProductTableSearch] = useState("");
     const [categoryTableSearch, setCategoryTableSearch] = useState("");
+    const [attributeTableSearch, setAttributeTableSearch] = useState("");
     const [brandTableSearch, setBrandTableSearch] = useState("");
     const [supermarketTableSearch, setSupermarketTableSearch] = useState("");
     const [unitTableSearch, setUnitTableSearch] = useState("");
     const [sellableTableSearch, setSellableTableSearch] = useState("");
     const [catalogTableSearch, setCatalogTableSearch] = useState("");
     const [allProductUnits, setAllProductUnits] = useState([]);
+    // Track which brand-product cards are expanded in the brand catalog
+    const [expandedCatalogProducts, setExpandedCatalogProducts] = useState({});
+    const toggleCatalogProduct = (key) => setExpandedCatalogProducts(prev => ({ ...prev, [key]: !prev[key] }));
 
     // Product-units catalog
     const [relationProductSearch, setRelationProductSearch] = useState("");
@@ -92,14 +110,6 @@ const AdminPage = () => {
         product_name: "",
         status: "active",
     });
-    const [sellableEditDialog, setSellableEditDialog] = useState(false);
-    const [sellableEditForm, setSellableEditForm] = useState({
-        id: "",
-        supermarket_id: "",
-        brand_id: "",
-        product_id: "",
-    });
-    const [sellableEditSaving, setSellableEditSaving] = useState(false);
 
     useEffect(() => {
         fetchAllData();
@@ -107,8 +117,9 @@ const AdminPage = () => {
 
     const fetchAllData = async () => {
         try {
-            const [catsRes, brandsRes, smsRes, unitsRes, prodsRes, sellableRes, catalogRes, productUnitsRes] = await Promise.all([
+            const [catsRes, attrsRes, brandsRes, smsRes, unitsRes, prodsRes, sellableRes, catalogRes, productUnitsRes] = await Promise.all([
                 axios.get(`${API}/admin/categories`),
+                axios.get(`${API}/admin/attributes`),
                 axios.get(`${API}/admin/brands`),
                 axios.get(`${API}/admin/supermarkets`),
                 axios.get(`${API}/admin/units`),
@@ -118,6 +129,7 @@ const AdminPage = () => {
                 axios.get(`${API}/admin/product-units`)
             ]);
             setCategories(catsRes.data);
+            setAttributes(attrsRes.data);
             setBrands(brandsRes.data);
             setSupermarkets(smsRes.data);
             setUnits(unitsRes.data);
@@ -149,6 +161,14 @@ const AdminPage = () => {
         return (
             (c.name || "").toLowerCase().includes(q) ||
             (c.description || "").toLowerCase().includes(q)
+        );
+    });
+    const filteredAttributesTable = attributes.filter((a) => {
+        const q = (attributeTableSearch || "").toLowerCase().trim();
+        if (!q) return true;
+        return (
+            (a.name || "").toLowerCase().includes(q) ||
+            (a.description || "").toLowerCase().includes(q)
         );
     });
     const filteredProductsTable = getFilteredProducts(productTableSearch);
@@ -188,10 +208,18 @@ const AdminPage = () => {
     }, {});
 
     const filteredRelationProducts = getFilteredProducts(relationProductSearch)
-        .map((p) => ({
-            ...p,
-            allowed_units_count: productUnitCountByProduct[p.id] || 0,
-        }))
+        .map((p) => {
+            const linkedBrands = brandCatalog
+                .filter(bc => bc.product_id === p.id)
+                .map(bc => bc.brand_name)
+                .filter((v, i, a) => v && a.indexOf(v) === i);
+
+            return {
+                ...p,
+                linked_brands: linkedBrands,
+                allowed_units_count: productUnitCountByProduct[p.id] || 0,
+            };
+        })
         .filter((p) => !relationOnlyMissingUnits || p.allowed_units_count === 0)
         .sort((a, b) => {
             if (a.allowed_units_count === 0 && b.allowed_units_count > 0) return -1;
@@ -237,9 +265,10 @@ const AdminPage = () => {
 
     const supermarketCatalogTree = Object.values(
         filteredSellableTable.reduce((acc, row) => {
-            const supermarketId = row.supermarket_id || row.supermarket_name || "unknown-supermarket";
-            const brandId = row.brand_id || row.brand_name || "unknown-brand";
-            const productId = row.product_id || row.product_name || row.id;
+            const supermarketId = row.supermarket_id || "unknown-supermarket";
+            const brandId = row.brand_id || "unknown-brand";
+            const productId = row.product_id || "unknown-product";
+
             if (!acc[supermarketId]) {
                 acc[supermarketId] = { id: supermarketId, name: row.supermarket_name || "Sin supermercado", brands: {} };
             }
@@ -250,15 +279,8 @@ const AdminPage = () => {
                 acc[supermarketId].brands[brandId].products[productId] = {
                     id: productId,
                     name: row.product_name || "Sin producto",
-                    brand_id: row.brand_id,
-                    product_id: row.product_id,
-                    brand_name: row.brand_name,
-                    product_name: row.product_name,
-                    status: brandCatalogStatusByBrandProduct[`${row.brand_id || ""}::${row.product_id || ""}`] || "missing",
-                    sellable_ids: [],
                 };
             }
-            acc[supermarketId].brands[brandId].products[productId].sellable_ids.push(row.id);
             return acc;
         }, {})
     )
@@ -266,12 +288,13 @@ const AdminPage = () => {
             const brandsList = Object.values(supermarket.brands).map((brand) => ({
                 ...brand,
                 products: Object.values(brand.products).sort((a, b) => a.name.localeCompare(b.name)),
+                products_count: Object.values(brand.products).length
             }));
             return {
                 ...supermarket,
                 brands: brandsList.sort((a, b) => a.name.localeCompare(b.name)),
                 brands_count: brandsList.length,
-                products_count: brandsList.reduce((acc, brand) => acc + brand.products.length, 0),
+                total_products_count: brandsList.reduce((acc, b) => acc + b.products_count, 0)
             };
         })
         .sort((a, b) => a.name.localeCompare(b.name));
@@ -287,21 +310,23 @@ const AdminPage = () => {
     const brandCatalogTree = Object.values(
         filteredCatalogTable.reduce((acc, row) => {
             const brandId = row.brand_id || row.brand_name || "unknown-brand";
-            const productId = row.product_id || row.product_name || row.id;
+            const productId = row.product_id || row.product_name || "unknown-product";
             const key = `${row.brand_id || ""}::${row.product_id || ""}`;
+
             if (!acc[brandId]) {
                 acc[brandId] = { id: brandId, name: row.brand_name || "Sin marca", products: {} };
             }
+
             acc[brandId].products[productId] = {
-                id: productId,
+                id: row.id, // entry id
                 name: row.product_name || "Sin producto",
-                status: row.status || "unknown",
+                status: row.status,
                 brand_id: row.brand_id,
                 product_id: row.product_id,
-                brand_name: row.brand_name,
-                product_name: row.product_name,
+                allowed_attributes: row.allowed_attributes || {},
                 supermarkets: Object.values(supermarketsByBrandProduct[key] || {}).sort((a, b) => a.localeCompare(b)),
             };
+
             return acc;
         }, {})
     )
@@ -455,6 +480,20 @@ const AdminPage = () => {
         try { await axios.delete(`${API}/admin/categories/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
+    const handleSaveAttribute = async () => {
+        try {
+            if (editingItem) await axios.put(`${API}/admin/attributes/${editingItem.id}`, attributeForm);
+            else await axios.post(`${API}/admin/attributes`, attributeForm);
+            fetchAllData(); setAttributeDialog(false); setAttributeForm({ name: "", description: "", values: [] }); setEditingItem(null);
+            toast.success("Atributo guardado");
+        } catch (error) { toast.error("Error al guardar"); }
+    };
+
+    const handleDeleteAttribute = async (id) => {
+        if (!window.confirm("¿Eliminar?")) return;
+        try { await axios.delete(`${API}/admin/attributes/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
+    };
+
     const handleSaveBrand = async () => {
         try {
             if (editingItem) await axios.put(`${API}/admin/brands/${editingItem.id}`, brandForm);
@@ -475,7 +514,7 @@ const AdminPage = () => {
             else await axios.post(`${API}/admin/supermarkets`, supermarketForm);
             fetchAllData(); setSupermarketDialog(false); setSupermarketForm({ name: "", logo_url: "" }); setEditingItem(null);
             toast.success("Supermercado guardado");
-        } catch (e) { toast.error("Error"); }
+        } catch (e) { toast.error("Error al guardar supermercado"); }
     };
 
     const handleDeleteSupermarket = async (id) => {
@@ -501,16 +540,14 @@ const AdminPage = () => {
         try {
             const payload = {
                 ...productForm,
-                brand_id: productForm.brand_id || null,
-                unit_id: productForm.unit_id || null,
-                barcode: productForm.barcode || null,
-                image_url: productForm.image_url || null
+                is_base: true,
+                allowed_attribute_ids: productForm.allowed_attribute_ids || []
             };
             if (editingItem) await axios.put(`${API}/admin/products/${editingItem.id}`, payload);
             else await axios.post(`${API}/admin/products`, payload);
             fetchAllData(); setProductDialog(false); setEditingItem(null);
-            toast.success("Producto guardado");
-        } catch (e) { toast.error("Error"); }
+            toast.success("Producto conceptual guardado");
+        } catch (e) { toast.error("Error al guardar producto"); }
     };
 
     const handleDeleteProduct = async (id) => {
@@ -520,7 +557,7 @@ const AdminPage = () => {
 
     const handleSaveSellable = async () => {
         try {
-            if (sellableForm.product_ids.length === 0) {
+            if (sellableForm.catalog_entry_ids.length === 0) {
                 toast.error("Selecciona al menos un producto");
                 return;
             }
@@ -528,7 +565,7 @@ const AdminPage = () => {
             toast.success(res.data.message);
             fetchAllData();
             setSellableDialog(false);
-            setSellableForm({ supermarket_id: "", brand_id: "", product_ids: [] });
+            setSellableForm({ supermarket_id: "", brand_id: "", catalog_entry_ids: [] });
             setProductSearch("");
         } catch (e) { toast.error("Error al vincular"); }
     };
@@ -551,66 +588,27 @@ const AdminPage = () => {
         }
     };
 
-    const openSellableEditor = ({ id, supermarket_id, brand_id, product_id }) => {
-        if (!id || !supermarket_id || !brand_id || !product_id) {
-            toast.error("No se puede editar este registro");
+    // Sync: create sellable products for all catalog entries of a brand in a supermarket
+    const handleSyncBrandInSupermarket = async (supermarketId, brandId, brandName, supermarketName) => {
+        // Get catalog entries for this brand
+        const catalogEntries = brandCatalog.filter(bc => bc.brand_id === brandId && bc.status !== 'discontinued');
+        if (catalogEntries.length === 0) {
+            toast.error(`${brandName} no tiene productos activos en el catálogo de marca`);
             return;
         }
-        setSellableEditForm({ id, supermarket_id, brand_id, product_id });
-        setSellableEditDialog(true);
-    };
-
-    const handleSaveSellableEdit = async () => {
-        if (!sellableEditForm.id || !sellableEditForm.supermarket_id || !sellableEditForm.brand_id || !sellableEditForm.product_id) {
-            toast.error("Completa todos los campos");
-            return;
-        }
-
-        const current = sellableProducts.find((sp) => sp.id === sellableEditForm.id);
-        if (!current) {
-            toast.error("No se encontro el vinculo original");
-            return;
-        }
-
-        const noChanges =
-            current.supermarket_id === sellableEditForm.supermarket_id &&
-            current.brand_id === sellableEditForm.brand_id &&
-            current.product_id === sellableEditForm.product_id;
-        if (noChanges) {
-            setSellableEditDialog(false);
-            return;
-        }
-
-        const duplicate = sellableProducts.find(
-            (sp) =>
-                sp.id !== sellableEditForm.id &&
-                sp.supermarket_id === sellableEditForm.supermarket_id &&
-                sp.brand_id === sellableEditForm.brand_id &&
-                sp.product_id === sellableEditForm.product_id
-        );
-        if (duplicate) {
-            toast.error("Ya existe ese vinculo en catalogo supermercado");
-            return;
-        }
-
-        setSellableEditSaving(true);
         try {
-            await axios.post(`${API}/admin/sellable-products`, {
-                supermarket_id: sellableEditForm.supermarket_id,
-                brand_id: sellableEditForm.brand_id,
-                product_id: sellableEditForm.product_id
+            const res = await axios.post(`${API}/admin/sellable-products/bulk`, {
+                supermarket_id: supermarketId,
+                brand_id: brandId,
+                catalog_entry_ids: catalogEntries.map(e => e.id)
             });
-            await axios.delete(`${API}/admin/sellable-products/${sellableEditForm.id}`);
-            toast.success("Vinculo operativo actualizado");
-            setSellableEditDialog(false);
+            toast.success(res.data?.message || `Sincronizados productos de ${brandName} en ${supermarketName}`);
             await fetchAllData();
-        } catch (error) {
-            console.error("Error saving sellable edit:", error);
-            toast.error("No se pudo actualizar el vinculo");
-        } finally {
-            setSellableEditSaving(false);
+        } catch (e) {
+            toast.error("Error al sincronizar");
         }
     };
+
 
     const handleSaveCatalog = async () => {
         try {
@@ -618,44 +616,57 @@ const AdminPage = () => {
                 toast.error("Selecciona al menos un producto");
                 return;
             }
+
             const res = await axios.post(`${API}/admin/brand-catalog/bulk`, catalogForm);
             toast.success(res.data.message);
             fetchAllData();
             setCatalogDialog(false);
             setCatalogForm({ brand_id: "", product_ids: [], status: "active" });
             setProductSearch("");
-        } catch (e) { toast.error("Error al actualizar catÃƒÆ’Ã‚Â¡logo"); }
+        } catch (e) { toast.error("Error al actualizar catálogo"); }
+    };
+
+    const handleDeleteCatalogEntry = async (entryId) => {
+        if (!window.confirm("¿Quitar esta variante del catálogo de la marca?")) return;
+        try {
+            await axios.delete(`${API}/admin/brand-catalog/${entryId}`);
+            toast.success("Variante eliminada del catálogo");
+            fetchAllData();
+        } catch (e) { toast.error("Error al eliminar"); }
     };
 
 
-    const openCatalogStatusEditor = ({ brand_id, product_id, status, brand_name, product_name }) => {
-        if (!brand_id || !product_id) {
-            toast.error("No se puede editar el estado de este registro");
+    const openCatalogStatusEditor = (entry) => {
+        if (!entry.brand_id || !entry.product_id) {
+            toast.error("No se puede editar este registro");
             return;
         }
         setCatalogStatusForm({
-            brand_id,
-            product_id,
-            status: status || "active",
-            brand_name: brand_name || "",
-            product_name: product_name || ""
+            ...entry,
+            status: entry.status || "active",
+            attribute_values: entry.attribute_values || {},
         });
         setCatalogStatusDialog(true);
     };
 
     const handleSaveCatalogStatus = async () => {
         try {
+            const cleanedAttrs = Object.fromEntries(
+                Object.entries(catalogStatusForm.attribute_values || {}).filter(([_, v]) => v !== "" && v !== "none")
+            );
+
             await axios.post(`${API}/admin/brand-catalog`, {
                 brand_id: catalogStatusForm.brand_id,
                 product_id: catalogStatusForm.product_id,
-                status: catalogStatusForm.status
+                status: catalogStatusForm.status,
+                attribute_values: cleanedAttrs
             });
-            toast.success("Estado del catalogo actualizado");
+            toast.success("Catálogo actualizado");
             setCatalogStatusDialog(false);
             await fetchAllData();
         } catch (error) {
             console.error("Error saving catalog status:", error);
-            toast.error("No se pudo actualizar el estado del catalogo");
+            toast.error("No se pudo actualizar el catálogo");
         }
     };
 
@@ -689,6 +700,7 @@ const AdminPage = () => {
                         <Tabs defaultValue="categories">
                             <TabsList className="bg-slate-50 border p-1 mb-4 flex-wrap h-auto">
                                 <TabsTrigger value="categories" className="gap-2" data-testid="tab-categories"><Layers className="w-4 h-4" /> Categorias</TabsTrigger>
+                                <TabsTrigger value="attributes" className="gap-2" data-testid="tab-attributes"><Tag className="w-4 h-4" /> Atributos</TabsTrigger>
                                 <TabsTrigger value="products" className="gap-2" data-testid="tab-products"><Package className="w-4 h-4" /> Productos</TabsTrigger>
                                 <TabsTrigger value="brands" className="gap-2" data-testid="tab-brands"><Tag className="w-4 h-4" /> Marcas</TabsTrigger>
                                 <TabsTrigger value="supermarkets" className="gap-2" data-testid="tab-supermarkets"><Store className="w-4 h-4" /> Supermercados</TabsTrigger>
@@ -713,15 +725,65 @@ const AdminPage = () => {
                                     </CardHeader>
                                     <CardContent className="p-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Categoria</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader><TableRow><TableHead>Concepto de Producto</TableHead><TableHead>Categoria</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
                                             <TableBody>
                                                 {filteredProductsTable.map(p => (
                                                     <TableRow key={p.id}>
-                                                        <TableCell className="font-medium">{p.name}</TableCell>
+                                                        <TableCell className="font-medium">
+                                                            {p.name}
+                                                            {p.attribute_values && Object.entries(p.attribute_values).length > 0 && (
+                                                                <div className="flex flex-wrap gap-1 mt-1">
+                                                                    {Object.entries(p.attribute_values).map(([attrId, val]) => {
+                                                                        const attr = attributes.find(a => a.id === attrId);
+                                                                        return <Badge key={attrId} variant="outline" className="text-[10px]">{attr?.name}: {val}</Badge>
+                                                                    })}
+                                                                </div>
+                                                            )}
+                                                        </TableCell>
                                                         <TableCell>{p.category_name}</TableCell>
                                                         <TableCell className="flex justify-end gap-1 pr-4">
-                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(p); setProductForm(p); setProductDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(p); setProductForm({ ...p, attribute_values: p.attribute_values || {} }); setProductDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(p.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                            </TableBody>
+                                        </Table>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="attributes">
+                                <Card>
+                                    <CardHeader className="space-y-4">
+                                        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                            <div>
+                                                <CardTitle className="text-lg">Atributos de Producto</CardTitle>
+                                                <p className="text-sm text-slate-500 mt-1">{filteredAttributesTable.length} registros</p>
+                                            </div>
+                                            <Button onClick={() => { setEditingItem(null); setAttributeForm({ name: "", description: "" }); setAttributeDialog(true); }} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Nuevo Atributo</Button>
+                                        </div>
+                                        <div className="relative">
+                                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <Input value={attributeTableSearch} onChange={(e) => setAttributeTableSearch(e.target.value)} placeholder="Buscar atributo" className="pl-9" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent className="p-0">
+                                        <Table>
+                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Descripción</TableHead><TableHead>Valores</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableBody>
+                                                {filteredAttributesTable.map(a => (
+                                                    <TableRow key={a.id}>
+                                                        <TableCell className="font-medium">{a.name}</TableCell>
+                                                        <TableCell>{a.description}</TableCell>
+                                                        <TableCell>
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {a.values?.map((v, i) => <Badge key={i} variant="secondary" className="text-[10px]">{v}</Badge>)}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="flex justify-end gap-1 pr-4">
+                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(a); setAttributeForm({ ...a, values: a.values || [] }); setAttributeDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteAttribute(a.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
                                                     </TableRow>
                                                 ))}
@@ -876,6 +938,7 @@ const AdminPage = () => {
                             <TabsList className="bg-slate-50 border p-1 mb-4 h-auto flex-wrap">
                                 <TabsTrigger value="sellable" className="gap-2" data-testid="tab-sellable"><Store className="w-4 h-4" /> Catalogo Supermercado</TabsTrigger>
                                 <TabsTrigger value="brand-cat" className="gap-2" data-testid="tab-brand-catalog"><Tag className="w-4 h-4" /> Catalogo Marca</TabsTrigger>
+                                <TabsTrigger value="attr-cat" className="gap-2"><Tag className="w-4 h-4" /> Catalogo Atributos</TabsTrigger>
                                 <TabsTrigger value="units-catalog" className="gap-2"><Link2 className="w-4 h-4" /> Unidades</TabsTrigger>
                             </TabsList>
 
@@ -884,60 +947,95 @@ const AdminPage = () => {
                                     <CardHeader className="space-y-4">
                                         <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                                             <div>
-                                                <CardTitle className="text-lg">Catalogo Supermercado</CardTitle>
-                                                <p className="text-sm text-slate-500 mt-1">Vista por supermercado, con marcas y productos operativos</p>
+                                                <CardTitle className="text-lg">Catálogo Supermercado</CardTitle>
+                                                <p className="text-sm text-slate-500 mt-1">Gestiona qué marcas están disponibles en cada establecimiento.</p>
                                             </div>
-                                            <Button onClick={() => setSellableDialog(true)} className="bg-emerald-500" data-testid="new-sellable-btn"><Plus className="w-4 h-4 mr-2" /> Vincular Producto</Button>
+                                            <Button onClick={() => setAddSupermarketToCatalogDialog(true)} className="bg-emerald-500" data-testid="new-sellable-btn"><Plus className="w-4 h-4 mr-2" /> Añadir Supermercado</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <Input value={sellableTableSearch} onChange={(e) => setSellableTableSearch(e.target.value)} placeholder="Filtrar por supermercado, marca o producto" className="pl-9" />
+                                            <Input value={sellableTableSearch} onChange={(e) => setSellableTableSearch(e.target.value)} placeholder="Filtrar por supermercado o marca" className="pl-9" />
                                         </div>
                                     </CardHeader>
                                     <CardContent>
                                         <Accordion type="multiple" className="w-full">
                                             {supermarketCatalogTree.map((supermarket) => (
                                                 <AccordionItem key={supermarket.id} value={`sm-${supermarket.id}`}>
-                                                    <AccordionTrigger className="hover:no-underline">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="font-semibold text-slate-800">{supermarket.name}</span>
-                                                            <Badge variant="secondary">{supermarket.brands_count} marcas</Badge>
-                                                            <Badge variant="secondary">{supermarket.products_count} productos</Badge>
+                                                    <AccordionTrigger className="hover:no-underline py-4">
+                                                        <div className="flex items-center justify-between w-full pr-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="font-semibold text-slate-800">{supermarket.name}</span>
+                                                                <div className="flex gap-2">
+                                                                    <Badge variant="secondary" className="bg-slate-100 text-slate-600">{supermarket.brands_count} marcas</Badge>
+                                                                    <Badge variant="secondary" className="bg-emerald-50 text-emerald-600">{supermarket.total_products_count} productos activos</Badge>
+                                                                </div>
+                                                            </div>
+                                                            <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
+                                                                <Button size="sm" variant="outline" className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={(e) => { e.stopPropagation(); setSellableForm({ ...sellableForm, supermarket_id: supermarket.id, brand_id: "", catalog_entry_ids: [] }); setSupermarketBrandDialog(true); }}>
+                                                                    <Plus className="w-3.5 h-3.5 mr-1.5" /> Añadir Marca
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </AccordionTrigger>
-                                                    <AccordionContent>
-                                                        <Accordion type="multiple" className="w-full space-y-2">
+                                                    <AccordionContent className="pt-2 pb-4">
+                                                        <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-3 px-1">
                                                             {supermarket.brands.map((brand) => (
-                                                                <AccordionItem key={`${supermarket.id}-${brand.id}`} value={`sm-${supermarket.id}-brand-${brand.id}`} className="rounded-lg border bg-white px-0">
-                                                                    <AccordionTrigger className="px-4 py-3 hover:no-underline">
+                                                                <div key={brand.id} className="group relative rounded-xl border bg-white p-4 shadow-sm hover:shadow-md transition-all">
+                                                                    <div className="flex items-start justify-between mb-2">
                                                                         <div className="flex items-center gap-3">
-                                                                            <p className="font-medium text-slate-800">{brand.name}</p>
-                                                                            <Badge variant="outline">{brand.products.length} productos</Badge>
+                                                                            <div className="w-10 h-10 rounded-lg bg-slate-50 border flex items-center justify-center text-slate-400 font-bold">
+                                                                                {brand.name.substring(0, 1)}
+                                                                            </div>
+                                                                            <div>
+                                                                                <p className="font-bold text-slate-800 leading-tight">{brand.name}</p>
+                                                                                <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{brand.products_count} productos operativos</p>
+                                                                            </div>
                                                                         </div>
-                                                                    </AccordionTrigger>
-                                                                    <AccordionContent className="px-0 pb-0">
-                                                                        <div className="divide-y">
-                                                                            {brand.products.map((product) => {
-                                                                                const statusMeta = getCatalogStatusMeta(product.status);
-                                                                                return (
-                                                                                    <div key={`${supermarket.id}-${brand.id}-${product.id}`} className="px-4 py-3 flex flex-col gap-2 md:flex-row md:items-center md:justify-between">
-                                                                                        <div className="flex items-center gap-2 flex-wrap">
-                                                                                            <span className="font-medium text-slate-800">{product.name}</span>
-                                                                                            <Badge className={statusMeta.className}>{statusMeta.label}</Badge>
-                                                                                            {product.sellable_ids.length > 1 && <Badge variant="outline">{product.sellable_ids.length} vinculos</Badge>}
-                                                                                        </div>
-                                                                                        <div className="flex items-center gap-2">
-                                                                                            <Button variant="outline" size="sm" onClick={() => openSellableEditor({ id: product.sellable_ids[0], supermarket_id: supermarket.id, brand_id: brand.id, product_id: product.product_id })}><Pencil className="w-4 h-4 mr-2" /> Editar</Button>
-                                                                                            <Button variant="ghost" size="sm" className="text-rose-600" onClick={() => handleDeleteSellableGroup(product.sellable_ids)}><Trash2 className="w-4 h-4 mr-2" /> Eliminar</Button>
-                                                                                        </div>
-                                                                                    </div>
-                                                                                );
-                                                                            })}
+                                                                         <div className="flex flex-col gap-1 items-end">
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="icon"
+                                                                                className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                onClick={async (e) => {
+                                                                                    e.stopPropagation();
+                                                                                    if (window.confirm(`¿Quitar ${brand.name} de ${supermarket.name}? Todos sus productos dejarán de estar operativos en este súper.`)) {
+                                                                                        try {
+                                                                                            await axios.delete(`${API}/admin/supermarkets/${supermarket.id}/brands/${brand.id}`);
+                                                                                            toast.success("Marca eliminada del supermercado");
+                                                                                            fetchAllData();
+                                                                                        } catch (e) { toast.error("Error al eliminar"); }
+                                                                                    }
+                                                                                }}
+                                                                            >
+                                                                                <Trash2 className="w-4 h-4" />
+                                                                            </Button>
+                                                                            <Button
+                                                                                variant="ghost"
+                                                                                size="sm"
+                                                                                className="h-7 px-2 text-[10px] text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                title="Sincronizar productos del catálogo de marca"
+                                                                                onClick={(e) => { e.stopPropagation(); handleSyncBrandInSupermarket(supermarket.id, brand.id, brand.name, supermarket.name); }}
+                                                                            >
+                                                                                <RefreshCw className="w-3 h-3" /> Sync
+                                                                            </Button>
                                                                         </div>
-                                                                    </AccordionContent>
-                                                                </AccordionItem>
+                                                                    </div>
+                                                                    <div className="mt-3 flex flex-wrap gap-1 max-h-16 overflow-y-auto no-scrollbar">
+                                                                        {brand.products.map(p => (
+                                                                            <Badge key={p.id} variant="secondary" className="text-[9px] font-normal bg-slate-50 text-slate-500 border-none px-1.5 py-0">
+                                                                                {p.name}
+                                                                            </Badge>
+                                                                        ))}
+                                                                    </div>
+
+                                                                </div>
                                                             ))}
-                                                        </Accordion>
+                                                            {supermarket.brands.length === 0 && (
+                                                                <div className="col-span-full py-8 text-center bg-slate-50/50 rounded-xl border border-dashed border-slate-200">
+                                                                    <p className="text-sm text-slate-400 italic">No hay marcas vinculadas a este supermercado.</p>
+                                                                </div>
+                                                            )}
+                                                        </div>
                                                     </AccordionContent>
                                                 </AccordionItem>
                                             ))}
@@ -954,7 +1052,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Catalogo Marca</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">Portfolio conceptual de marca con estado editable</p>
                                             </div>
-                                            <Button onClick={() => setCatalogDialog(true)} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Actualizar en Bloque</Button>
+                                            <Button onClick={() => setAddBrandGlobalDialog(true)} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Gestionar Marcas</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -965,32 +1063,245 @@ const AdminPage = () => {
                                         <Accordion type="multiple" className="w-full">
                                             {brandCatalogTree.map((brand) => (
                                                 <AccordionItem key={brand.id} value={`brand-${brand.id}`}>
-                                                    <AccordionTrigger className="hover:no-underline">
-                                                        <div className="flex items-center gap-3">
-                                                            <span className="font-semibold text-slate-800">{brand.name}</span>
-                                                            <Badge variant="secondary">{brand.products_count} productos</Badge>
+                                                    <AccordionTrigger className="hover:no-underline py-4">
+                                                        <div className="flex items-center justify-between w-full pr-4">
+                                                            <div className="flex items-center gap-3">
+                                                                <span className="font-semibold text-slate-800">{brand.name}</span>
+                                                                <Badge variant="secondary" className="bg-slate-100 text-slate-600">{brand.products_count} productos</Badge>
+                                                            </div>
+                                                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                                <Button
+                                                                    size="sm"
+                                                                    variant="outline"
+                                                                    className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-1.5"
+                                                                    onClick={(e) => { e.stopPropagation(); setCatalogForm({ ...catalogForm, brand_id: brand.id, product_ids: [], status: "active" }); setCatalogDialog(true); }}
+                                                                >
+                                                                    <Plus className="w-3.5 h-3.5" /> Añadir Productos
+                                                                </Button>
+                                                                <Button
+                                                                    variant="ghost"
+                                                                    size="icon"
+                                                                    className="h-8 w-8 text-rose-300 hover:text-rose-600 hover:bg-rose-50 rounded-full"
+                                                                    onClick={async (e) => {
+                                                                        e.stopPropagation();
+                                                                        if (window.confirm(`¿Seguro que quieres quitar la marca ${brand.name} del catálogo?`)) {
+                                                                            const entries = brandCatalog.filter(bc => bc.brand_id === brand.id);
+                                                                            try {
+                                                                                await Promise.all(entries.map(ent => axios.delete(`${API}/admin/brand-catalog/${ent.id}`)));
+                                                                                toast.success("Marca eliminada del catálogo");
+                                                                                fetchAllData();
+                                                                            } catch (err) { toast.error("Error al eliminar"); }
+                                                                        }
+                                                                    }}
+                                                                >
+                                                                    <Trash2 className="w-4 h-4" />
+                                                                </Button>
+                                                            </div>
                                                         </div>
                                                     </AccordionTrigger>
-                                                    <AccordionContent>
-                                                        <div className="space-y-2">
-                                                            {brand.products.map((product) => {
-                                                                const statusMeta = getCatalogStatusMeta(product.status);
-                                                                return (
-                                                                    <div key={`${brand.id}-${product.id}`} className="rounded-lg border px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                                                        <div className="space-y-2">
-                                                                            <div className="flex items-center gap-2 flex-wrap">
-                                                                                <span className="font-medium text-slate-800">{product.name}</span>
-                                                                                <Badge className={statusMeta.className}>{statusMeta.label}</Badge>
+                                                    <AccordionContent className="pt-2 pb-6 px-1">
+                                                        <div className="space-y-4">
+                                                            <div className="grid gap-2">
+                                                                {brand.products.map((product) => {
+                                                                    const statusMeta = getCatalogStatusMeta(product.status);
+                                                                    const productConcept = products.find(p => p.id === product.product_id);
+                                                                    const expandKey = `${brand.id}::${product.product_id}`;
+                                                                    const isExpanded = !!expandedCatalogProducts[expandKey];
+
+                                                                    return (
+                                                                        <div key={product.id} className="rounded-xl border bg-white shadow-sm overflow-hidden group">
+                                                                            {/* ── Header row – always visible ── */}
+                                                                            <div
+                                                                                className="px-4 py-3 flex items-center justify-between bg-slate-50/30 hover:bg-slate-50/80 transition-colors cursor-pointer select-none"
+                                                                                onClick={() => toggleCatalogProduct(expandKey)}
+                                                                            >
+                                                                                <div className="flex items-center gap-3">
+                                                                                    {isExpanded
+                                                                                        ? <ChevronDown className="w-4 h-4 text-slate-400 shrink-0" />
+                                                                                        : <ChevronRight className="w-4 h-4 text-slate-400 shrink-0" />
+                                                                                    }
+                                                                                    <div>
+                                                                                        <span className="font-semibold text-slate-800">{product.name}</span>
+                                                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                                                            <Badge className={`${statusMeta.className} text-[9px] h-4 px-1.5`}>{statusMeta.label}</Badge>
+                                                                                            {product.supermarkets.length > 0 && (
+                                                                                                <span className="text-[10px] text-slate-400 flex items-center gap-1">
+                                                                                                    <Store className="w-2.5 h-2.5" /> {product.supermarkets.join(", ")}
+                                                                                                </span>
+                                                                                            )}
+                                                                                            {productConcept?.allowed_attribute_ids?.length > 0 && (
+                                                                                                <span className="text-[10px] text-slate-400">
+                                                                                                    · {productConcept.allowed_attribute_ids.length} atrib.
+                                                                                                </span>
+                                                                                            )}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                                <Button
+                                                                                    variant="ghost" size="icon"
+                                                                                    className="h-8 w-8 text-rose-400 hover:text-rose-600 opacity-0 group-hover:opacity-100 transition-opacity shrink-0"
+                                                                                    onClick={(e) => { e.stopPropagation(); handleDeleteCatalogEntry(product.id); }}
+                                                                                >
+                                                                                    <Trash2 className="w-4 h-4" />
+                                                                                </Button>
                                                                             </div>
-                                                                            <div className="flex items-center gap-2 flex-wrap text-xs text-slate-600">
-                                                                                <span>Operativo en:</span>
-                                                                                {product.supermarkets.length > 0 ? product.supermarkets.map((name) => <Badge key={`${brand.id}-${product.id}-${name}`} variant="outline" className="text-xs">{name}</Badge>) : <Badge variant="outline" className="text-xs">Sin supermercados</Badge>}
-                                                                            </div>
+
+                                                                            {/* ── Expandable body ── */}
+                                                                            {isExpanded && (
+                                                                                <div className="p-4 space-y-4 border-t">
+                                                                                    {productConcept?.allowed_attribute_ids?.length > 0 ? (
+                                                                                        <div className="grid sm:grid-cols-2 gap-4">
+                                                                                            {productConcept.allowed_attribute_ids.map(attrId => {
+                                                                                                const attr = attributes.find(a => a.id === attrId);
+                                                                                                if (!attr) return null;
+
+                                                                                                return (
+                                                                                                    <div key={attrId} className="space-y-2">
+                                                                                                        <Label className="text-[10px] uppercase font-bold text-slate-400 tracking-wider">{attr.name}</Label>
+                                                                                                        <div className="flex flex-wrap gap-1.5">
+                                                                                                            {attr.values?.map(val => (
+                                                                                                                <div
+                                                                                                                    key={val}
+                                                                                                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs cursor-pointer transition-all ${
+                                                                                                                        product.allowed_attributes?.[attrId]?.includes(val)
+                                                                                                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
+                                                                                                                        : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                                                                                                    }`}
+                                                                                                                    onClick={async (e) => {
+                                                                                                                        e.stopPropagation();
+                                                                                                                        const current = product.allowed_attributes?.[attrId] || [];
+                                                                                                                        const next = current.includes(val) ? current.filter(v => v !== val) : [...current, val];
+                                                                                                                        const updatedAttrs = { ...product.allowed_attributes, [attrId]: next };
+                                                                                                                        try {
+                                                                                                                            await axios.post(`${API}/admin/brand-catalog`, {
+                                                                                                                                brand_id: product.brand_id,
+                                                                                                                                product_id: product.product_id,
+                                                                                                                                status: product.status,
+                                                                                                                                allowed_attributes: updatedAttrs
+                                                                                                                            });
+                                                                                                                            fetchAllData();
+                                                                                                                        } catch (e) { toast.error("Error al actualizar"); }
+                                                                                                                    }}
+                                                                                                                >
+                                                                                                                    <div className={`w-2 h-2 rounded-full ${product.allowed_attributes?.[attrId]?.includes(val) ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                                                                                                                    {val}
+                                                                                                                </div>
+                                                                                                            ))}
+                                                                                                        </div>
+                                                                                                    </div>
+                                                                                                );
+                                                                                            })}
+                                                                                        </div>
+                                                                                    ) : (
+                                                                                        <div className="flex flex-col items-center justify-center py-3 bg-slate-50/50 rounded-lg border border-dashed border-slate-200">
+                                                                                            <Tag className="w-4 h-4 text-slate-300 mb-1" />
+                                                                                            <p className="text-[11px] text-slate-400 italic">Sin atributos configurados.</p>
+                                                                                        </div>
+                                                                                    )}
+
+                                                                                    <div className="pt-2 border-t flex justify-between items-center">
+                                                                                        <Label className="text-[10px] font-medium text-slate-500">Estado:</Label>
+                                                                                        <div className="flex gap-2">
+                                                                                            {["active", "planned", "discontinued"].map(st => (
+                                                                                                <button
+                                                                                                    key={st}
+                                                                                                    onClick={async (e) => {
+                                                                                                        e.stopPropagation();
+                                                                                                        try {
+                                                                                                            await axios.post(`${API}/admin/brand-catalog`, {
+                                                                                                                brand_id: product.brand_id,
+                                                                                                                product_id: product.product_id,
+                                                                                                                status: st,
+                                                                                                                allowed_attributes: product.allowed_attributes
+                                                                                                            });
+                                                                                                            fetchAllData();
+                                                                                                        } catch (e) { toast.error("Error"); }
+                                                                                                    }}
+                                                                                                    className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold transition-colors ${
+                                                                                                        product.status === st
+                                                                                                        ? 'bg-slate-800 text-white'
+                                                                                                        : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                                                                                    }`}
+                                                                                                >
+                                                                                                    {st === 'active' ? 'Activo' : st === 'planned' ? 'Planeado' : 'Desc.'}
+                                                                                                </button>
+                                                                                            ))}
+                                                                                        </div>
+                                                                                    </div>
+                                                                                </div>
+                                                                            )}
                                                                         </div>
-                                                                        <Button variant="outline" size="sm" onClick={() => openCatalogStatusEditor(product)}><Pencil className="w-4 h-4 mr-2" /> Editar estado</Button>
+                                                                    );
+                                                                })}
+                                                            </div>
+                                                        </div>
+                                                    </AccordionContent>
+                                                </AccordionItem>
+                                            ))}
+                                        </Accordion>
+                                    </CardContent>
+                                </Card>
+                            </TabsContent>
+
+                            <TabsContent value="attr-cat">
+                                <Card>
+                                    <CardHeader className="space-y-4">
+                                        <div>
+                                            <CardTitle className="text-lg">Configuración de Atributos</CardTitle>
+                                            <p className="text-sm text-slate-500 mt-1">Define qué características (sabor, tipo, etc.) puede tener cada producto conceptual.</p>
+                                        </div>
+                                        <div className="relative">
+                                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                            <Input value={productTableSearch} onChange={(e) => setProductTableSearch(e.target.value)} placeholder="Buscar producto conceptual..." className="pl-9" />
+                                        </div>
+                                    </CardHeader>
+                                    <CardContent>
+                                        <Accordion type="multiple" className="w-full">
+                                            {products.filter(p => (productTableSearch === "" || p.name.toLowerCase().includes(productTableSearch.toLowerCase()))).sort((a, b) => a.name.localeCompare(b.name)).map(baseProd => (
+                                                <AccordionItem key={baseProd.id} value={`attr-prod-${baseProd.id}`}>
+                                                    <AccordionTrigger className="hover:no-underline">
+                                                        <div className="flex items-center gap-3">
+                                                            <span className="font-semibold text-slate-800">{baseProd.name}</span>
+                                                            <Badge variant="secondary" className="bg-blue-50 text-blue-700">{baseProd.allowed_attribute_ids?.length || 0} atributos</Badge>
+                                                        </div>
+                                                    </AccordionTrigger>
+                                                    <AccordionContent className="pt-2 px-1">
+                                                        <div className="bg-slate-50 rounded-lg p-4 border border-dashed">
+                                                            <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mb-3">Atributos Disponibles</p>
+                                                            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">
+                                                                {attributes.map(attr => (
+                                                                    <div key={attr.id} className="flex items-center space-x-2">
+                                                                        <Checkbox
+                                                                            id={`base-${baseProd.id}-attr-${attr.id}`}
+                                                                            checked={baseProd.allowed_attribute_ids?.includes(attr.id)}
+                                                                            onCheckedChange={async (checked) => {
+                                                                                const current = baseProd.allowed_attribute_ids || [];
+                                                                                const next = checked
+                                                                                    ? [...current, attr.id]
+                                                                                    : current.filter(id => id !== attr.id);
+
+                                                                                try {
+                                                                                    await axios.put(`${API}/admin/products/${baseProd.id}`, {
+                                                                                        ...baseProd,
+                                                                                        allowed_attribute_ids: next
+                                                                                    });
+                                                                                    toast.success(`Atributo ${attr.name} vinculado`);
+                                                                                    fetchAllData();
+                                                                                } catch (e) {
+                                                                                    toast.error("Error al actualizar");
+                                                                                }
+                                                                            }}
+                                                                        />
+                                                                        <label
+                                                                            htmlFor={`base-${baseProd.id}-attr-${attr.id}`}
+                                                                            className="text-sm font-medium cursor-pointer"
+                                                                        >
+                                                                            {attr.name}
+                                                                        </label>
                                                                     </div>
-                                                                );
-                                                            })}
+                                                                ))}
+                                                                {attributes.length === 0 && <p className="text-xs text-slate-400 italic">No hay atributos definidos. Créalos en 'Datos Base > Atributos'.</p>}
+                                                            </div>
                                                         </div>
                                                     </AccordionContent>
                                                 </AccordionItem>
@@ -1033,7 +1344,12 @@ const AdminPage = () => {
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         <span className="font-medium text-slate-800">{p.name}</span>
                                                         <Badge variant="outline">{p.category_name || "Sin categoria"}</Badge>
-                                                        <Badge variant="outline">{p.brand_name || "Sin marca"}</Badge>
+                                                        {p.linked_brands?.length > 0 && (
+                                                            <div className="flex items-center gap-1">
+                                                                <span className="text-[10px] text-slate-400 ml-2">Marcas:</span>
+                                                                {p.linked_brands.map(b => <Badge key={b} variant="ghost" className="text-[9px] h-4 px-1 border-slate-100">{b}</Badge>)}
+                                                            </div>
+                                                        )}
                                                     </div>
                                                     <div className="flex items-center gap-2 flex-wrap">
                                                         {(unitNamesByProduct[p.id] || []).map((u) => (
@@ -1105,21 +1421,94 @@ const AdminPage = () => {
 
             {/* Diálogos */}
             <Dialog open={productDialog} onOpenChange={setProductDialog}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Producto</DialogTitle></DialogHeader>
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                    <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Producto Conceptual</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <div className="space-y-2">
-                            <Label>Nombre</Label>
-                            <Input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} placeholder="Nombre del producto" />
+                            <Label>Nombre del Producto</Label>
+                            <Input value={productForm.name} onChange={e => setProductForm({ ...productForm, name: e.target.value })} placeholder="Ej: Yogur, Pan, Leche..." />
+                            <p className="text-[10px] text-slate-500 italic">Define el concepto general. Las marcas y variantes se gestionan en los catálogos correspondientes.</p>
                         </div>
+
                         <div className="space-y-2">
                             <Label>Categoría</Label>
                             <Select value={productForm.category_id} onValueChange={v => setProductForm({ ...productForm, category_id: v })}>
-                                <SelectTrigger data-testid="select-category"><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
+                                <SelectTrigger><SelectValue placeholder="Seleccionar categoría" /></SelectTrigger>
                                 <SelectContent>{categories.map(c => <SelectItem key={c.id} value={c.id}>{c.name}</SelectItem>)}</SelectContent>
                             </Select>
                         </div>
-                        <Button onClick={handleSaveProduct} className="w-full bg-emerald-500" data-testid="save-product-btn">Guardar Producto</Button>
+
+                        <div className="space-y-2">
+                            <Label>Código de Barras Genérico (Opcional)</Label>
+                            <Input value={productForm.barcode || ""} onChange={e => setProductForm({ ...productForm, barcode: e.target.value })} placeholder="Barcode" />
+                        </div>
+
+                        <div className="space-y-2">
+                            <Label>Imagen Genérica (URL)</Label>
+                            <Input value={productForm.image_url || ""} onChange={e => setProductForm({ ...productForm, image_url: e.target.value })} placeholder="https://..." />
+                        </div>
+
+                        <Button onClick={handleSaveProduct} className="w-full bg-emerald-500" data-testid="save-product-btn">Guardar Concepto de Producto</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={attributeDialog} onOpenChange={setAttributeDialog}>
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                    <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Atributo</DialogTitle></DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                            <Label>Nombre</Label>
+                            <Input value={attributeForm.name} onChange={e => setAttributeForm({ ...attributeForm, name: e.target.value })} placeholder="Ej: Sabor, Grasa, Formato..." />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Descripción</Label>
+                            <Input value={attributeForm.description} onChange={e => setAttributeForm({ ...attributeForm, description: e.target.value })} placeholder="Descripción opcional" />
+                        </div>
+
+                        <div className="space-y-3 pt-2">
+                            <Label>Valores Posibles</Label>
+                            <div className="flex gap-2">
+                                <Input
+                                    value={newAttributeValue}
+                                    onChange={e => setNewAttributeValue(e.target.value)}
+                                    placeholder="Nuevo valor..."
+                                    onKeyDown={e => {
+                                        if (e.key === 'Enter') {
+                                            e.preventDefault();
+                                            if (newAttributeValue.trim()) {
+                                                setAttributeForm({ ...attributeForm, values: [...(attributeForm.values || []), newAttributeValue.trim()] });
+                                                setNewAttributeValue("");
+                                            }
+                                        }
+                                    }}
+                                />
+                                <Button size="sm" type="button" onClick={() => {
+                                    if (newAttributeValue.trim()) {
+                                        setAttributeForm({ ...attributeForm, values: [...(attributeForm.values || []), newAttributeValue.trim()] });
+                                        setNewAttributeValue("");
+                                    }
+                                }}><Plus className="w-4 h-4" /></Button>
+                            </div>
+                            <div className="flex flex-wrap gap-2 min-h-10 p-2 border rounded bg-slate-50">
+                                {attributeForm.values?.map((v, i) => (
+                                    <Badge key={i} className="gap-1 pr-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                                        {v}
+                                        <Button
+                                            variant="ghost"
+                                            size="icon"
+                                            className="h-4 w-4 rounded-full hover:bg-emerald-200"
+                                            onClick={() => setAttributeForm({ ...attributeForm, values: attributeForm.values.filter((_, idx) => idx !== i) })}
+                                        >
+                                            <Trash2 className="h-3 w-3" />
+                                        </Button>
+                                    </Badge>
+                                ))}
+                                {(!attributeForm.values || attributeForm.values.length === 0) && <span className="text-xs text-slate-400 italic">Sin valores definidos</span>}
+                            </div>
+                        </div>
+
+                        <Button onClick={handleSaveAttribute} className="w-full bg-emerald-500">Guardar Atributo</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1165,75 +1554,160 @@ const AdminPage = () => {
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={sellableDialog} onOpenChange={(val) => { setSellableDialog(val); if (!val) setProductSearch(""); }}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle>Vincular Productos a Supermercado</DialogTitle></DialogHeader>
+            <Dialog open={supermarketBrandDialog} onOpenChange={setSupermarketBrandDialog}>
+                <DialogContent className="max-w-xl">
+                    <DialogHeader><DialogTitle>Gestionar Marcas en {supermarkets.find(s => s.id === sellableForm.supermarket_id)?.name}</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
-                        <div className="grid grid-cols-2 gap-4">
-                            <div className="space-y-2">
-                                <Label>Supermercado</Label>
-                                <Select value={sellableForm.supermarket_id} onValueChange={v => setSellableForm({ ...sellableForm, supermarket_id: v })}>
-                                    <SelectTrigger data-testid="select-sellable-supermarket"><SelectValue placeholder="Seleccionar supermercado" /></SelectTrigger>
-                                    <SelectContent>{supermarkets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            </div>
-                            <div className="space-y-2">
-                                <Label>Marca</Label>
-                                <Select value={sellableForm.brand_id} onValueChange={v => setSellableForm({ ...sellableForm, brand_id: v })}>
-                                    <SelectTrigger data-testid="select-sellable-brand"><SelectValue placeholder="Seleccionar marca" /></SelectTrigger>
-                                    <SelectContent>{brands.map(b => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                                </Select>
-                            </div>
+                        <div className="relative">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Input placeholder="Buscar marca para añadir..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="pl-9" />
                         </div>
-
-                        {sellableForm.brand_id && (
-                            <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <Label>Productos (MultiselecciÃƒÆ’Ã‚Â³n)</Label>
-                                    <Input
-                                        placeholder="Filtrar productos..."
-                                        className="w-1/2 h-8"
-                                        value={productSearch}
-                                        onChange={e => setProductSearch(e.target.value)}
-                                    />
-                                </div>
-                                <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto bg-slate-50">
-                                    {products
-                                        .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
-                                        .map(p => {
-                                            const isInCatalog = brandCatalog.find(bc => bc.brand_id === sellableForm.brand_id && bc.product_id === p.id);
-                                            return (
-                                                <div key={p.id} className="flex items-center space-x-2 p-1 hover:bg-white rounded transition-colors">
-                                                    <Checkbox
-                                                        id={`sp-${p.id}`}
-                                                        checked={sellableForm.product_ids.includes(p.id)}
-                                                        onCheckedChange={(checked) => {
-                                                            if (checked) setSellableForm({ ...sellableForm, product_ids: [...sellableForm.product_ids, p.id] });
-                                                            else setSellableForm({ ...sellableForm, product_ids: sellableForm.product_ids.filter(id => id !== p.id) });
-                                                        }}
-                                                    />
-                                                    <label htmlFor={`sp-${p.id}`} className="text-sm cursor-pointer flex-1">
-                                                        {p.name}
-                                                        {isInCatalog && <span className="ml-1 text-[10px] text-emerald-600 font-bold">(CatÃƒÆ’Ã‚Â¡logo)</span>}
-                                                    </label>
-                                                </div>
-                                            );
-                                        })
-                                    }
-                                </div>
-                                <p className="text-xs text-slate-500">{sellableForm.product_ids.length} productos seleccionados</p>
-                            </div>
-                        )}
-
-                        <Button onClick={handleSaveSellable} className="w-full bg-emerald-500 mt-4" data-testid="save-sellable-btn">Guardar Vinculación Masiva</Button>
+                        <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1">
+                            {brands.filter(b => b.name.toLowerCase().includes(productSearch.toLowerCase())).map(brand => {
+                                const isLinked = sellableProducts.some(sp => sp.supermarket_id === sellableForm.supermarket_id && sp.brand_id === brand.id);
+                                return (
+                                    <div key={brand.id} className="relative group">
+                                        <Button
+                                            variant={isLinked ? "secondary" : "outline"}
+                                            className={`w-full justify-start h-auto py-2 px-3 pr-8 ${isLinked ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}`}
+                                            onClick={async () => {
+                                                if (isLinked) {
+                                                    toast.info("Esta marca ya está vinculada.");
+                                                } else {
+                                                    if (window.confirm(`¿Quieres vincular AUTOMÁTICAMENTE todos los productos activos de ${brand.name}?`)) {
+                                                        try {
+                                                            await axios.post(`${API}/admin/sellable-products/bulk`, {
+                                                                supermarket_id: sellableForm.supermarket_id,
+                                                                brand_id: brand.id,
+                                                                catalog_entry_ids: [] // Empty means all active
+                                                            });
+                                                            toast.success("Marca y productos vinculados");
+                                                            fetchAllData();
+                                                            setSupermarketBrandDialog(false);
+                                                        } catch (e) { toast.error("Error al vincular marca"); }
+                                                    } else {
+                                                        setSellableForm({ ...sellableForm, brand_id: brand.id, catalog_entry_ids: [] });
+                                                        setSupermarketBrandDialog(false);
+                                                        setSellableDialog(true);
+                                                    }
+                                                }
+                                            }}
+                                        >
+                                            <div className="flex flex-col items-start text-left">
+                                                <span className="font-medium text-sm">{brand.name}</span>
+                                                {isLinked && <span className="text-[10px] uppercase font-bold tracking-tighter">Vinculada</span>}
+                                            </div>
+                                        </Button>
+                                        {isLinked && (
+                                            <button
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`¿Seguro que quieres quitar la marca ${brand.name} de este supermercado? Se borrarán todos sus productos.`)) {
+                                                        try {
+                                                            await axios.delete(`${API}/admin/supermarkets/${sellableForm.supermarket_id}/brands/${brand.id}`);
+                                                            toast.success("Marca eliminada del supermercado");
+                                                            fetchAllData();
+                                                        } catch (err) { toast.error("Error al eliminar"); }
+                                                    }
+                                                }}
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>
 
-            <Dialog open={catalogDialog} onOpenChange={(val) => { setCatalogDialog(val); if (!val) setProductSearch(""); }}>
+            <Dialog open={sellableDialog} onOpenChange={(val) => { setSellableDialog(val); if (!val) setProductSearch(""); }}>
                 <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader><DialogTitle>Gestionar Catálogo de Marca (Bulk)</DialogTitle></DialogHeader>
+                    <DialogHeader>
+                        <DialogTitle>Vincular Productos: {brands.find(b => b.id === sellableForm.brand_id)?.name}</DialogTitle>
+                        <p className="text-sm text-slate-500">Supermercado: {supermarkets.find(s => s.id === sellableForm.supermarket_id)?.name}</p>
+                    </DialogHeader>
                     <div className="space-y-4 pt-4">
+                        <div className="space-y-3">
+                            <div className="flex items-center justify-between">
+                                <Label className="font-bold">Catálogo de la Marca</Label>
+                                <Input
+                                    placeholder="Filtrar catálogo..."
+                                    className="w-1/2 h-8"
+                                    value={productSearch}
+                                    onChange={e => setProductSearch(e.target.value)}
+                                />
+                            </div>
+                            <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-80 overflow-y-auto bg-slate-50">
+                                {brandCatalog
+                                    .filter(bc => bc.brand_id === sellableForm.brand_id)
+                                    .filter(bc => bc.product_name.toLowerCase().includes(productSearch.toLowerCase()))
+                                    .map(bc => {
+                                        const alreadyInSM = sellableProducts.some(sp =>
+                                            sp.supermarket_id === sellableForm.supermarket_id &&
+                                            sp.product_id === bc.product_id &&
+                                            sp.brand_id === bc.brand_id &&
+                                            JSON.stringify(sp.attribute_values || {}) === JSON.stringify(bc.attribute_values || {})
+                                        );
+                                        return (
+                                            <div key={bc.id} className={`flex items-center space-x-2 p-2 rounded transition-colors border ${alreadyInSM ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white hover:border-emerald-200 shadow-sm'}`}>
+                                                <Checkbox
+                                                    id={`sp-${bc.id}`}
+                                                    disabled={alreadyInSM}
+                                                    checked={alreadyInSM || sellableForm.catalog_entry_ids.includes(bc.id)}
+                                                    onCheckedChange={(checked) => {
+                                                        if (checked) setSellableForm({ ...sellableForm, catalog_entry_ids: [...sellableForm.catalog_entry_ids, bc.id] });
+                                                        else setSellableForm({ ...sellableForm, catalog_entry_ids: sellableForm.catalog_entry_ids.filter(id => id !== bc.id) });
+                                                    }}
+                                                />
+                                                <div className="flex flex-col flex-1 cursor-default">
+                                                    <label htmlFor={`sp-${bc.id}`} className="text-sm font-medium leading-none cursor-pointer">
+                                                        {bc.product_name}
+                                                    </label>
+                                                    {bc.attribute_values && Object.entries(bc.attribute_values).length > 0 && (
+                                                        <div className="flex flex-wrap gap-1 mt-1">
+                                                            {Object.entries(bc.attribute_values).map(([attrId, val]) => {
+                                                                const attr = attributes.find(a => a.id === attrId);
+                                                                return <Badge key={attrId} variant="outline" className="text-[10px] h-3 px-1">{attr?.name}: {val}</Badge>
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                    {alreadyInSM && <span className="text-[9px] text-slate-500 italic mt-0.5">Ya disponible en este súper</span>}
+                                                    <Badge variant="outline" className="w-fit text-[9px] h-4 mt-1 px-1">{bc.status}</Badge>
+                                                </div>
+                                            </div>
+                                        );
+                                    })
+                                }
+                                {brandCatalog.filter(bc => bc.brand_id === sellableForm.brand_id).length === 0 && (
+                                    <div className="col-span-2 py-8 text-center text-slate-400 italic text-sm">
+                                        No hay productos en el catálogo conceptual de esta marca.<br/>
+                                        <Button variant="link" size="sm" onClick={() => setCatalogDialog(true)}>Gestionar Catálogo de Marca</Button>
+                                    </div>
+                                )}
+                            </div>
+                            <p className="text-xs text-emerald-600 font-semibold">{sellableForm.catalog_entry_ids.length} variantes nuevas seleccionadas</p>
+                        </div>
+
+                        <div className="flex gap-3 mt-6">
+                            <Button variant="outline" className="flex-1" onClick={() => setSellableDialog(false)}>Cancelar</Button>
+                            <Button onClick={handleSaveSellable} className="flex-[2] bg-emerald-500" disabled={sellableForm.catalog_entry_ids.length === 0}>
+                                Confirmar Vinculación ({sellableForm.catalog_entry_ids.length})
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={catalogDialog} onOpenChange={(val) => { setCatalogDialog(val); if (!val) { setProductSearch(""); } }}>
+                <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle>Añadir Productos al Catálogo</DialogTitle>
+                        <p className="text-sm text-slate-500">Selecciona los productos conceptuales que esta marca comercializa.</p>
+                    </DialogHeader>
+                    <div className="space-y-6 pt-4">
                         <div className="grid grid-cols-2 gap-4">
                             <div className="space-y-2">
                                 <Label>Marca</Label>
@@ -1243,13 +1717,13 @@ const AdminPage = () => {
                                 </Select>
                             </div>
                             <div className="space-y-2">
-                                <Label>Estado Conceptual</Label>
+                                <Label>Estado Inicial</Label>
                                 <Select value={catalogForm.status} onValueChange={v => setCatalogForm({ ...catalogForm, status: v })}>
                                     <SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
                                     <SelectContent>
-                                        <SelectItem value="planned">Planned (Planeado)</SelectItem>
-                                        <SelectItem value="active">Active (Activo)</SelectItem>
-                                        <SelectItem value="discontinued">Discontinued (Descatalogado)</SelectItem>
+                                        <SelectItem value="active">Activo</SelectItem>
+                                        <SelectItem value="planned">Planeado</SelectItem>
+                                        <SelectItem value="discontinued">Descatalogado</SelectItem>
                                     </SelectContent>
                                 </Select>
                             </div>
@@ -1257,90 +1731,56 @@ const AdminPage = () => {
 
                         {catalogForm.brand_id && (
                             <div className="space-y-3">
-                                <div className="flex items-center justify-between">
-                                    <Label>Productos para añadir al catálogo</Label>
-                                    <Input
-                                        placeholder="Filtrar productos..."
-                                        className="w-1/2 h-8"
-                                        value={productSearch}
-                                        onChange={e => setProductSearch(e.target.value)}
-                                    />
+                                <Label className="font-bold">Seleccionar Productos</Label>
+                                <div className="relative">
+                                    <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                    <Input placeholder="Buscar concepto (ej: Yogur)..." value={productSearch} onChange={e => setProductSearch(e.target.value)} className="pl-9 h-9" />
                                 </div>
-                                <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto bg-slate-50">
+                                <div className="border rounded-md p-3 grid grid-cols-2 gap-2 max-h-60 overflow-y-auto bg-slate-50 shadow-inner">
                                     {products
                                         .filter(p => p.name.toLowerCase().includes(productSearch.toLowerCase()))
                                         .map(p => {
-                                            const currentEntry = brandCatalog.find(bc => bc.brand_id === catalogForm.brand_id && bc.product_id === p.id);
+                                            const alreadyInCatalog = brandCatalog.some(bc => bc.brand_id === catalogForm.brand_id && bc.product_id === p.id);
                                             return (
-                                                <div key={p.id} className="flex items-center space-x-2 p-1 hover:bg-white rounded transition-colors">
+                                                <div key={p.id} className={`flex items-center space-x-2 p-2 rounded transition-colors border ${alreadyInCatalog ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white hover:border-emerald-200 shadow-sm'}`}>
                                                     <Checkbox
                                                         id={`cat-${p.id}`}
-                                                        checked={catalogForm.product_ids.includes(p.id)}
+                                                        disabled={alreadyInCatalog}
+                                                        checked={alreadyInCatalog || catalogForm.product_ids.includes(p.id)}
                                                         onCheckedChange={(checked) => {
                                                             if (checked) setCatalogForm({ ...catalogForm, product_ids: [...catalogForm.product_ids, p.id] });
                                                             else setCatalogForm({ ...catalogForm, product_ids: catalogForm.product_ids.filter(id => id !== p.id) });
                                                         }}
                                                     />
-                                                    <label htmlFor={`cat-${p.id}`} className="text-sm cursor-pointer flex-1">
-                                                        {p.name}
-                                                        {currentEntry && <span className="ml-1 text-[10px] text-blue-600 font-bold">({currentEntry.status})</span>}
-                                                    </label>
+                                                    <label htmlFor={`cat-${p.id}`} className="text-sm cursor-pointer flex-1 truncate">{p.name}</label>
+                                                    {alreadyInCatalog && <span className="text-[9px] text-slate-500 italic">Ya en catálogo</span>}
                                                 </div>
                                             );
                                         })
                                     }
                                 </div>
-                                <p className="text-xs text-slate-500">{catalogForm.product_ids.length} productos seleccionados</p>
                             </div>
                         )}
 
-                        <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500 mt-4">Actualizar Catálogo Masivo</Button>
-                    </div>
-                </DialogContent>
-            </Dialog>
-
-            <Dialog open={sellableEditDialog} onOpenChange={setSellableEditDialog}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Editar Vinculo Operativo</DialogTitle></DialogHeader>
-                    <div className="space-y-4 pt-4">
-                        <div className="space-y-2">
-                            <Label>Supermercado</Label>
-                            <Select value={sellableEditForm.supermarket_id} onValueChange={(v) => setSellableEditForm({ ...sellableEditForm, supermarket_id: v })}>
-                                <SelectTrigger><SelectValue placeholder="Seleccionar supermercado" /></SelectTrigger>
-                                <SelectContent>{supermarkets.map((s) => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Marca</Label>
-                            <Select value={sellableEditForm.brand_id} onValueChange={(v) => setSellableEditForm({ ...sellableEditForm, brand_id: v })}>
-                                <SelectTrigger><SelectValue placeholder="Seleccionar marca" /></SelectTrigger>
-                                <SelectContent>{brands.map((b) => <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Producto</Label>
-                            <Select value={sellableEditForm.product_id} onValueChange={(v) => setSellableEditForm({ ...sellableEditForm, product_id: v })}>
-                                <SelectTrigger><SelectValue placeholder="Seleccionar producto" /></SelectTrigger>
-                                <SelectContent>{products.map((p) => <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>)}</SelectContent>
-                            </Select>
-                        </div>
-                        <Button onClick={handleSaveSellableEdit} disabled={sellableEditSaving} className="w-full bg-emerald-500">
-                            {sellableEditSaving ? "Guardando..." : "Guardar Cambios"}
+                        <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500 mt-2 h-11 text-base font-semibold" disabled={catalogForm.product_ids.length === 0 || !catalogForm.brand_id}>
+                            Añadir {catalogForm.product_ids.length} productos
                         </Button>
                     </div>
                 </DialogContent>
             </Dialog>
 
+
             <Dialog open={catalogStatusDialog} onOpenChange={setCatalogStatusDialog}>
-                <DialogContent>
-                    <DialogHeader><DialogTitle>Editar Estado de Catalogo Marca</DialogTitle></DialogHeader>
-                    <div className="space-y-4 pt-4">
+                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                    <DialogHeader><DialogTitle>Configurar Entrada de Catálogo</DialogTitle></DialogHeader>
+                    <div className="space-y-5 pt-4">
                         <div className="rounded-lg border bg-slate-50 p-3 text-sm text-slate-600">
                             <p><strong>Marca:</strong> {catalogStatusForm.brand_name || "-"}</p>
-                            <p><strong>Producto:</strong> {catalogStatusForm.product_name || "-"}</p>
+                            <p><strong>Producto Base:</strong> {catalogStatusForm.product_name || "-"}</p>
                         </div>
+
                         <div className="space-y-2">
-                            <Label>Estado</Label>
+                            <Label>Estado Conceptual</Label>
                             <Select value={catalogStatusForm.status} onValueChange={(v) => setCatalogStatusForm({ ...catalogStatusForm, status: v })}>
                                 <SelectTrigger><SelectValue placeholder="Seleccionar estado" /></SelectTrigger>
                                 <SelectContent>
@@ -1350,7 +1790,128 @@ const AdminPage = () => {
                                 </SelectContent>
                             </Select>
                         </div>
-                        <Button onClick={handleSaveCatalogStatus} className="w-full bg-emerald-500">Guardar Estado</Button>
+
+                        <div className="space-y-3 pt-2 border-t">
+                            <Label className="text-sm font-bold">Atributos del Producto (Variante de Marca)</Label>
+                            <p className="text-xs text-slate-500">Define los valores específicos (sabor, formato, etc.) que tiene este producto base para esta marca.</p>
+
+                            {(() => {
+                                const baseProd = products.find(p => p.id === catalogStatusForm.product_id);
+                                if (!baseProd) return null;
+
+                                return baseProd.allowed_attribute_ids?.map(attrId => {
+                                    const attr = attributes.find(a => a.id === attrId);
+                                    return (
+                                        <div key={attrId} className="space-y-1">
+                                            <Label className="text-xs">{attr?.name}</Label>
+                                            {attr?.values && attr.values.length > 0 ? (
+                                                <Select
+                                                    value={catalogStatusForm.attribute_values?.[attrId] || "none"}
+                                                    onValueChange={v => setCatalogStatusForm({
+                                                        ...catalogStatusForm,
+                                                        attribute_values: { ...catalogStatusForm.attribute_values, [attrId]: v === "none" ? "" : v }
+                                                    })}
+                                                >
+                                                    <SelectTrigger size="sm"><SelectValue placeholder={`Seleccionar ${attr.name}`} /></SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">Seleccionar...</SelectItem>
+                                                        {attr.values.map(v => <SelectItem key={v} value={v}>{v}</SelectItem>)}
+                                                    </SelectContent>
+                                                </Select>
+                                            ) : (
+                                                <Input
+                                                    size="sm"
+                                                    value={catalogStatusForm.attribute_values?.[attrId] || ""}
+                                                    onChange={e => setCatalogStatusForm({
+                                                        ...catalogStatusForm,
+                                                        attribute_values: { ...catalogStatusForm.attribute_values, [attrId]: e.target.value }
+                                                    })}
+                                                    placeholder={`Valor de ${attr?.name}`}
+                                                />
+                                            )}
+                                        </div>
+                                    );
+                                });
+                            })()}
+
+                            {products.find(p => p.id === catalogStatusForm.product_id)?.allowed_attribute_ids?.length === 0 && (
+                                <p className="text-xs text-slate-400 italic">Este producto base no tiene atributos configurados.</p>
+                            )}
+                        </div>
+
+                        <Button onClick={handleSaveCatalogStatus} className="w-full bg-emerald-500">Guardar Cambios</Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={addSupermarketToCatalogDialog} onOpenChange={setAddSupermarketToCatalogDialog}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Añadir Supermercado al Catálogo</DialogTitle></DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <Label>Selecciona Supermercado</Label>
+                        <Select onValueChange={(v) => {
+                            setSellableForm({ ...sellableForm, supermarket_id: v, brand_id: "", catalog_entry_ids: [] });
+                            setAddSupermarketToCatalogDialog(false);
+                            setSupermarketBrandDialog(true);
+                        }}>
+                            <SelectTrigger><SelectValue placeholder="Supermercado..." /></SelectTrigger>
+                            <SelectContent>
+                                {supermarkets.map(s => <SelectItem key={s.id} value={s.id}>{s.name}</SelectItem>)}
+                            </SelectContent>
+                        </Select>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog open={addBrandGlobalDialog} onOpenChange={setAddBrandGlobalDialog}>
+                <DialogContent>
+                    <DialogHeader><DialogTitle>Gestionar Marcas en el Catálogo</DialogTitle></DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="relative">
+                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                            <Input placeholder="Buscar marca..." value={brandTableSearch} onChange={e => setBrandTableSearch(e.target.value)} className="pl-9" />
+                        </div>
+                        <div className="grid grid-cols-2 gap-2 max-h-60 overflow-y-auto p-1">
+                            {brands.filter(b => b.name.toLowerCase().includes(brandTableSearch.toLowerCase())).map(brand => {
+                                const isLinked = brandCatalog.some(bc => bc.brand_id === brand.id);
+                                return (
+                                    <div key={brand.id} className="relative group">
+                                        <Button
+                                            variant={isLinked ? "secondary" : "outline"}
+                                            className={`w-full justify-start h-auto py-2 px-3 pr-8 ${isLinked ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}`}
+                                            onClick={() => {
+                                                setCatalogForm({ ...catalogForm, brand_id: brand.id, product_ids: [], status: "active", attribute_combinations: [] });
+                                                setAddBrandGlobalDialog(false);
+                                                setCatalogDialog(true);
+                                            }}
+                                        >
+                                            <div className="flex flex-col items-start text-left">
+                                                <span className="font-medium text-sm">{brand.name}</span>
+                                                {isLinked && <span className="text-[10px] uppercase font-bold tracking-tighter">En catálogo</span>}
+                                            </div>
+                                        </Button>
+                                        {isLinked && (
+                                            <button
+                                                className="absolute right-2 top-1/2 -translate-y-1/2 text-rose-400 hover:text-rose-600 p-1 rounded-md hover:bg-rose-50 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                onClick={async (e) => {
+                                                    e.stopPropagation();
+                                                    if (window.confirm(`¿Seguro que quieres quitar la marca ${brand.name} del catálogo? Se borrarán todas sus variantes.`)) {
+                                                        const entries = brandCatalog.filter(bc => bc.brand_id === brand.id);
+                                                        try {
+                                                            await Promise.all(entries.map(e => axios.delete(`${API}/admin/brand-catalog/${e.id}`)));
+                                                            toast.success("Marca eliminada del catálogo");
+                                                            fetchAllData();
+                                                        } catch (err) { toast.error("Error al eliminar"); }
+                                                    }
+                                                }}
+                                            >
+                                                <Trash2 className="w-3.5 h-3.5" />
+                                            </button>
+                                        )}
+                                    </div>
+                                );
+                            })}
+                        </div>
                     </div>
                 </DialogContent>
             </Dialog>

@@ -8,6 +8,7 @@ class ShoppingListItemCreate(BaseModel):
     price: Optional[float] = None
     estimated_price: Optional[float] = None
     purchased: bool = False
+    attribute_values: Optional[dict] = None
 
 class ShoppingListCreate(BaseModel):
     name: str
@@ -27,6 +28,7 @@ class ShoppingListItemResponse(BaseModel):
     purchased: bool
     brand_id: Optional[str] = None
     brand_name: Optional[str] = None
+    attribute_values: Optional[dict] = None
 
 class ShoppingListResponse(BaseModel):
     id: str
