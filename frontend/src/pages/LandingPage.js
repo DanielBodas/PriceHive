@@ -30,25 +30,25 @@ const LandingPage = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-stone-50">
+        <div className="min-h-screen bg-white">
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-secondary border-b-4 border-primary">
-                <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-md border-b border-slate-200">
+                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-2 group">
-                        <Hexagon className="w-10 h-10 text-primary fill-primary/10 transition-transform group-hover:scale-110" strokeWidth={2.5} />
-                        <span className="text-2xl font-extrabold tracking-tight text-white font-heading uppercase tracking-widest">
-                            Enjambre
+                        <Hexagon className="w-8 h-8 text-primary fill-primary/10" strokeWidth={2.5} />
+                        <span className="text-xl font-bold tracking-tight text-slate-900 font-heading">
+                            Price<span className="text-primary">Hive</span>
                         </span>
                     </div>
                     <div className="flex items-center gap-4">
                         <Link to="/login">
-                            <Button variant="ghost" className="text-stone-300 hover:text-primary hover:bg-white/5 font-semibold" data-testid="login-nav-btn">
+                            <Button variant="ghost" className="text-slate-600 hover:text-primary font-semibold" data-testid="login-nav-btn">
                                 Iniciar Sesión
                             </Button>
                         </Link>
                         <Button 
                             onClick={loginWithGoogle}
-                            className="rounded-full px-6 font-bold shadow-lg"
+                            className="rounded-xl px-6 font-bold shadow-sm"
                             data-testid="register-nav-btn"
                         >
                             Empezar con Google
@@ -58,38 +58,38 @@ const LandingPage = () => {
             </nav>
 
             {/* Hero Section */}
-            <section className="relative pt-32 pb-24 px-6 overflow-hidden bg-white bee-stripe-bottom">
-                <div className="max-w-7xl mx-auto rounded-[2rem] p-8 lg:p-16 border border-stone-200 relative bg-stone-50/50">
+            <section className="relative pt-32 pb-24 px-6 overflow-hidden bg-slate-50">
+                <div className="max-w-7xl mx-auto relative">
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         <div className="animate-fade-in-up">
-                            <div className="inline-flex items-center gap-2 bg-secondary text-primary px-4 py-2 rounded-full text-sm font-bold mb-6 border border-primary/20">
-                                <Sparkles className="w-4 h-4" />
+                            <div className="inline-flex items-center gap-2 bg-slate-200 text-slate-700 px-4 py-2 rounded-full text-[10px] font-bold mb-6 tracking-widest uppercase">
+                                <Sparkles className="w-3 h-3 text-primary" />
                                 Inteligencia Colectiva de Precios
                             </div>
-                            <h1 className="text-5xl lg:text-7xl font-extrabold text-secondary leading-[1.1] mb-6 tracking-tight font-heading">
-                                Construye la mejor <span className="text-primary">colmena</span> de precios
+                            <h1 className="text-5xl lg:text-6xl font-bold text-slate-900 leading-[1.1] mb-6 tracking-tight font-heading">
+                                La transparencia de precios <span className="text-primary">definitiva</span>
                             </h1>
-                            <p className="text-lg lg:text-xl text-muted-foreground mb-8 max-w-lg leading-relaxed font-medium">
-                                No más falsas ofertas. Únete a miles de usuarios que colaboran para transparentar los precios de los supermercados.
+                            <p className="text-lg text-slate-600 mb-8 max-w-lg leading-relaxed">
+                                No más falsas ofertas. Únete a miles de usuarios que colaboran para compartir precios reales de supermercados en tiempo real.
                             </p>
                             <div className="flex flex-wrap gap-4">
                                 <Button 
                                     size="lg" 
-                                    className="rounded-full px-8 py-7 text-lg font-bold shadow-xl"
+                                    className="rounded-xl px-8 h-14 text-base font-bold shadow-md"
                                     data-testid="hero-cta-btn"
                                     onClick={loginWithGoogle}
                                 >
-                                    Unirse al Enjambre
+                                    Empezar a ahorrar
                                     <ArrowRight className="w-5 h-5 ml-2" />
                                 </Button>
                                 <Link to="/login">
                                     <Button 
                                         variant="outline" 
                                         size="lg" 
-                                        className="rounded-full px-8 py-6 text-lg border-stone-300 hover:bg-stone-100 text-secondary font-bold"
+                                        className="rounded-xl px-8 h-14 text-base border-slate-200 bg-white hover:bg-slate-50 text-slate-700 font-bold"
                                         data-testid="hero-login-btn"
                                     >
-                                        Ya tengo cuenta
+                                        Iniciar Sesión
                                     </Button>
                                 </Link>
                             </div>
@@ -119,34 +119,31 @@ const LandingPage = () => {
             </section>
 
             {/* Features Section */}
-            <section className="py-24 px-6 bg-stone-50 relative">
+            <section className="py-24 px-6 bg-white relative">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-16 animate-fade-in-up">
-                        <h2 className="text-4xl lg:text-5xl font-extrabold text-secondary mb-4 tracking-tight font-heading">
+                        <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4 tracking-tight font-heading">
                             Poder compartido, ahorro multiplicado
                         </h2>
-                        <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-medium">
-                            Enjambre utiliza tecnología de red para que nunca más vuelvas a pagar de más por un producto básico.
+                        <p className="text-slate-500 max-w-2xl mx-auto">
+                            PriceHive utiliza datos en tiempo real aportados por la comunidad para que nunca más vuelvas a pagar de más.
                         </p>
                     </div>
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {features.map((feature, index) => (
                             <div 
                                 key={index}
-                                className={`bg-white rounded-[2rem] p-8 border-2 border-stone-200 card-interactive group hover:border-primary transition-all duration-300 animate-fade-in-up shadow-sm`}
+                                className={`bg-slate-50 rounded-2xl p-8 border border-slate-100 hover:border-primary/20 hover:shadow-xl hover:shadow-primary/5 transition-all duration-300 animate-fade-in-up`}
                                 style={{ animationDelay: `${index * 100}ms` }}
                                 data-testid={`feature-card-${index}`}
                             >
-                                <div className="relative mb-6">
-                                    <Hexagon className="w-14 h-14 text-primary fill-primary/10 transition-transform group-hover:rotate-12" strokeWidth={1.5} />
-                                    <div className="absolute inset-0 flex items-center justify-center text-primary">
-                                        {feature.icon}
-                                    </div>
+                                <div className="w-12 h-12 rounded-xl bg-white border border-slate-100 flex items-center justify-center text-primary mb-6 shadow-sm">
+                                    {feature.icon}
                                 </div>
-                                <h3 className="text-xl font-bold text-secondary mb-3 font-heading">
+                                <h3 className="text-lg font-bold text-slate-900 mb-3 font-heading">
                                     {feature.title}
                                 </h3>
-                                <p className="text-muted-foreground text-sm leading-relaxed font-medium">
+                                <p className="text-slate-500 text-sm leading-relaxed">
                                     {feature.description}
                                 </p>
                             </div>
@@ -156,35 +153,27 @@ const LandingPage = () => {
             </section>
 
             {/* How it works */}
-            <section className="py-24 px-6 bg-white bee-stripe border-y-4 border-secondary">
+            <section className="py-24 px-6 bg-slate-50">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-20">
-                        <h2 className="text-4xl lg:text-5xl font-extrabold text-secondary mb-4 tracking-tight font-heading">
-                            El Ciclo Enjambre
+                        <h2 className="text-3xl lg:text-4xl font-bold text-slate-900 mb-4 tracking-tight font-heading">
+                            Cómo funciona PriceHive
                         </h2>
                     </div>
-                    <div className="grid md:grid-cols-3 gap-12 relative">
-                        {/* Connecting Line (Desktop) */}
-                        <div className="hidden md:block absolute top-12 left-1/4 right-1/4 h-px border-t border-dashed border-primary/30 -z-10" />
-
+                    <div className="grid md:grid-cols-3 gap-12">
                         {[
-                            { step: "01", title: "Planificación", desc: "Añade productos a tu lista inteligente y recibe estimaciones basadas en datos locales.", icon: <ShoppingCart className="w-5 h-5" /> },
-                            { step: "02", title: "Colaboración", desc: "Registra precios durante tu compra. Cada dato fortalece la red de información.", icon: <Globe className="w-5 h-5" /> },
-                            { step: "03", title: "Recompensa", desc: "Gana puntos, sube en la jerarquía del enjambre y ayuda a miles a ahorrar.", icon: <Sparkles className="w-5 h-5" /> }
+                            { step: "01", title: "Planificación", desc: "Añade productos a tu lista inteligente y recibe estimaciones basadas en datos reales.", icon: <ShoppingCart className="w-5 h-5" /> },
+                            { step: "02", title: "Colaboración", desc: "Registra precios durante tu compra de forma rápida. Tu aporte ayuda a toda la comunidad.", icon: <Globe className="w-5 h-5" /> },
+                            { step: "03", title: "Recompensa", desc: "Gana puntos por cada aporte, sube de nivel y desbloquea análisis avanzados.", icon: <Sparkles className="w-5 h-5" /> }
                         ].map((item, index) => (
-                            <div key={index} className="text-center animate-fade-in-up group" style={{ animationDelay: `${index * 150}ms` }}>
-                                <div className="relative inline-block mb-6">
-                                    <div className="w-24 h-24 rounded-[1.5rem] bg-stone-50 border-2 border-stone-200 shadow-sm flex items-center justify-center text-5xl font-black text-primary group-hover:scale-105 transition-all duration-300">
-                                        {item.step}
-                                    </div>
-                                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-secondary text-primary flex items-center justify-center shadow-lg border border-primary">
-                                        {item.icon}
-                                    </div>
+                            <div key={index} className="bg-white p-10 rounded-2xl border border-slate-100 shadow-sm animate-fade-in-up" style={{ animationDelay: `${index * 150}ms` }}>
+                                <div className="w-12 h-12 rounded-full bg-primary text-white flex items-center justify-center font-bold mb-6">
+                                    {item.step}
                                 </div>
-                                <h3 className="text-2xl font-bold text-secondary mb-3 font-heading">
+                                <h3 className="text-xl font-bold text-slate-900 mb-3 font-heading">
                                     {item.title}
                                 </h3>
-                                <p className="text-muted-foreground font-semibold leading-relaxed">{item.desc}</p>
+                                <p className="text-slate-500 text-sm leading-relaxed">{item.desc}</p>
                             </div>
                         ))}
                     </div>
@@ -192,42 +181,40 @@ const LandingPage = () => {
             </section>
 
             {/* CTA Section */}
-            <section className="py-32 px-6 relative overflow-hidden bg-secondary border-t-8 border-primary">
-                <div className="absolute inset-0 bee-stripe opacity-5 -z-10" />
-
+            <section className="py-24 px-6 bg-primary">
                 <div className="max-w-4xl mx-auto text-center animate-fade-in-up">
-                    <h2 className="text-4xl lg:text-6xl font-extrabold text-white mb-6 tracking-tight font-heading">
-                        ¿Listo para unirte al <span className="text-primary">enjambre</span>?
+                    <h2 className="text-4xl lg:text-5xl font-bold text-white mb-6 tracking-tight font-heading">
+                        ¿Listo para empezar a ahorrar?
                     </h2>
-                    <p className="text-stone-400 text-xl mb-10 max-w-2xl mx-auto font-bold uppercase tracking-wider">
-                        Democratizando el acceso a la información de precios.
+                    <p className="text-white/80 text-lg mb-10 max-w-2xl mx-auto">
+                        Únete a la comunidad de PriceHive y toma el control de tus gastos hoy mismo.
                     </p>
                     <Button 
                         size="lg" 
-                        className="rounded-full px-12 py-8 text-xl font-bold shadow-2xl"
+                        className="rounded-xl px-12 h-16 text-lg font-bold bg-white text-primary hover:bg-slate-50 shadow-xl"
                         data-testid="cta-register-btn"
                         onClick={loginWithGoogle}
                     >
-                        Empezar Ahora Gratis
+                        Crear cuenta gratis
                         <ArrowRight className="w-6 h-6 ml-3" />
                     </Button>
                 </div>
             </section>
 
             {/* Footer */}
-            <footer className="bg-stone-50 text-muted-foreground py-16 px-6 border-t border-border">
+            <footer className="bg-white text-slate-500 py-16 px-6 border-t border-slate-100">
                 <div className="max-w-7xl mx-auto grid md:grid-cols-4 gap-12 mb-12">
                     <div className="col-span-2">
                         <div className="flex items-center gap-2 mb-6">
-                            <Hexagon className="w-8 h-8 text-primary fill-primary/10" strokeWidth={2.5} />
-                            <span className="text-xl font-extrabold text-secondary uppercase tracking-widest">Enjambre</span>
+                            <Hexagon className="w-6 h-6 text-primary fill-primary/10" strokeWidth={2.5} />
+                            <span className="text-lg font-bold text-slate-900">PriceHive</span>
                         </div>
-                        <p className="max-w-xs font-medium leading-relaxed">
-                            La plataforma líder en inteligencia colectiva de precios. Empoderando al consumidor a través de la colaboración masiva.
+                        <p className="max-w-xs text-sm leading-relaxed">
+                            La plataforma líder en transparencia de precios para el consumidor moderno.
                         </p>
                     </div>
                     <div>
-                        <h4 className="text-secondary font-bold mb-6">Producto</h4>
+                        <h4 className="text-slate-900 font-bold mb-6">Producto</h4>
                         <ul className="space-y-4 font-medium text-sm">
                             <li className="hover:text-primary cursor-pointer transition-colors">Características</li>
                             <li className="hover:text-primary cursor-pointer transition-colors">Casos de Uso</li>
@@ -235,16 +222,16 @@ const LandingPage = () => {
                         </ul>
                     </div>
                     <div>
-                        <h4 className="text-secondary font-bold mb-6">Comunidad</h4>
-                        <ul className="space-y-4 font-medium text-sm">
-                            <li className="hover:text-primary cursor-pointer transition-colors">Blog del Enjambre</li>
+                        <h4 className="text-slate-900 font-bold mb-6">Comunidad</h4>
+                        <ul className="space-y-4 text-sm">
+                            <li className="hover:text-primary cursor-pointer transition-colors">Blog</li>
                             <li className="hover:text-primary cursor-pointer transition-colors">Guía del Usuario</li>
                             <li className="hover:text-primary cursor-pointer transition-colors">Soporte</li>
                         </ul>
                     </div>
                 </div>
-                <div className="max-w-7xl mx-auto pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
-                    <p className="text-sm font-medium">© 2024 Enjambre. Inteligencia Colectiva para el Ahorro Real.</p>
+                <div className="max-w-7xl mx-auto pt-8 border-t border-slate-100 flex flex-col md:flex-row items-center justify-between gap-4">
+                    <p className="text-xs font-medium text-slate-400">© 2024 PriceHive. Todos los derechos reservados.</p>
                     <div className="flex gap-8 text-sm font-medium">
                         <span className="hover:text-primary cursor-pointer transition-colors">Privacidad</span>
                         <span className="hover:text-primary cursor-pointer transition-colors">Términos</span>

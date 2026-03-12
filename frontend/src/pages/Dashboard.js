@@ -60,7 +60,7 @@ const Dashboard = () => {
             bg: "bg-secondary/5"
         },
         { 
-            label: "Enjambre",
+            label: "Comunidad",
             value: stats?.total_users || 0, 
             icon: <Users className="w-6 h-6" />,
             color: "text-secondary",
@@ -74,10 +74,10 @@ const Dashboard = () => {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
-                        <h1 className="text-4xl font-extrabold text-secondary tracking-tight font-heading">
+                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-heading">
                             Dashboard
                         </h1>
-                        <p className="text-muted-foreground font-medium mt-1">Estado actual del ecosistema Enjambre</p>
+                        <p className="text-slate-500 font-medium mt-1">Estado actual del ecosistema PriceHive</p>
                     </div>
                     <div className="flex gap-3">
                         <Link to="/shopping-list">
@@ -121,7 +121,7 @@ const Dashboard = () => {
                             <CardTitle className="flex items-center justify-between text-xl font-bold text-secondary font-heading">
                                 <div className="flex items-center gap-2">
                                     <TrendingUp className="w-5 h-5 text-primary" />
-                                    Actividad del Enjambre
+                                    Actividad de la Comunidad
                                 </div>
                                 <Button variant="ghost" size="sm" className="text-primary hover:text-primary hover:bg-primary/5 font-bold">
                                     Ver todo
@@ -138,11 +138,8 @@ const Dashboard = () => {
                                         <div key={index} className="p-5 hover:bg-stone-50/80 transition-colors group">
                                             <div className="flex items-center justify-between">
                                                 <div className="flex items-center gap-4">
-                                                    <div className="relative">
-                                                        <Hexagon className="w-12 h-12 text-primary/20 fill-primary/5 transition-transform group-hover:rotate-12" strokeWidth={1.5} />
-                                                        <div className="absolute inset-0 flex items-center justify-center text-primary">
-                                                            <Package className="w-5 h-5" />
-                                                        </div>
+                                        <div className="w-12 h-12 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center text-primary">
+                                            <Package className="w-5 h-5" />
                                                     </div>
                                                     <div>
                                                         <p className="font-bold text-secondary text-lg">{activity.product_name}</p>
@@ -168,7 +165,7 @@ const Dashboard = () => {
                                         <Hexagon className="w-10 h-10 text-muted-foreground/30" />
                                     </div>
                                     <p className="text-secondary font-bold text-lg">No hay actividad reciente</p>
-                                    <p className="text-muted-foreground font-medium mt-1">Los precios registrados por el enjambre aparecerán aquí</p>
+                                    <p className="text-muted-foreground font-medium mt-1">Los precios registrados por la comunidad aparecerán aquí</p>
                                 </div>
                             )}
                         </CardContent>
@@ -176,14 +173,11 @@ const Dashboard = () => {
 
                     {/* Quick Tips / Sidebar */}
                     <div className="space-y-6">
-                        <Card className="border-primary/20 bg-primary/5 overflow-hidden relative">
-                            <div className="absolute -top-6 -right-6">
-                                <Hexagon className="w-24 h-24 text-primary/10 fill-primary/5 rotate-12" strokeWidth={1} />
-                            </div>
+                        <Card className="border-slate-200 bg-white overflow-hidden relative">
                             <CardContent className="p-6 relative">
-                                <h3 className="text-primary font-black text-lg mb-2 uppercase tracking-tight">Tip de Ahorro</h3>
-                                <p className="text-primary/80 font-bold leading-relaxed">
-                                    Los precios de los productos básicos suelen fluctuar más los martes. ¡Atento al enjambre!
+                                <h3 className="text-primary font-bold text-sm mb-2 uppercase tracking-tight">Tip de Ahorro</h3>
+                                <p className="text-slate-600 font-medium leading-relaxed text-sm">
+                                    Los precios de los productos básicos suelen fluctuar más los martes. ¡Atento a los cambios!
                                 </p>
                             </CardContent>
                         </Card>
@@ -198,10 +192,10 @@ const Dashboard = () => {
                                     <span className="font-black text-primary">12</span>
                                 </div>
                                 <div className="flex items-center justify-between p-3 bg-stone-50 rounded-xl border border-border/40">
-                                    <span className="text-sm font-bold text-muted-foreground">Ranking enjambre</span>
+                                    <span className="text-sm font-bold text-muted-foreground">Ranking comunidad</span>
                                     <span className="font-black text-secondary">#432</span>
                                 </div>
-                                <Button className="w-full bg-secondary hover:bg-secondary/90 text-white font-bold rounded-xl py-6 btn-lift">
+                                <Button className="w-full bg-slate-900 hover:bg-slate-800 text-white font-bold rounded-xl py-6">
                                     Ver Perfil Completo
                                 </Button>
                             </CardContent>

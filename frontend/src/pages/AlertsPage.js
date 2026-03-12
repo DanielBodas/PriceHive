@@ -109,10 +109,10 @@ const AlertsPage = () => {
                 {/* Header */}
                 <div className="flex flex-col md:flex-row md:items-end justify-between gap-4">
                     <div>
-                        <h1 className="text-4xl font-extrabold text-secondary tracking-tight font-heading">
-                            Alertas del Enjambre
+                        <h1 className="text-3xl font-bold text-slate-900 tracking-tight font-heading">
+                            Alertas de Precio
                         </h1>
-                        <p className="text-muted-foreground font-medium mt-1">Vigilancia proactiva de precios en tiempo real</p>
+                        <p className="text-slate-500 font-medium mt-1">Vigilancia proactiva de precios en tiempo real</p>
                     </div>
                     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>

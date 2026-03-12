@@ -155,7 +155,7 @@ const FeedPage = () => {
                 {/* Header */}
                 <div>
                     <h1 className="text-4xl font-extrabold text-secondary tracking-tight font-heading">
-                        Muro del Enjambre
+                        Muro de la Comunidad
                     </h1>
                     <p className="text-muted-foreground font-medium mt-1">Comparte y descubre inteligencia colectiva</p>
                 </div>

@@ -49,7 +49,7 @@ const AuthCallback = () => {
                         <div className="w-4 h-4 bg-primary rounded-full animate-ping" />
                     </div>
                 </div>
-                <h2 className="text-2xl font-extrabold text-secondary tracking-tight font-heading">Entrando al Enjambre</h2>
+                <h2 className="text-2xl font-extrabold text-secondary tracking-tight font-heading">Entrando a PriceHive</h2>
                 <p className="text-muted-foreground font-medium mt-2">Sincronizando precios en tiempo real...</p>
             </div>
         </div>

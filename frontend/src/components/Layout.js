@@ -74,20 +74,17 @@ const Layout = ({ children }) => {
     return (
         <div className="min-h-screen bg-background">
             {/* Top Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-secondary border-b border-white/10 shadow-lg">
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm">
                 <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
                     <div className="flex items-center justify-between h-16">
                         {/* Logo */}
                         <div className="flex items-center gap-2 flex-shrink-0">
                             <Link to="/dashboard" className="flex items-center gap-2 group">
                                 <div className="relative flex items-center justify-center transition-transform group-hover:scale-105">
-                                    <Hexagon className="w-9 h-9 text-primary fill-primary/20" strokeWidth={2.5} />
-                                    <div className="absolute inset-0 flex items-center justify-center">
-                                        <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-                                    </div>
+                                    <Hexagon className="w-8 h-8 text-primary fill-primary/10" strokeWidth={2.5} />
                                 </div>
-                                <span className="text-xl font-extrabold tracking-tight text-white hidden sm:block font-heading uppercase tracking-widest">
-                                    Enjambre
+                                <span className="text-xl font-bold tracking-tight text-slate-900 hidden sm:block font-heading">
+                                    Price<span className="text-primary">Hive</span>
                                 </span>
                             </Link>
                         </div>
@@ -106,16 +103,16 @@ const Layout = ({ children }) => {
                                                     <Button
                                                         variant={isActive ? "default" : "ghost"}
                                                         size="sm"
-                                                        className={`relative gap-2 transition-all btn-lift ${isActive
+                                                        className={`relative gap-2 transition-all ${isActive
                                                                 ? "bg-primary text-white hover:bg-primary/90 shadow-sm"
-                                                                : "text-white/70 hover:text-primary hover:bg-white/5"
+                                                                : "text-slate-600 hover:text-primary hover:bg-slate-50"
                                                             }`}
                                                         data-testid={`nav-${item.path.slice(1)}`}
                                                     >
                                                         <span className="relative">
                                                             {item.icon}
                                                             {hasNotification && (
-                                                                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500 border-2 border-secondary"></span>
+                                                                <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-rose-500 border-2 border-white"></span>
                                                             )}
                                                         </span>
                                                         {/* Texto visible solo en pantallas grandes (lg+) */}
@@ -147,9 +144,9 @@ const Layout = ({ children }) => {
                         {/* Right Side - User Info */}
                         <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
                             {/* Points Badge */}
-                            <div className="hidden sm:flex items-center gap-1 px-2 lg:px-3 py-1.5 bg-white/5 rounded-full border border-white/10">
+                            <div className="hidden sm:flex items-center gap-1 px-2 lg:px-3 py-1.5 bg-slate-50 rounded-full border border-slate-200">
                                 <Star className="w-4 h-4 text-primary fill-primary flex-shrink-0" />
-                                <span className="font-mono text-xs lg:text-sm font-bold text-primary">
+                                <span className="font-mono text-xs lg:text-sm font-bold text-slate-700">
                                     {user?.points || 0}
                                 </span>
                             </div>
@@ -157,18 +154,18 @@ const Layout = ({ children }) => {
                             {/* User Dropdown */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="flex items-center gap-1.5 lg:gap-2 px-1.5 lg:px-2 hover:bg-white/5">
-                                        <Avatar className="w-7 h-7 lg:w-8 lg:h-8 border border-white/10">
+                                    <Button variant="ghost" size="sm" className="flex items-center gap-1.5 lg:gap-2 px-1.5 lg:px-2 hover:bg-slate-50">
+                                        <Avatar className="w-7 h-7 lg:w-8 lg:h-8 border border-slate-200">
                                             <AvatarImage src={user?.picture} />
-                                            <AvatarFallback className="bg-primary/10 text-primary text-xs lg:text-sm font-bold">
+                                            <AvatarFallback className="bg-slate-100 text-primary text-xs lg:text-sm font-bold">
                                                 {user?.name?.charAt(0).toUpperCase()}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <span className="hidden xl:block text-sm font-semibold text-white max-w-[120px] truncate">
+                                        <span className="hidden xl:block text-sm font-semibold text-slate-700 max-w-[120px] truncate">
                                             {user?.name}
                                         </span>
                                         {user?.role === 'admin' && (
-                                            <span className="hidden xl:inline px-2 py-0.5 bg-primary text-white text-[10px] uppercase tracking-wider font-bold rounded-md">
+                                            <span className="hidden xl:inline px-2 py-0.5 bg-slate-100 text-slate-600 text-[10px] uppercase tracking-wider font-bold rounded-md">
                                                 Admin
                                             </span>
                                         )}
@@ -211,7 +208,7 @@ const Layout = ({ children }) => {
                             <Button
                                 variant="ghost"
                                 size="icon"
-                                className="md:hidden h-9 w-9 text-white hover:bg-white/5"
+                                className="md:hidden h-9 w-9 text-slate-600 hover:bg-slate-50"
                                 onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
                                 data-testid="mobile-menu-btn"
                             >
@@ -349,7 +346,7 @@ const Layout = ({ children }) => {
             </nav>
 
             {/* Main Content */}
-            <main className="pt-16 min-h-screen hive-pattern bee-stripe">
+            <main className="pt-16 min-h-screen bg-slate-50">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
                     {children}
                 </div>

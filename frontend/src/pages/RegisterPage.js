@@ -35,23 +35,19 @@ const RegisterPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-background hive-pattern flex items-center justify-center px-6 py-12">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6 py-12">
             <div className="w-full max-w-md animate-fade-in-up">
-                <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8 transition-colors font-bold group">
+                <Link to="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-primary mb-8 transition-colors font-bold group">
                     <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                     Volver al inicio
                 </Link>
                 
-                <Card className="border-border/50 shadow-2xl rounded-[2.5rem] overflow-hidden">
-                    <div className="h-2 bg-primary" />
+                <Card className="border-slate-200 shadow-xl rounded-2xl overflow-hidden bg-white">
                     <CardHeader className="text-center pt-10 pb-2">
-                        <div className="relative w-20 h-20 mx-auto mb-6">
-                            <Hexagon className="w-20 h-20 text-primary fill-primary/10" strokeWidth={1.5} />
-                            <div className="absolute inset-0 flex items-center justify-center">
-                                <Sparkles className="w-8 h-8 text-primary" />
-                            </div>
+                        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <Sparkles className="w-8 h-8 text-primary" strokeWidth={2.5} />
                         </div>
-                        <CardTitle className="text-3xl font-extrabold text-secondary tracking-tight font-heading">
+                        <CardTitle className="text-2xl font-bold text-slate-900 tracking-tight font-heading">
                             Crear Cuenta
                         </CardTitle>
                         <CardDescription className="text-muted-foreground font-medium mt-2">
@@ -102,10 +98,10 @@ const RegisterPage = () => {
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full h-14 rounded-2xl font-bold btn-lift shadow-xl shadow-primary/20 text-lg"
+                                className="w-full h-12 rounded-xl font-bold text-base"
                                 data-testid="register-submit-btn"
                             >
-                                {loading ? "Creando perfil..." : "Unirse al Enjambre"}
+                                {loading ? "Creando perfil..." : "Crear Cuenta"}
                             </Button>
                         </form>
                         <div className="mt-8 text-center">

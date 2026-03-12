@@ -95,7 +95,7 @@ const ProfilePage = () => {
                     <h1 className="text-4xl font-extrabold text-secondary tracking-tight font-heading">
                         Mi Perfil
                     </h1>
-                    <p className="text-muted-foreground font-medium mt-1">Gestiona tu identidad y contribuciones al enjambre</p>
+                    <p className="text-muted-foreground font-medium mt-1">Gestiona tu identidad y tus contribuciones a la comunidad</p>
                 </div>
 
                 <div className="grid lg:grid-cols-3 gap-8">
@@ -137,7 +137,7 @@ const ProfilePage = () => {
                                         {pointsData?.points || user?.points || 0}
                                     </span>
                                 </div>
-                                <p className="text-xs font-black text-primary uppercase tracking-[0.2em]">Puntos de Enjambre</p>
+                                <p className="text-xs font-black text-primary uppercase tracking-[0.2em]">Puntos de Colmena</p>
                                 {pointsData?.rank && (
                                     <div className="flex items-center justify-center gap-2 mt-4 pt-4 border-t border-border/40">
                                         <Trophy className="w-4 h-4 text-amber-500" />
@@ -224,7 +224,7 @@ const ProfilePage = () => {
                                 ) : (
                                     <div className="p-12 text-center">
                                         <Star className="w-12 h-12 text-muted-foreground/20 mx-auto mb-4" />
-                                        <p className="text-muted-foreground font-medium">Aún no has aportado datos al enjambre</p>
+                                        <p className="text-muted-foreground font-medium">Aún no has aportado datos a la comunidad</p>
                                     </div>
                                 )}
                             </CardContent>
@@ -289,7 +289,7 @@ const ProfilePage = () => {
                         ) : (
                             <div className="p-16 text-center">
                                 <BellOff className="w-16 h-16 text-muted-foreground/20 mx-auto mb-4" />
-                                <p className="text-muted-foreground font-bold">Silencio en el enjambre. No hay notificaciones.</p>
+                                <p className="text-muted-foreground font-bold">Silencio en la colmena. No hay notificaciones.</p>
                             </div>
                         )}
                     </CardContent>

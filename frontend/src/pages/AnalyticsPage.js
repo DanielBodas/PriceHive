@@ -337,7 +337,7 @@ const AnalyticsPage = () => {
                     <h1 className="text-4xl font-extrabold text-secondary tracking-tight font-heading">
                         Analisis de Precios
                     </h1>
-                    <p className="text-muted-foreground font-medium mt-1">Explora evolucion, comparativas y oportunidades del enjambre</p>
+                    <p className="text-muted-foreground font-medium mt-1">Explora evolución, comparativas y oportunidades de la comunidad</p>
                 </div>
 
                 {/* Search & Filters */}
@@ -827,11 +827,11 @@ const AnalyticsPage = () => {
                         <CardContent className="space-y-3">
                             {selectedVsBest && selectedSupermarketRow && (
                                 <div className="rounded-xl border border-border/60 p-4 bg-stone-50 text-sm font-medium text-secondary">
-                                    En <span className="font-bold">{selectedSupermarketRow.supermarket_name}</span>, el producto esta{" "}
-                                    <span className={selectedVsBest.delta > 0 ? "text-rose-600 font-black" : "text-primary font-black"}>
+                                    En <span className="font-bold">{selectedSupermarketRow.supermarket_name}</span>, el producto está{" "}
+                                    <span className={selectedVsBest.delta > 0 ? "text-rose-600 font-bold" : "text-primary font-bold"}>
                                         {selectedVsBest.delta > 0 ? "+" : ""}{formatCurrency(selectedVsBest.delta)}
                                     </span>{" "}
-                                    frente al mejor precio disponible detectado por el enjambre.
+                                    frente al mejor precio disponible detectado por la comunidad.
                                 </div>
                             )}
 

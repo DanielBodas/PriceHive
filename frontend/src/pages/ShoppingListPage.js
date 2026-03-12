@@ -935,7 +935,7 @@ const ShoppingListPage = () => {
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-primary font-heading">
                             <CheckCircle2 className="w-5 h-5" />
-                            Subir Precios al Enjambre
+                            Subir Precios a la Comunidad
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
@@ -944,7 +944,7 @@ const ShoppingListPage = () => {
                             <div className="text-sm text-secondary space-y-1.5 font-medium">
                                 <p className="font-bold text-primary">Confirma antes de subir</p>
                                 <p>Se enviarán los precios de los productos <strong>marcados como comprados</strong> con precio real registrado.</p>
-                                <p>Estos datos ayudarán al enjambre a tener estimaciones más precisas. ¡Gracias por contribuir!</p>
+                                <p>Estos datos ayudarán a la comunidad a tener estimaciones más precisas. ¡Gracias por contribuir!</p>
                             </div>
                         </div>
                         <div className="bg-stone-50 border border-border rounded-xl p-4">
