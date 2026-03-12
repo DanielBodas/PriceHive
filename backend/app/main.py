@@ -17,11 +17,12 @@ app = FastAPI(
 )
 
 # CORS Middleware
-origins = [
-    "http://localhost:3000",
-    "http://127.0.0.1:3000",
-    settings.FRONTEND_URL,
-]
+origins = [settings.FRONTEND_URL]
+if settings.ENVIRONMENT == "development":
+    origins.extend([
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+    ])
 
 app.add_middleware(
     CORSMiddleware,

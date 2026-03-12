@@ -52,9 +52,17 @@ Este documento detalla los hallazgos de la auditoría de seguridad realizada sob
 *   **Tipo de vulnerabilidad**: Configuración de Seguridad Incorrecta
 *   **Nivel de riesgo**: Bajo/Medio
 *   **Archivo**: `backend/app/main.py`
-*   **Explicación técnica**: Se permite explícitamente `localhost:3000` y se aceptan todos los headers.
-*   **Cómo podría explotarse**: Facilita ataques de CSRF o acceso no autorizado desde entornos de desarrollo maliciosos si el usuario tiene una pestaña abierta en un sitio atacante.
-*   **Cómo solucionarlo**: Definir orígenes exactos y restringir headers en producción.
+*   **Explicación técnica**: Se permitía explícitamente `localhost:3000` en todos los entornos.
+*   **Cómo podría explotarse**: Facilita ataques de CSRF o acceso no autorizado desde entornos de desarrollo maliciosos.
+*   **Estado**: **CORREGIDO** (Localhost solo se permite si `ENVIRONMENT=development`).
+
+### 1.6 Exposición de Hash de Contraseñas
+*   **Tipo de vulnerabilidad**: Exposición de Datos Sensibles
+*   **Nivel de riesgo**: Alto
+*   **Archivo**: `backend/app/core/auth.py` y `backend/app/routers/auth.py`
+*   **Explicación técnica**: El sistema recuperaba el documento completo del usuario, incluyendo el hash `bcrypt` de la contraseña, y lo enviaba al frontend o lo mantenía en memoria de sesión.
+*   **Cómo podría explotarse**: Si un atacante logra capturar el objeto `user` (vía logs, sniffing si no hay TLS, o comprometiendo el estado del frontend), obtiene hashes que pueden ser atacados por fuerza bruta offline.
+*   **Estado**: **CORREGIDO** (Se utiliza proyección de MongoDB para excluir el campo `password` en recuperaciones estándar).
 
 ---
 
