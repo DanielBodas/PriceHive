@@ -30,25 +30,25 @@ const LandingPage = () => {
     ];
 
     return (
-        <div className="min-h-screen bg-background">
+        <div className="min-h-screen bg-stone-50">
             {/* Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+            <nav className="fixed top-0 left-0 right-0 z-50 bg-secondary border-b-4 border-primary">
+                <div className="max-w-7xl mx-auto px-6 py-3 flex items-center justify-between">
                     <div className="flex items-center gap-2 group">
                         <Hexagon className="w-10 h-10 text-primary fill-primary/10 transition-transform group-hover:scale-110" strokeWidth={2.5} />
-                        <span className="text-2xl font-extrabold tracking-tight text-secondary font-heading">
-                            Price<span className="text-primary">Hive</span>
+                        <span className="text-2xl font-extrabold tracking-tight text-white font-heading uppercase tracking-widest">
+                            Enjambre
                         </span>
                     </div>
                     <div className="flex items-center gap-4">
                         <Link to="/login">
-                            <Button variant="ghost" className="text-muted-foreground hover:text-primary hover:bg-primary/5 font-semibold" data-testid="login-nav-btn">
+                            <Button variant="ghost" className="text-stone-300 hover:text-primary hover:bg-white/5 font-semibold" data-testid="login-nav-btn">
                                 Iniciar Sesión
                             </Button>
                         </Link>
                         <Button 
                             onClick={loginWithGoogle}
-                            className="bg-primary hover:bg-primary/90 text-white rounded-full px-6 font-bold btn-lift shadow-lg shadow-primary/20"
+                            className="rounded-full px-6 font-bold shadow-lg"
                             data-testid="register-nav-btn"
                         >
                             Empezar con Google
@@ -58,15 +58,11 @@ const LandingPage = () => {
             </nav>
 
             {/* Hero Section */}
-            <section className="relative pt-32 pb-24 px-6 overflow-hidden">
-                {/* Visual Ornaments */}
-                <div className="absolute top-0 right-0 -translate-y-1/2 translate-x-1/3 w-[600px] h-[600px] bg-primary/5 rounded-full blur-3xl -z-10" />
-                <div className="absolute bottom-0 left-0 translate-y-1/2 -translate-x-1/3 w-[400px] h-[400px] bg-amber-200/20 rounded-full blur-3xl -z-10" />
-
-                <div className="max-w-7xl mx-auto hive-pattern rounded-[2rem] p-8 lg:p-16 border border-primary/5 relative">
+            <section className="relative pt-32 pb-24 px-6 overflow-hidden bg-white bee-stripe-bottom">
+                <div className="max-w-7xl mx-auto rounded-[2rem] p-8 lg:p-16 border border-stone-200 relative bg-stone-50/50">
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         <div className="animate-fade-in-up">
-                            <div className="inline-flex items-center gap-2 bg-primary/10 text-primary px-4 py-2 rounded-full text-sm font-bold mb-6 border border-primary/20">
+                            <div className="inline-flex items-center gap-2 bg-secondary text-primary px-4 py-2 rounded-full text-sm font-bold mb-6 border border-primary/20">
                                 <Sparkles className="w-4 h-4" />
                                 Inteligencia Colectiva de Precios
                             </div>
@@ -79,7 +75,7 @@ const LandingPage = () => {
                             <div className="flex flex-wrap gap-4">
                                 <Button 
                                     size="lg" 
-                                    className="bg-primary hover:bg-primary/90 text-white rounded-full px-8 py-7 text-lg font-bold btn-lift shadow-xl shadow-primary/30"
+                                    className="rounded-full px-8 py-7 text-lg font-bold shadow-xl"
                                     data-testid="hero-cta-btn"
                                     onClick={loginWithGoogle}
                                 >
@@ -90,7 +86,7 @@ const LandingPage = () => {
                                     <Button 
                                         variant="outline" 
                                         size="lg" 
-                                        className="rounded-full px-8 py-6 text-lg border-slate-300 hover:bg-slate-100"
+                                        className="rounded-full px-8 py-6 text-lg border-stone-300 hover:bg-stone-100 text-secondary font-bold"
                                         data-testid="hero-login-btn"
                                     >
                                         Ya tengo cuenta
@@ -123,21 +119,21 @@ const LandingPage = () => {
             </section>
 
             {/* Features Section */}
-            <section className="py-24 px-6 bg-white relative">
+            <section className="py-24 px-6 bg-stone-50 relative">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-16 animate-fade-in-up">
                         <h2 className="text-4xl lg:text-5xl font-extrabold text-secondary mb-4 tracking-tight font-heading">
                             Poder compartido, ahorro multiplicado
                         </h2>
                         <p className="text-lg text-muted-foreground max-w-2xl mx-auto font-medium">
-                            PriceHive utiliza tecnología de red para que nunca más vuelvas a pagar de más por un producto básico.
+                            Enjambre utiliza tecnología de red para que nunca más vuelvas a pagar de más por un producto básico.
                         </p>
                     </div>
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-8">
                         {features.map((feature, index) => (
                             <div 
                                 key={index}
-                                className={`bg-stone-50 rounded-[2rem] p-8 border border-border/60 card-interactive group hover:border-primary/30 transition-all duration-300 animate-fade-in-up`}
+                                className={`bg-white rounded-[2rem] p-8 border-2 border-stone-200 card-interactive group hover:border-primary transition-all duration-300 animate-fade-in-up shadow-sm`}
                                 style={{ animationDelay: `${index * 100}ms` }}
                                 data-testid={`feature-card-${index}`}
                             >
@@ -160,11 +156,11 @@ const LandingPage = () => {
             </section>
 
             {/* How it works */}
-            <section className="py-24 px-6 bg-stone-50/50 hive-pattern border-y border-border/40">
+            <section className="py-24 px-6 bg-white bee-stripe border-y-4 border-secondary">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center mb-20">
                         <h2 className="text-4xl lg:text-5xl font-extrabold text-secondary mb-4 tracking-tight font-heading">
-                            El Ciclo PriceHive
+                            El Ciclo Enjambre
                         </h2>
                     </div>
                     <div className="grid md:grid-cols-3 gap-12 relative">
@@ -178,17 +174,17 @@ const LandingPage = () => {
                         ].map((item, index) => (
                             <div key={index} className="text-center animate-fade-in-up group" style={{ animationDelay: `${index * 150}ms` }}>
                                 <div className="relative inline-block mb-6">
-                                    <div className="w-24 h-24 rounded-[1.5rem] bg-white border border-border shadow-sm flex items-center justify-center text-5xl font-black text-primary/20 group-hover:text-primary/40 group-hover:scale-105 transition-all duration-300">
+                                    <div className="w-24 h-24 rounded-[1.5rem] bg-stone-50 border-2 border-stone-200 shadow-sm flex items-center justify-center text-5xl font-black text-primary group-hover:scale-105 transition-all duration-300">
                                         {item.step}
                                     </div>
-                                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-primary text-white flex items-center justify-center shadow-lg shadow-primary/20">
+                                    <div className="absolute -bottom-2 -right-2 w-10 h-10 rounded-full bg-secondary text-primary flex items-center justify-center shadow-lg border border-primary">
                                         {item.icon}
                                     </div>
                                 </div>
                                 <h3 className="text-2xl font-bold text-secondary mb-3 font-heading">
                                     {item.title}
                                 </h3>
-                                <p className="text-muted-foreground font-medium leading-relaxed">{item.desc}</p>
+                                <p className="text-muted-foreground font-semibold leading-relaxed">{item.desc}</p>
                             </div>
                         ))}
                     </div>
@@ -196,20 +192,19 @@ const LandingPage = () => {
             </section>
 
             {/* CTA Section */}
-            <section className="py-24 px-6 relative overflow-hidden">
-                <div className="absolute inset-0 bg-secondary -z-20" />
-                <div className="absolute inset-0 hive-pattern opacity-10 -z-10" />
+            <section className="py-32 px-6 relative overflow-hidden bg-secondary border-t-8 border-primary">
+                <div className="absolute inset-0 bee-stripe opacity-5 -z-10" />
 
                 <div className="max-w-4xl mx-auto text-center animate-fade-in-up">
                     <h2 className="text-4xl lg:text-6xl font-extrabold text-white mb-6 tracking-tight font-heading">
                         ¿Listo para unirte al <span className="text-primary">enjambre</span>?
                     </h2>
-                    <p className="text-stone-300 text-xl mb-10 max-w-2xl mx-auto font-medium">
-                        Únete a más de 10.000 usuarios que ya están democratizando el acceso a la información de precios.
+                    <p className="text-stone-400 text-xl mb-10 max-w-2xl mx-auto font-bold uppercase tracking-wider">
+                        Democratizando el acceso a la información de precios.
                     </p>
                     <Button 
                         size="lg" 
-                        className="bg-primary hover:bg-primary/90 text-white rounded-full px-12 py-8 text-xl font-bold shadow-2xl shadow-primary/20 btn-lift"
+                        className="rounded-full px-12 py-8 text-xl font-bold shadow-2xl"
                         data-testid="cta-register-btn"
                         onClick={loginWithGoogle}
                     >
@@ -225,7 +220,7 @@ const LandingPage = () => {
                     <div className="col-span-2">
                         <div className="flex items-center gap-2 mb-6">
                             <Hexagon className="w-8 h-8 text-primary fill-primary/10" strokeWidth={2.5} />
-                            <span className="text-xl font-extrabold text-secondary">PriceHive</span>
+                            <span className="text-xl font-extrabold text-secondary uppercase tracking-widest">Enjambre</span>
                         </div>
                         <p className="max-w-xs font-medium leading-relaxed">
                             La plataforma líder en inteligencia colectiva de precios. Empoderando al consumidor a través de la colaboración masiva.
@@ -249,7 +244,7 @@ const LandingPage = () => {
                     </div>
                 </div>
                 <div className="max-w-7xl mx-auto pt-8 border-t border-border flex flex-col md:flex-row items-center justify-between gap-4">
-                    <p className="text-sm font-medium">© 2024 PriceHive. Inteligencia Colectiva para el Ahorro Real.</p>
+                    <p className="text-sm font-medium">© 2024 Enjambre. Inteligencia Colectiva para el Ahorro Real.</p>
                     <div className="flex gap-8 text-sm font-medium">
                         <span className="hover:text-primary cursor-pointer transition-colors">Privacidad</span>
                         <span className="hover:text-primary cursor-pointer transition-colors">Términos</span>

@@ -42,8 +42,8 @@ const Dashboard = () => {
             label: "Productos", 
             value: stats?.total_products || 0, 
             icon: <Package className="w-6 h-6" />,
-            color: "text-amber-600",
-            bg: "bg-amber-100/50"
+            color: "text-primary",
+            bg: "bg-primary/10"
         },
         { 
             label: "Precios",
@@ -56,15 +56,15 @@ const Dashboard = () => {
             label: "Supermercados", 
             value: stats?.total_supermarkets || 0, 
             icon: <Store className="w-6 h-6" />,
-            color: "text-zinc-600",
-            bg: "bg-zinc-100"
+            color: "text-secondary",
+            bg: "bg-secondary/5"
         },
         { 
             label: "Enjambre",
             value: stats?.total_users || 0, 
             icon: <Users className="w-6 h-6" />,
-            color: "text-orange-600",
-            bg: "bg-orange-100/50"
+            color: "text-secondary",
+            bg: "bg-secondary/5"
         },
     ];
 
@@ -77,11 +77,11 @@ const Dashboard = () => {
                         <h1 className="text-4xl font-extrabold text-secondary tracking-tight font-heading">
                             Dashboard
                         </h1>
-                        <p className="text-muted-foreground font-medium mt-1">Estado actual del ecosistema PriceHive</p>
+                        <p className="text-muted-foreground font-medium mt-1">Estado actual del ecosistema Enjambre</p>
                     </div>
                     <div className="flex gap-3">
                         <Link to="/shopping-list">
-                            <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-xl px-6 btn-lift shadow-lg shadow-primary/20">
+                            <Button className="rounded-xl px-6 btn-lift shadow-lg shadow-primary/20">
                                 <Plus className="w-5 h-5 mr-2" />
                                 Nueva Lista
                             </Button>

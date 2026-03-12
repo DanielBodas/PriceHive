@@ -102,7 +102,7 @@ const RegisterPage = () => {
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-bold btn-lift shadow-xl shadow-primary/20 text-lg"
+                                className="w-full h-14 rounded-2xl font-bold btn-lift shadow-xl shadow-primary/20 text-lg"
                                 data-testid="register-submit-btn"
                             >
                                 {loading ? "Creando perfil..." : "Unirse al Enjambre"}

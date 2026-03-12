@@ -116,7 +116,7 @@ const AlertsPage = () => {
                     </div>
                     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-xl px-6 btn-lift shadow-lg shadow-primary/20 gap-2" data-testid="create-alert-btn">
+                            <Button className="rounded-xl px-6 btn-lift shadow-lg shadow-primary/20 gap-2" data-testid="create-alert-btn">
                                 <Plus className="w-4 h-4" />
                                 Nueva Alerta
                             </Button>
@@ -184,7 +184,7 @@ const AlertsPage = () => {
                                 )}
                                 <Button 
                                     onClick={handleCreateAlert} 
-                                    className="w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl py-6 btn-lift shadow-lg shadow-primary/20"
+                                    className="w-full rounded-xl py-6 btn-lift shadow-lg shadow-primary/20"
                                     data-testid="save-alert-btn"
                                 >
                                     Crear Alerta

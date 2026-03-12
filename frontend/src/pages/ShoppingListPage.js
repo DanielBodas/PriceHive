@@ -381,15 +381,15 @@ const ShoppingListPage = () => {
                                 <PanelLeft className="w-5 h-5" />
                             </Button>
                             <div>
-                                    <h1 className="text-3xl font-extrabold text-secondary tracking-tight font-heading">
+                                <h1 className="text-3xl font-extrabold text-secondary tracking-tight font-heading">
                                     Lista de Compra
                                 </h1>
-                                    <p className="text-muted-foreground font-medium mt-1">Planifica tu compra y registra precios</p>
+                                <p className="text-muted-foreground font-medium mt-1">Planifica tu compra y registra precios</p>
                             </div>
                         </div>
                         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                             <DialogTrigger asChild>
-                                    <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-xl px-6 btn-lift shadow-lg shadow-primary/20 gap-2" data-testid="new-list-btn">
+                                <Button className="rounded-xl px-6 btn-lift shadow-lg shadow-primary/20 gap-2" data-testid="new-list-btn">
                                     <Plus className="w-4 h-4" />
                                     Nueva Lista
                                 </Button>
@@ -421,7 +421,7 @@ const ShoppingListPage = () => {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <Button onClick={handleCreateList} className="w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl py-6 btn-lift shadow-lg shadow-primary/20" data-testid="create-list-btn">
+                                    <Button onClick={handleCreateList} className="w-full rounded-xl py-6 btn-lift shadow-lg shadow-primary/20" data-testid="create-list-btn">
                                         Crear Lista
                                     </Button>
                                 </div>
@@ -536,7 +536,7 @@ const ShoppingListPage = () => {
                                                 </Button>
                                                 <Dialog open={addItemDialogOpen} onOpenChange={(val) => { setAddItemDialogOpen(val); if (!val) resetNewItemForm(); }}>
                                                     <DialogTrigger asChild>
-                                                        <Button className="gap-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl btn-lift shadow-lg shadow-primary/20" data-testid="add-item-btn">
+                                                        <Button className="gap-2 rounded-xl btn-lift shadow-lg shadow-primary/20" data-testid="add-item-btn">
                                                             <Plus className="w-4 h-4" />
                                                             Añadir
                                                         </Button>
@@ -666,7 +666,7 @@ const ShoppingListPage = () => {
                                                             <Button
                                                                 onClick={handleAddItem}
                                                                 disabled={!newItemUnit}
-                                                                className="w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl py-6 btn-lift shadow-lg shadow-primary/20"
+                                                                className="w-full rounded-xl py-6 btn-lift shadow-lg shadow-primary/20"
                                                                 data-testid="confirm-add-item-btn"
                                                             >
                                                                 Añadir a la lista
@@ -963,7 +963,7 @@ const ShoppingListPage = () => {
                         <div className="flex gap-3 pt-2">
                             <Button variant="outline" className="flex-1 rounded-xl h-12 font-bold" onClick={() => setConfirmSubmitOpen(false)}>Cancelar</Button>
                             <Button
-                                className="flex-1 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl h-12 gap-2 shadow-lg shadow-primary/20"
+                                                                    className="flex-1 rounded-xl h-12 gap-2 shadow-lg shadow-primary/20"
                                 onClick={handleSubmitPrices}
                             >
                                 <CheckCircle2 className="w-4 h-4" />

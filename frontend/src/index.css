@@ -12,9 +12,9 @@
         --card-foreground: 240 10% 4%;
         --popover: 0 0% 100%;
         --popover-foreground: 240 10% 4%;
-        --primary: 38 92% 50%;
+        --primary: 38 70% 45%;
         --primary-foreground: 0 0% 100%;
-        --secondary: 240 10% 4%;
+        --secondary: 240 6% 10%;
         --secondary-foreground: 0 0% 100%;
         --muted: 33 20% 94%;
         --muted-foreground: 240 4% 46%;
@@ -71,6 +71,44 @@
 @layer utilities {
     .glass {
         @apply bg-white/70 backdrop-blur-lg border-white/30 shadow-sm;
+    }
+    .bee-stripe {
+        position: relative;
+    }
+    .bee-stripe::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: repeating-linear-gradient(
+            -45deg,
+            hsl(var(--primary)),
+            hsl(var(--primary)) 12px,
+            hsl(var(--secondary)) 12px,
+            hsl(var(--secondary)) 24px
+        );
+        z-index: 10;
+    }
+    .bee-stripe-bottom {
+        position: relative;
+    }
+    .bee-stripe-bottom::after {
+        content: '';
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        height: 6px;
+        background: repeating-linear-gradient(
+            -45deg,
+            hsl(var(--primary)),
+            hsl(var(--primary)) 12px,
+            hsl(var(--secondary)) 12px,
+            hsl(var(--secondary)) 24px
+        );
+        z-index: 10;
     }
     .hive-pattern {
         background-color: transparent;
