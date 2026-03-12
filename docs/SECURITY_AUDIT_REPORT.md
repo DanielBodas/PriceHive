@@ -74,7 +74,7 @@ Este documento detalla los hallazgos de la auditoría de seguridad realizada sob
 
 ## 4. Checklist para Producción
 - [ ] Cambiar `JWT_SECRET` a un valor aleatorio de 64 caracteres.
-- [ ] Desactivar el Swagger UI (`docs_url=None`) o protegerlo tras auth.
+- [x] Desactivar el Swagger UI (`docs_url=None`) en producción (Implementado mediante variable `ENVIRONMENT`).
 - [ ] Configurar el flag `secure=True` en todas las cookies.
 - [ ] Implementar Rate Limiting (ej. `slowapi`).
 - [ ] Configurar un firewall de aplicaciones web (WAF).

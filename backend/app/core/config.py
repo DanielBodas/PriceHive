@@ -7,6 +7,7 @@ load_dotenv(ROOT_DIR / '.env')
 
 class Settings:
     PROJECT_NAME: str = "PriceHive API"
+    ENVIRONMENT: str = os.environ.get("ENVIRONMENT", "development")
     MONGO_URL: str = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
     DB_NAME: str = os.environ.get("DB_NAME", "pricehive")
     # SECURITY WARNING: DO NOT USE DEFAULTS IN PRODUCTION
