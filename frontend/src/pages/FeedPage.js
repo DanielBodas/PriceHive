@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import {
     MessageSquare,
     Heart,
+    Hexagon,
     ThumbsUp,
     Lightbulb,
     AlertTriangle,
@@ -127,9 +128,9 @@ const FeedPage = () => {
             case "price_alert":
                 return "bg-rose-50 border-rose-200 text-rose-700";
             case "tip":
-                return "bg-lime-50 border-lime-200 text-lime-700";
+                return "bg-amber-50 border-amber-200 text-amber-700";
             default:
-                return "bg-emerald-50 border-emerald-200 text-emerald-700";
+                return "bg-primary/10 border-primary/20 text-primary";
         }
     };
 
@@ -150,28 +151,28 @@ const FeedPage = () => {
 
     return (
         <Layout>
-            <div className="max-w-2xl mx-auto space-y-6" data-testid="feed-page">
+            <div className="max-w-2xl mx-auto space-y-6 animate-fade-in-up" data-testid="feed-page">
                 {/* Header */}
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                        Muro
+                    <h1 className="text-4xl font-extrabold text-secondary tracking-tight font-heading">
+                        Muro del Enjambre
                     </h1>
-                    <p className="text-slate-500 mt-1">Comparte y descubre información de la comunidad</p>
+                    <p className="text-muted-foreground font-medium mt-1">Comparte y descubre inteligencia colectiva</p>
                 </div>
 
                 {/* New Post */}
-                <Card className="border-slate-200" data-testid="new-post-card">
-                    <CardContent className="p-4 space-y-4">
+                <Card className="border-border/50 shadow-sm rounded-[1.5rem]" data-testid="new-post-card">
+                    <CardContent className="p-5 space-y-4">
                         <Textarea
-                            placeholder="¿Qué quieres compartir con la comunidad?"
+                            placeholder="¿Qué información útil has encontrado para el enjambre?"
                             value={newPost}
                             onChange={(e) => setNewPost(e.target.value)}
-                            className="min-h-[100px] resize-none bg-slate-50 border-slate-200 focus:border-emerald-500"
+                            className="min-h-[120px] resize-none bg-stone-50 border-border/60 focus:border-primary rounded-xl p-4 font-medium"
                             data-testid="new-post-textarea"
                         />
                         <div className="flex items-center justify-between">
                             <Select value={postType} onValueChange={setPostType}>
-                                <SelectTrigger className="w-48" data-testid="post-type-select">
+                                <SelectTrigger className="w-48 rounded-xl font-bold" data-testid="post-type-select">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
@@ -183,7 +184,7 @@ const FeedPage = () => {
                             <Button
                                 onClick={handleCreatePost}
                                 disabled={posting || !newPost.trim()}
-                                className="bg-emerald-500 hover:bg-emerald-600 gap-2"
+                                className="bg-primary hover:bg-primary/90 text-white font-bold rounded-xl px-6 btn-lift shadow-lg shadow-primary/20 gap-2"
                                 data-testid="create-post-btn"
                             >
                                 <Send className="w-4 h-4" />
@@ -209,15 +210,18 @@ const FeedPage = () => {
                 ) : (
                     <div className="space-y-4">
                         {posts.map((post) => (
-                            <Card key={post.id} className="border-slate-200" data-testid={`post-${post.id}`}>
+                            <Card key={post.id} className="border-border/50 shadow-sm rounded-[1.5rem]" data-testid={`post-${post.id}`}>
                                 <CardHeader className="pb-3">
                                     <div className="flex items-start justify-between">
                                         <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-emerald-100 flex items-center justify-center text-emerald-600 font-medium">
-                                                {post.user_name?.charAt(0).toUpperCase()}
+                                            <div className="relative">
+                                                <Hexagon className="w-12 h-12 text-primary/20 fill-primary/10" strokeWidth={1.5} />
+                                                <div className="absolute inset-0 flex items-center justify-center text-primary font-black">
+                                                    {post.user_name?.charAt(0).toUpperCase()}
+                                                </div>
                                             </div>
                                             <div>
-                                                <p className="font-medium text-slate-900">{post.user_name}</p>
+                                                <p className="font-bold text-secondary">{post.user_name}</p>
                                                 <p className="text-xs text-slate-400 flex items-center gap-1">
                                                     <Clock className="w-3 h-3" />
                                                     {formatDate(post.created_at)}
@@ -246,14 +250,14 @@ const FeedPage = () => {
                                     <p className="text-slate-700 whitespace-pre-wrap mb-4">{post.content}</p>
 
                                     {/* Reactions */}
-                                    <div className="flex items-center gap-2 flex-wrap border-t border-slate-100 pt-4">
+                                    <div className="flex items-center gap-2 flex-wrap border-t border-border/30 pt-4">
                                         {reactionButtons.map((btn) => (
                                             <Button
                                                 key={btn.type}
                                                 variant="ghost"
                                                 size="sm"
                                                 onClick={() => handleReaction(post.id, btn.type)}
-                                                className={`gap-1.5 ${post.reactions[btn.type] > 0 ? 'text-emerald-600' : 'text-slate-500'}`}
+                                                className={`gap-1.5 rounded-xl font-bold ${post.reactions[btn.type] > 0 ? 'text-primary bg-primary/5' : 'text-muted-foreground'}`}
                                                 data-testid={`reaction-${btn.type}-${post.id}`}
                                             >
                                                 {btn.icon}
@@ -297,14 +301,14 @@ const FeedPage = () => {
                                                     placeholder="Escribe un comentario..."
                                                     value={newComments[post.id] || ""}
                                                     onChange={(e) => setNewComments({ ...newComments, [post.id]: e.target.value })}
-                                                    className="flex-1 px-3 py-2 text-sm bg-white border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-500"
+                                                    className="flex-1 px-4 py-2 text-sm bg-stone-50 border border-border/60 rounded-xl focus:outline-none focus:border-primary font-medium"
                                                     data-testid={`comment-input-${post.id}`}
                                                     onKeyPress={(e) => e.key === 'Enter' && handleAddComment(post.id)}
                                                 />
                                                 <Button
                                                     size="sm"
                                                     onClick={() => handleAddComment(post.id)}
-                                                    className="bg-emerald-500 hover:bg-emerald-600"
+                                                    className="bg-primary hover:bg-primary/90 text-white font-bold rounded-xl px-4"
                                                     data-testid={`submit-comment-${post.id}`}
                                                 >
                                                     <Send className="w-4 h-4" />

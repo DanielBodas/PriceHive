@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
 import { useAuth } from "../contexts/AuthContext";
 import { toast } from "sonner";
+import { Hexagon } from "lucide-react";
 
 const AuthCallback = () => {
     const navigate = useNavigate();
@@ -40,10 +41,16 @@ const AuthCallback = () => {
     }, [location.hash, navigate, processGoogleSession]);
 
     return (
-        <div className="min-h-screen flex items-center justify-center bg-slate-50">
-            <div className="text-center">
-                <div className="w-16 h-16 border-4 border-emerald-500 border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
-                <p className="text-slate-600 text-lg">Iniciando sesión...</p>
+        <div className="min-h-screen flex items-center justify-center bg-background hive-pattern">
+            <div className="text-center p-12 glass rounded-[2.5rem] border border-primary/20 shadow-2xl animate-fade-in-up">
+                <div className="relative w-20 h-20 mx-auto mb-6">
+                    <Hexagon className="w-20 h-20 text-primary fill-primary/10 animate-pulse" strokeWidth={1.5} />
+                    <div className="absolute inset-0 flex items-center justify-center">
+                        <div className="w-4 h-4 bg-primary rounded-full animate-ping" />
+                    </div>
+                </div>
+                <h2 className="text-2xl font-extrabold text-secondary tracking-tight font-heading">Entrando al Enjambre</h2>
+                <p className="text-muted-foreground font-medium mt-2">Sincronizando precios en tiempo real...</p>
             </div>
         </div>
     );

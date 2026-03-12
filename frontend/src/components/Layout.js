@@ -16,7 +16,7 @@ import {
     TooltipTrigger,
 } from "./ui/tooltip";
 import {
-    Tag,
+    Hexagon,
     LayoutDashboard,
     MessageSquare,
     ShoppingCart,
@@ -72,19 +72,22 @@ const Layout = ({ children }) => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-background">
             {/* Top Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+            <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
                 <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
                     <div className="flex items-center justify-between h-16">
                         {/* Logo */}
                         <div className="flex items-center gap-2 flex-shrink-0">
-                            <Link to="/dashboard" className="flex items-center gap-2">
-                                <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
-                                    <Tag className="w-5 h-5 text-white" />
+                            <Link to="/dashboard" className="flex items-center gap-2 group">
+                                <div className="relative flex items-center justify-center transition-transform group-hover:scale-105">
+                                    <Hexagon className="w-9 h-9 text-primary fill-primary/10" strokeWidth={2.5} />
+                                    <div className="absolute inset-0 flex items-center justify-center">
+                                        <div className="w-1.5 h-1.5 rounded-full bg-primary animate-pulse" />
+                                    </div>
                                 </div>
-                                <span className="text-lg font-bold text-slate-900 hidden sm:block" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                                    PriceHive
+                                <span className="text-xl font-extrabold tracking-tight text-secondary hidden sm:block font-heading">
+                                    Price<span className="text-primary">Hive</span>
                                 </span>
                             </Link>
                         </div>
@@ -103,9 +106,9 @@ const Layout = ({ children }) => {
                                                     <Button
                                                         variant={isActive ? "default" : "ghost"}
                                                         size="sm"
-                                                        className={`relative gap-2 transition-all ${isActive
-                                                                ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                                                                : "text-slate-600 hover:text-emerald-600 hover:bg-emerald-50"
+                                                        className={`relative gap-2 transition-all btn-lift ${isActive
+                                                                ? "bg-primary text-white hover:bg-primary/90 shadow-sm"
+                                                                : "text-muted-foreground hover:text-primary hover:bg-primary/5"
                                                             }`}
                                                         data-testid={`nav-${item.path.slice(1)}`}
                                                     >
@@ -144,9 +147,9 @@ const Layout = ({ children }) => {
                         {/* Right Side - User Info */}
                         <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
                             {/* Points Badge */}
-                            <div className="hidden sm:flex items-center gap-1 px-2 lg:px-3 py-1.5 bg-emerald-50 rounded-full">
-                                <Star className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                                <span className="font-mono text-xs lg:text-sm font-medium text-emerald-600">
+                            <div className="hidden sm:flex items-center gap-1 px-2 lg:px-3 py-1.5 bg-primary/10 rounded-full border border-primary/20">
+                                <Star className="w-4 h-4 text-primary fill-primary flex-shrink-0" />
+                                <span className="font-mono text-xs lg:text-sm font-bold text-primary">
                                     {user?.points || 0}
                                 </span>
                             </div>
@@ -154,18 +157,18 @@ const Layout = ({ children }) => {
                             {/* User Dropdown */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="flex items-center gap-1.5 lg:gap-2 px-1.5 lg:px-2">
-                                        <Avatar className="w-7 h-7 lg:w-8 lg:h-8">
+                                    <Button variant="ghost" size="sm" className="flex items-center gap-1.5 lg:gap-2 px-1.5 lg:px-2 hover:bg-primary/5">
+                                        <Avatar className="w-7 h-7 lg:w-8 lg:h-8 border border-border">
                                             <AvatarImage src={user?.picture} />
-                                            <AvatarFallback className="bg-emerald-100 text-emerald-600 text-xs lg:text-sm">
+                                            <AvatarFallback className="bg-primary/10 text-primary text-xs lg:text-sm font-bold">
                                                 {user?.name?.charAt(0).toUpperCase()}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <span className="hidden xl:block text-sm font-medium text-slate-700 max-w-[120px] truncate">
+                                        <span className="hidden xl:block text-sm font-semibold text-secondary max-w-[120px] truncate">
                                             {user?.name}
                                         </span>
                                         {user?.role === 'admin' && (
-                                            <span className="hidden xl:inline px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+                                            <span className="hidden xl:inline px-2 py-0.5 bg-secondary text-white text-[10px] uppercase tracking-wider font-bold rounded-md">
                                                 Admin
                                             </span>
                                         )}
@@ -220,21 +223,21 @@ const Layout = ({ children }) => {
 
                 {/* Mobile Navigation */}
                 {mobileMenuOpen && (
-                    <div className="md:hidden border-t border-slate-200 bg-white shadow-lg">
+                    <div className="md:hidden border-t border-border bg-white shadow-xl animate-fade-in-up">
                         <div className="px-3 py-3 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
                             {/* User info en móvil */}
-                            <div className="flex items-center gap-3 px-3 py-3 bg-emerald-50 rounded-lg mb-3">
-                                <Avatar className="w-10 h-10">
+                            <div className="flex items-center gap-3 px-3 py-3 bg-primary/5 rounded-xl mb-3 border border-primary/10">
+                                <Avatar className="w-10 h-10 border border-border">
                                     <AvatarImage src={user?.picture} />
-                                    <AvatarFallback className="bg-emerald-100 text-emerald-600">
+                                    <AvatarFallback className="bg-primary text-white">
                                         {user?.name?.charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-slate-900 truncate">{user?.name}</p>
+                                    <p className="text-sm font-bold text-secondary truncate">{user?.name}</p>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <Star className="w-3 h-3 text-emerald-500" />
-                                        <span className="text-xs font-mono text-emerald-600">{user?.points || 0} pts</span>
+                                        <Star className="w-3 h-3 text-primary fill-primary" />
+                                        <span className="text-xs font-mono font-bold text-primary">{user?.points || 0} pts</span>
                                     </div>
                                 </div>
                             </div>
@@ -252,9 +255,9 @@ const Layout = ({ children }) => {
                                     >
                                         <Button
                                             variant={isActive ? "default" : "ghost"}
-                                            className={`w-full justify-start gap-3 h-11 ${isActive
-                                                    ? "bg-emerald-500 text-white"
-                                                    : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                            className={`w-full justify-start gap-3 h-11 rounded-xl ${isActive
+                                                    ? "bg-primary text-white shadow-md shadow-primary/20"
+                                                    : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
                                                 }`}
                                         >
                                             <span className="relative">
@@ -283,9 +286,9 @@ const Layout = ({ children }) => {
                             >
                                 <Button
                                     variant={location.pathname === "/profile" ? "default" : "ghost"}
-                                    className={`w-full justify-start gap-3 h-11 ${location.pathname === "/profile"
-                                            ? "bg-emerald-500 text-white"
-                                            : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                    className={`w-full justify-start gap-3 h-11 rounded-xl ${location.pathname === "/profile"
+                                            ? "bg-primary text-white"
+                                            : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
                                         }`}
                                 >
                                     <User className="w-5 h-5" />
@@ -299,9 +302,9 @@ const Layout = ({ children }) => {
                             >
                                 <Button
                                     variant={location.pathname === "/alerts" ? "default" : "ghost"}
-                                    className={`w-full justify-start gap-3 h-11 ${location.pathname === "/alerts"
-                                            ? "bg-emerald-500 text-white"
-                                            : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                    className={`w-full justify-start gap-3 h-11 rounded-xl ${location.pathname === "/alerts"
+                                            ? "bg-primary text-white"
+                                            : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
                                         }`}
                                 >
                                     <Bell className="w-5 h-5" />
@@ -321,9 +324,9 @@ const Layout = ({ children }) => {
                                 >
                                     <Button
                                         variant={location.pathname === "/admin" ? "default" : "ghost"}
-                                        className={`w-full justify-start gap-3 h-11 ${location.pathname === "/admin"
-                                                ? "bg-emerald-500 text-white"
-                                                : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                        className={`w-full justify-start gap-3 h-11 rounded-xl ${location.pathname === "/admin"
+                                                ? "bg-primary text-white"
+                                                : "text-muted-foreground hover:bg-primary/5 hover:text-primary"
                                             }`}
                                     >
                                         <Settings className="w-5 h-5" />
@@ -346,7 +349,7 @@ const Layout = ({ children }) => {
             </nav>
 
             {/* Main Content */}
-            <main className="pt-16 min-h-screen">
+            <main className="pt-16 min-h-screen hive-pattern">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
                     {children}
                 </div>
