@@ -375,28 +375,28 @@ const ShoppingListPage = () => {
                                 variant="outline"
                                 size="icon"
                                 onClick={() => setListsExpanded(!listsExpanded)}
-                                className={`h-10 w-10 shrink-0 hidden lg:flex transition-colors ${listsExpanded ? 'text-slate-900 bg-slate-100 border-slate-200 hover:bg-slate-200' : 'text-slate-500 hover:text-slate-900 border-slate-200'}`}
+                                    className={`h-10 w-10 shrink-0 hidden lg:flex rounded-xl transition-all ${listsExpanded ? 'text-primary bg-primary/10 border-primary/20 hover:bg-primary/20' : 'text-muted-foreground hover:text-primary border-border hover:bg-primary/5'}`}
                                 title={listsExpanded ? "Ocultar mis listas" : "Mostrar mis listas"}
                             >
                                 <PanelLeft className="w-5 h-5" />
                             </Button>
                             <div>
-                                <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                                    <h1 className="text-3xl font-extrabold text-secondary tracking-tight font-heading">
                                     Lista de Compra
                                 </h1>
-                                <p className="text-slate-500 mt-1">Planifica tu compra y registra precios</p>
+                                    <p className="text-muted-foreground font-medium mt-1">Planifica tu compra y registra precios</p>
                             </div>
                         </div>
                         <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                             <DialogTrigger asChild>
-                                <Button className="bg-emerald-500 hover:bg-emerald-600 gap-2" data-testid="new-list-btn">
+                                    <Button className="bg-primary hover:bg-primary/90 text-white font-bold rounded-xl px-6 btn-lift shadow-lg shadow-primary/20 gap-2" data-testid="new-list-btn">
                                     <Plus className="w-4 h-4" />
                                     Nueva Lista
                                 </Button>
                             </DialogTrigger>
                             <DialogContent>
                                 <DialogHeader>
-                                    <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>Crear Nueva Lista</DialogTitle>
+                                    <DialogTitle className="font-heading">Crear Nueva Lista</DialogTitle>
                                 </DialogHeader>
                                 <div className="space-y-4 pt-4">
                                     <div className="space-y-2">
@@ -421,7 +421,7 @@ const ShoppingListPage = () => {
                                             </SelectContent>
                                         </Select>
                                     </div>
-                                    <Button onClick={handleCreateList} className="w-full bg-emerald-500 hover:bg-emerald-600" data-testid="create-list-btn">
+                                    <Button onClick={handleCreateList} className="w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl py-6 btn-lift shadow-lg shadow-primary/20" data-testid="create-list-btn">
                                         Crear Lista
                                     </Button>
                                 </div>
@@ -435,7 +435,7 @@ const ShoppingListPage = () => {
                             <div className={`${listsExpanded ? 'w-full lg:w-64' : 'w-0'} overflow-hidden transition-all duration-300`}>
                                 <div className="w-full lg:w-64 pr-0 lg:pr-3">
                                     <div className="flex items-center justify-between mb-3">
-                                        <h2 className="font-semibold text-slate-900 text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>Mis Listas</h2>
+                                        <h2 className="font-semibold text-slate-900 text-sm font-heading">Mis Listas</h2>
                                     </div>
                                     {loading ? (
                                         <div className="text-slate-500 text-sm">Cargando...</div>
@@ -449,9 +449,9 @@ const ShoppingListPage = () => {
                                             {lists.map((list) => (
                                                 <div
                                                     key={list.id}
-                                                    className={`group relative flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all ${selectedList?.id === list.id
-                                                        ? 'bg-emerald-500 text-white shadow-sm'
-                                                        : 'hover:bg-slate-100 text-slate-700'
+                                                    className={`group relative flex items-center justify-between px-3 py-3 rounded-xl cursor-pointer transition-all duration-200 ${selectedList?.id === list.id
+                                                        ? 'bg-primary text-white shadow-md shadow-primary/20'
+                                                        : 'hover:bg-primary/5 text-muted-foreground hover:text-primary'
                                                         }`}
                                                     onClick={() => {
                                                         setSelectedList(list);
@@ -460,21 +460,21 @@ const ShoppingListPage = () => {
                                                     data-testid={`list-card-${list.id}`}
                                                 >
                                                     <div className="flex-1 min-w-0">
-                                                        <p className={`font-medium truncate text-sm leading-tight ${selectedList?.id === list.id ? 'text-white' : 'text-slate-800'}`}>
+                                                        <p className={`font-bold truncate text-sm leading-tight ${selectedList?.id === list.id ? 'text-white' : 'text-secondary'}`}>
                                                             {list.name}
                                                         </p>
-                                                        <p className={`text-[11px] truncate flex items-center gap-1 mt-0.5 ${selectedList?.id === list.id ? 'text-emerald-100' : 'text-slate-400'}`}>
-                                                            <Store className="w-2.5 h-2.5 shrink-0" />
+                                                        <p className={`text-[11px] font-semibold truncate flex items-center gap-1 mt-1 ${selectedList?.id === list.id ? 'text-white/80' : 'text-muted-foreground/70'}`}>
+                                                            <Store className="w-3 h-3 shrink-0" />
                                                             {list.supermarket_name}
-                                                            <span className="ml-auto shrink-0">{list.items?.length || 0}</span>
+                                                            <span className="ml-auto shrink-0 bg-black/10 px-1.5 py-0.5 rounded-md">{list.items?.length || 0}</span>
                                                         </p>
                                                     </div>
                                                     <button
                                                         onClick={(e) => { e.stopPropagation(); handleDeleteList(list.id); }}
-                                                        className={`ml-2 h-6 w-6 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ${selectedList?.id === list.id ? 'hover:bg-emerald-400 text-emerald-100' : 'hover:bg-rose-100 text-slate-400 hover:text-rose-600'}`}
+                                                        className={`ml-2 h-7 w-7 rounded-lg flex items-center justify-center opacity-0 group-hover:opacity-100 transition-all shrink-0 ${selectedList?.id === list.id ? 'hover:bg-white/20 text-white' : 'hover:bg-rose-50 text-muted-foreground hover:text-rose-600'}`}
                                                         data-testid={`delete-list-${list.id}`}
                                                     >
-                                                        <Trash2 className="w-3 h-3" />
+                                                        <Trash2 className="w-3.5 h-3.5" />
                                                     </button>
                                                 </div>
                                             ))}
@@ -501,7 +501,7 @@ const ShoppingListPage = () => {
                                                     <PanelLeft className="w-5 h-5" />
                                                 </Button>
                                                 <div>
-                                                    <CardTitle style={{ fontFamily: 'Manrope, sans-serif' }}>{selectedList.name}</CardTitle>
+                                                    <CardTitle className="font-heading">{selectedList.name}</CardTitle>
                                                     <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
                                                         <Store className="w-4 h-4" />
                                                         {selectedList.supermarket_name}
@@ -536,14 +536,14 @@ const ShoppingListPage = () => {
                                                 </Button>
                                                 <Dialog open={addItemDialogOpen} onOpenChange={(val) => { setAddItemDialogOpen(val); if (!val) resetNewItemForm(); }}>
                                                     <DialogTrigger asChild>
-                                                        <Button className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white" data-testid="add-item-btn">
+                                                        <Button className="gap-2 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl btn-lift shadow-lg shadow-primary/20" data-testid="add-item-btn">
                                                             <Plus className="w-4 h-4" />
                                                             Añadir
                                                         </Button>
                                                     </DialogTrigger>
                                                     <DialogContent className="max-h-[90vh] overflow-y-auto">
                                                         <DialogHeader>
-                                                            <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>{editingItemIndex !== null ? "Editar Producto" : "Añadir Producto"}</DialogTitle>
+                                                            <DialogTitle className="font-heading">{editingItemIndex !== null ? "Editar Producto" : "Añadir Producto"}</DialogTitle>
                                                         </DialogHeader>
                                                         <div className="space-y-4 pt-4">
                                                             <div className="space-y-2">
@@ -666,7 +666,7 @@ const ShoppingListPage = () => {
                                                             <Button
                                                                 onClick={handleAddItem}
                                                                 disabled={!newItemUnit}
-                                                                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
+                                                                className="w-full bg-primary hover:bg-primary/90 text-white font-bold rounded-xl py-6 btn-lift shadow-lg shadow-primary/20"
                                                                 data-testid="confirm-add-item-btn"
                                                             >
                                                                 Añadir a la lista
@@ -690,7 +690,7 @@ const ShoppingListPage = () => {
                                                     {selectedList.items?.map((item, index) => (
                                                         <div
                                                             key={index}
-                                                            className={`p-3 sm:p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 ${item.purchased ? 'bg-slate-50/70 border-l border-emerald-500' : 'hover:bg-slate-50/50 border-l border-transparent'}`}
+                                                            className={`p-3 sm:p-5 transition-all duration-200 flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 ${item.purchased ? 'bg-primary/5 border-l-4 border-primary' : 'hover:bg-stone-50 border-l-4 border-transparent'}`}
                                                             data-testid={`list-item-${index}`}
                                                         >
                                                             <div className="flex items-center gap-3 sm:gap-4 flex-1">
@@ -698,7 +698,7 @@ const ShoppingListPage = () => {
                                                                 <Checkbox
                                                                     checked={item.purchased}
                                                                     onCheckedChange={(checked) => handleUpdateItem(index, { purchased: checked })}
-                                                                    className="w-6 h-6 rounded-md data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 mt-1"
+                                                                    className="w-6 h-6 rounded-md data-[state=checked]:bg-primary data-[state=checked]:border-primary border-2 mt-1"
                                                                     data-testid={`item-checkbox-${index}`}
                                                                 />
 
@@ -722,7 +722,7 @@ const ShoppingListPage = () => {
                                                                                     {Object.entries(item.attribute_values).map(([attrId, val]) => (
                                                                                         <span
                                                                                             key={attrId}
-                                                                                            className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200"
+                                                                                            className="inline-flex items-center text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/10 text-primary border border-primary/20"
                                                                                         >
                                                                                             {val}
                                                                                         </span>
@@ -808,13 +808,12 @@ const ShoppingListPage = () => {
                                                                         value={item.price || ""}
                                                                         onChange={(e) => updateLocalItem(index, { price: parseFloat(e.target.value) || null })}
                                                                         onBlur={() => saveList(selectedList.items)}
-                                                                        className={`h-9 w-[80px] sm:w-[90px] text-right pr-6 font-mono text-sm shadow-sm transition-colors
-                                                                            ${item.price ? 'border-emerald-500 bg-emerald-50/50 font-semibold text-emerald-800' : 'border-slate-200 bg-white placeholder:text-slate-300'} 
-                                                                            ${item.purchased && !item.price ? 'border-amber-300 bg-amber-50 ring-2 ring-amber-100 ring-offset-1' : ''}
-                                                                            ${item.purchased && item.price ? 'bg-transparent' : ''}`}
+                                                                            className={`h-10 w-[80px] sm:w-[100px] text-right pr-6 font-mono font-bold text-sm shadow-sm transition-all rounded-xl
+                                                                                ${item.price ? 'border-primary bg-primary/5 text-primary' : 'border-border bg-white placeholder:text-muted-foreground/40'}
+                                                                                ${item.purchased && !item.price ? 'border-amber-400 bg-amber-50 ring-4 ring-amber-400/10' : ''}`}
                                                                     />
-                                                                    <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold
-                                                                    ${item.price ? 'text-emerald-700' : 'text-slate-400'}
+                                                                        <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-bold
+                                                                        ${item.price ? 'text-primary' : 'text-muted-foreground/50'}
                                                                 `}>€</span>
                                                                 </div>
 
@@ -860,10 +859,10 @@ const ShoppingListPage = () => {
                                                         </div>
 
                                                         {/* Real price total — same w-[90px] as price input in cards */}
-                                                        <div className="flex flex-col items-end justify-center shrink-0 w-[90px]">
-                                                            <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Total Real</span>
-                                                            <span className="font-mono text-base font-bold text-emerald-600">
-                                                                {selectedList.total_actual?.toFixed(2) || '0.00'} €
+                                                        <div className="flex flex-col items-end justify-center shrink-0 w-[100px]">
+                                                            <span className="text-[10px] text-primary font-black uppercase tracking-widest">Total Real</span>
+                                                            <span className="font-mono text-xl font-black text-secondary">
+                                                                {selectedList.total_actual?.toFixed(2) || '0.00'}<span className="text-xs ml-0.5">€</span>
                                                             </span>
                                                         </div>
 
@@ -879,7 +878,7 @@ const ShoppingListPage = () => {
                                 <Card className="border-slate-200">
                                     <CardContent className="p-12 text-center flex flex-col items-center">
                                         <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                                        <p className="text-slate-600 text-lg font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>Selecciona una lista configurada</p>
+                                        <p className="text-slate-600 text-lg font-semibold font-heading">Selecciona una lista configurada</p>
                                         <p className="text-sm text-slate-400 mt-2 mb-6 max-w-sm">Abre el panel lateral para elegir una lista de compra existente o crea una nueva.</p>
                                         {!listsExpanded && (
                                             <Button onClick={() => setListsExpanded(true)} variant="outline" className="gap-2 border-slate-200 text-slate-600 hover:text-slate-900">
@@ -898,7 +897,7 @@ const ShoppingListPage = () => {
             <Dialog open={confirmEstimateOpen} onOpenChange={setConfirmEstimateOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-indigo-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                        <DialogTitle className="flex items-center gap-2 text-indigo-700 font-heading">
                             <Sparkles className="w-5 h-5" />
                             Calcular Precio Estimado
                         </DialogTitle>
@@ -934,37 +933,37 @@ const ShoppingListPage = () => {
             <Dialog open={confirmSubmitOpen} onOpenChange={setConfirmSubmitOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-emerald-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                        <DialogTitle className="flex items-center gap-2 text-primary font-heading">
                             <CheckCircle2 className="w-5 h-5" />
-                            Subir Precios a la Comunidad
+                            Subir Precios al Enjambre
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
-                        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex gap-3">
-                            <AlertTriangle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                            <div className="text-sm text-emerald-900 space-y-1.5">
-                                <p className="font-semibold">Confirma antes de subir</p>
+                        <div className="bg-primary/10 border border-primary/20 rounded-xl p-4 flex gap-3">
+                            <AlertTriangle className="w-5 h-5 text-primary shrink-0 mt-0.5" />
+                            <div className="text-sm text-secondary space-y-1.5 font-medium">
+                                <p className="font-bold text-primary">Confirma antes de subir</p>
                                 <p>Se enviarán los precios de los productos <strong>marcados como comprados</strong> con precio real registrado.</p>
-                                <p>Estos datos ayudarán a la comunidad a tener estimaciones más precisas. ¡Gracias por contribuir!</p>
+                                <p>Estos datos ayudarán al enjambre a tener estimaciones más precisas. ¡Gracias por contribuir!</p>
                             </div>
                         </div>
-                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                            <p className="text-xs text-slate-500 font-medium mb-2">Resumen de la lista: <span className="font-bold">{selectedList?.name}</span></p>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">Productos comprados con precio</span>
-                                <span className="font-mono font-bold text-emerald-700">
+                        <div className="bg-stone-50 border border-border rounded-xl p-4">
+                            <p className="text-xs text-muted-foreground font-bold uppercase tracking-wider mb-3">Resumen de la lista</p>
+                            <div className="flex justify-between text-sm mb-2">
+                                <span className="text-muted-foreground font-semibold">Productos comprados</span>
+                                <span className="font-black text-secondary">
                                     {selectedList?.items?.filter(i => i.purchased && i.price).length || 0}
                                 </span>
                             </div>
-                            <div className="flex justify-between text-sm mt-1">
-                                <span className="text-slate-600">Total registrado</span>
-                                <span className="font-mono font-bold text-emerald-700">{selectedList?.total_actual?.toFixed(2) || '0.00'} €</span>
+                            <div className="flex justify-between text-sm">
+                                <span className="text-muted-foreground font-semibold">Total registrado</span>
+                                <span className="font-black text-primary">{selectedList?.total_actual?.toFixed(2) || '0.00'} €</span>
                             </div>
                         </div>
-                        <div className="flex gap-2 pt-1">
-                            <Button variant="outline" className="flex-1" onClick={() => setConfirmSubmitOpen(false)}>Cancelar</Button>
+                        <div className="flex gap-3 pt-2">
+                            <Button variant="outline" className="flex-1 rounded-xl h-12 font-bold" onClick={() => setConfirmSubmitOpen(false)}>Cancelar</Button>
                             <Button
-                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
+                                className="flex-1 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl h-12 gap-2 shadow-lg shadow-primary/20"
                                 onClick={handleSubmitPrices}
                             >
                                 <CheckCircle2 className="w-4 h-4" />

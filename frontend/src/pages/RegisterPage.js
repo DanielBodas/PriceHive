@@ -6,7 +6,7 @@ import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { toast } from "sonner";
-import { Tag, ArrowLeft } from "lucide-react";
+import { Hexagon, ArrowLeft, Sparkles } from "lucide-react";
 
 const RegisterPage = () => {
     const [name, setName] = useState("");
@@ -25,7 +25,7 @@ const RegisterPage = () => {
         setLoading(true);
         try {
             await register(name, email, password);
-            toast.success("¡Cuenta creada con éxito!");
+            toast.success("¡Bienvenido al enjambre!");
             navigate("/dashboard");
         } catch (error) {
             toast.error(error.response?.data?.detail || "Error al crear cuenta");
@@ -35,29 +35,33 @@ const RegisterPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6 py-12">
-            <div className="w-full max-w-md">
-                <Link to="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 mb-8 transition-colors">
-                    <ArrowLeft className="w-4 h-4" />
+        <div className="min-h-screen bg-background hive-pattern flex items-center justify-center px-6 py-12">
+            <div className="w-full max-w-md animate-fade-in-up">
+                <Link to="/" className="inline-flex items-center gap-2 text-muted-foreground hover:text-primary mb-8 transition-colors font-bold group">
+                    <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                     Volver al inicio
                 </Link>
                 
-                <Card className="border-slate-200 shadow-xl">
-                    <CardHeader className="text-center pb-2">
-                        <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center mx-auto mb-4">
-                            <Tag className="w-8 h-8 text-white" />
+                <Card className="border-border/50 shadow-2xl rounded-[2.5rem] overflow-hidden">
+                    <div className="h-2 bg-primary" />
+                    <CardHeader className="text-center pt-10 pb-2">
+                        <div className="relative w-20 h-20 mx-auto mb-6">
+                            <Hexagon className="w-20 h-20 text-primary fill-primary/10" strokeWidth={1.5} />
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <Sparkles className="w-8 h-8 text-primary" />
+                            </div>
                         </div>
-                        <CardTitle className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                        <CardTitle className="text-3xl font-extrabold text-secondary tracking-tight font-heading">
                             Crear Cuenta
                         </CardTitle>
-                        <CardDescription className="text-slate-500">
-                            Únete a la comunidad PriceHive
+                        <CardDescription className="text-muted-foreground font-medium mt-2">
+                            Únete hoy y empieza a ahorrar con la red.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="pt-6">
-                        <form onSubmit={handleSubmit} className="space-y-5">
+                    <CardContent className="p-8 pt-6">
+                        <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="space-y-2">
-                                <Label htmlFor="name" className="text-slate-700">Nombre</Label>
+                                <Label htmlFor="name" className="text-secondary font-bold">Nombre Completo</Label>
                                 <Input
                                     id="name"
                                     type="text"
@@ -65,12 +69,12 @@ const RegisterPage = () => {
                                     value={name}
                                     onChange={(e) => setName(e.target.value)}
                                     required
-                                    className="h-12 bg-slate-50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500"
+                                    className="h-14 bg-stone-50 border-border/60 focus:border-primary rounded-xl font-medium"
                                     data-testid="register-name-input"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="email" className="text-slate-700">Email</Label>
+                                <Label htmlFor="email" className="text-secondary font-bold">Email</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -78,12 +82,12 @@ const RegisterPage = () => {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="h-12 bg-slate-50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500"
+                                    className="h-14 bg-stone-50 border-border/60 focus:border-primary rounded-xl font-medium"
                                     data-testid="register-email-input"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="password" className="text-slate-700">Contraseña</Label>
+                                <Label htmlFor="password" title="password label" className="text-secondary font-bold">Contraseña</Label>
                                 <Input
                                     id="password"
                                     type="password"
@@ -91,23 +95,23 @@ const RegisterPage = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="h-12 bg-slate-50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500"
+                                    className="h-14 bg-stone-50 border-border/60 focus:border-primary rounded-xl font-medium"
                                     data-testid="register-password-input"
                                 />
                             </div>
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold btn-lift"
+                                className="w-full h-14 bg-primary hover:bg-primary/90 text-white rounded-2xl font-bold btn-lift shadow-xl shadow-primary/20 text-lg"
                                 data-testid="register-submit-btn"
                             >
-                                {loading ? "Creando cuenta..." : "Crear Cuenta"}
+                                {loading ? "Creando perfil..." : "Unirse al Enjambre"}
                             </Button>
                         </form>
-                        <div className="mt-6 text-center">
-                            <p className="text-slate-600">
-                                ¿Ya tienes cuenta?{" "}
-                                <Link to="/login" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                        <div className="mt-8 text-center">
+                            <p className="text-muted-foreground font-medium">
+                                ¿Ya eres del enjambre?{" "}
+                                <Link to="/login" className="text-primary hover:text-primary/80 font-bold underline-offset-4 hover:underline">
                                     Inicia sesión
                                 </Link>
                             </p>
