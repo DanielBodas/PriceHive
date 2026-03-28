@@ -593,8 +593,8 @@ const AnalyticsPage = () => {
                                             <span>{historySpanDays != null ? `${historySpanDays} dias de ventana` : "Ventana corta"}</span>
                                         </div>
                                         {/* Stats */}
-                                        <div className="grid grid-cols-4 gap-4 mb-6">
-                                            <div className="text-center p-3 bg-slate-50 rounded-lg">
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 sm:gap-4 mb-6">
+                                            <div className="text-center p-2 sm:p-3 bg-slate-50 rounded-lg">
                                                 <p className="text-xs text-slate-500">Actual</p>
                                                 <p className="font-mono font-semibold text-slate-900">
                                                     {formatCurrency(productAnalytics.current_price)}
@@ -621,7 +621,7 @@ const AnalyticsPage = () => {
                                         </div>
 
                                         {/* Chart */}
-                                        <div className="h-64">
+                                        <div className="h-64 sm:h-80">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <LineChart data={historyData}>
                                                     <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
@@ -712,7 +712,7 @@ const AnalyticsPage = () => {
                                         )}
 
                                         {/* Bar Chart */}
-                                        <div className="h-56">
+                                        <div className="h-64 sm:h-72">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart 
                                                     data={comparisonSorted} 

@@ -121,7 +121,7 @@ const AlertsPage = () => {
                                 Nueva Alerta
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="max-w-[95vw] sm:max-w-md">
                             <DialogHeader>
                                 <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>Crear Alerta de Precio</DialogTitle>
                             </DialogHeader>
