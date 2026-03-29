@@ -673,8 +673,8 @@ const AdminPage = () => {
                         <Tabs defaultValue="categories">
                             <TabsList className="bg-slate-50 border p-1 mb-4 flex-wrap h-auto">
                                 <TabsTrigger value="categories" className="gap-2" data-testid="tab-categories"><Layers className="w-4 h-4" /> Categorias</TabsTrigger>
-                                <TabsTrigger value="attributes" className="gap-2" data-testid="tab-attributes"><Tag className="w-4 h-4" /> Atributos</TabsTrigger>
                                 <TabsTrigger value="products" className="gap-2" data-testid="tab-products"><Package className="w-4 h-4" /> Productos</TabsTrigger>
+                                <TabsTrigger value="attributes" className="gap-2" data-testid="tab-attributes"><Tag className="w-4 h-4" /> Atributos</TabsTrigger>
                                 <TabsTrigger value="brands" className="gap-2" data-testid="tab-brands"><Tag className="w-4 h-4" /> Marcas</TabsTrigger>
                                 <TabsTrigger value="supermarkets" className="gap-2" data-testid="tab-supermarkets"><Store className="w-4 h-4" /> Supermercados</TabsTrigger>
                                 <TabsTrigger value="units" className="gap-2" data-testid="tab-units"><Scale className="w-4 h-4" /> Unidades</TabsTrigger>
@@ -1308,6 +1308,64 @@ const AdminPage = () => {
                     </TabsContent>
 
                     <TabsContent value="overview" className="space-y-6">
+                        <Card className="border-emerald-200 bg-emerald-50/30">
+                            <CardHeader className="pb-3">
+                                <CardTitle className="text-base font-bold text-emerald-800 flex items-center gap-2">
+                                    <RefreshCcw className="w-4 h-4" /> Sincronizacion de Datos
+                                </CardTitle>
+                            </CardHeader>
+                            <CardContent className="flex flex-wrap gap-4">
+                                <div className="space-y-1 flex-1 min-w-[240px]">
+                                    <p className="text-sm font-medium text-emerald-900">Exportar Base de Datos</p>
+                                    <p className="text-xs text-emerald-600">Descarga un archivo JSON con toda la configuracion actual (maestros y catalogos).</p>
+                                    <Button
+                                        onClick={async () => {
+                                            try {
+                                                const res = await axios.get(`${API}/admin/export`);
+                                                const blob = new Blob([JSON.stringify(res.data, null, 2)], { type: "application/json" });
+                                                const url = window.URL.createObjectURL(blob);
+                                                const a = document.createElement("a");
+                                                a.href = url;
+                                                a.download = `backup_sistema_${new Date().toISOString().split('T')[0]}.json`;
+                                                a.click();
+                                                toast.success("Copia de seguridad generada");
+                                            } catch (e) { toast.error("Error al exportar"); }
+                                        }}
+                                        className="mt-2 bg-emerald-600 hover:bg-emerald-700 h-9"
+                                    >
+                                        <Scale className="w-4 h-4 mr-2 rotate-180" /> Exportar Datos
+                                    </Button>
+                                </div>
+                                <div className="space-y-1 flex-1 min-w-[240px] border-l border-emerald-100 pl-4">
+                                    <p className="text-sm font-medium text-emerald-900">Importar Base de Datos</p>
+                                    <p className="text-xs text-emerald-600">Sube un archivo JSON para sobrescribir la configuracion actual. ¡CUIDADO! Esto borra los datos previos.</p>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <Input
+                                            type="file"
+                                            accept=".json"
+                                            className="h-9 bg-white text-xs"
+                                            onChange={async (e) => {
+                                                const file = e.target.files[0];
+                                                if (!file) return;
+                                                if (!window.confirm("¿IMPORTAR DATOS? Se borraran todas las categorias, productos, marcas, supermercados y catalogos actuales.")) return;
+
+                                                const reader = new FileReader();
+                                                reader.onload = async (event) => {
+                                                    try {
+                                                        const json = JSON.parse(event.target.result);
+                                                        const res = await axios.post(`${API}/admin/import`, json);
+                                                        toast.success(res.data.message);
+                                                        fetchAllData();
+                                                    } catch (err) { toast.error("Error al importar el archivo"); }
+                                                };
+                                                reader.readAsText(file);
+                                            }}
+                                        />
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                             <Card>
                                 <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-600">Cobertura unidades</CardTitle></CardHeader>
