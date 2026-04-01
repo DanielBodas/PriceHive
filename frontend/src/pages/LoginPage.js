@@ -7,7 +7,7 @@ import { Label } from "../components/ui/label";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Separator } from "../components/ui/separator";
 import { toast } from "sonner";
-import { Tag, ArrowLeft } from "lucide-react";
+import { Hexagon, ArrowLeft, Globe } from "lucide-react";
 
 const LoginPage = () => {
     const [email, setEmail] = useState("");
@@ -24,17 +24,13 @@ const LoginPage = () => {
             toast.success("¡Bienvenido de vuelta!");
             navigate("/dashboard");
         } catch (error) {
-            // --- NUEVA LÓGICA DE DIAGNÓSTICO ---
             console.error("Error capturado:", error);
-
             if (error.response) {
-                // El servidor respondió (401, 400, 500...)
                 toast.error(error.response.data?.detail || "Error en los datos");
             } else if (error.request) {
-                // El servidor NO respondió o el navegador bloqueó la respuesta (CORS)
-                toast.error("Bloqueo de seguridad (CORS) o el servidor está caído. Revisa F12.");
+                toast.error("Error de conexión con el servidor.");
             } else {
-                toast.error("Error desconocido: " + error.message);
+                toast.error("Error: " + error.message);
             }
         } finally {
             setLoading(false);
@@ -47,30 +43,28 @@ const LoginPage = () => {
 
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6 py-12">
-            <div className="w-full max-w-md">
-                <Link to="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 mb-8 transition-colors">
-                    <ArrowLeft className="w-4 h-4" />
+            <div className="w-full max-w-md animate-fade-in-up">
+                <Link to="/" className="inline-flex items-center gap-2 text-slate-500 hover:text-primary mb-8 transition-colors font-bold group">
+                    <ArrowLeft className="w-4 h-4 transition-transform group-hover:-translate-x-1" />
                     Volver al inicio
                 </Link>
 
-                <Card className="border-slate-200 shadow-xl">
-                    <CardHeader className="text-center pb-2">
-                        <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center mx-auto mb-4">
-                            <Tag className="w-8 h-8 text-white" />
+                <Card className="border-slate-200 shadow-xl rounded-2xl overflow-hidden bg-white">
+                    <CardHeader className="text-center pt-10 pb-2">
+                        <div className="w-16 h-16 bg-primary/10 rounded-2xl flex items-center justify-center mx-auto mb-6">
+                            <Hexagon className="w-8 h-8 text-primary" strokeWidth={2.5} />
                         </div>
-                        <CardTitle className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                            Iniciar Sesión
+                        <CardTitle className="text-2xl font-bold text-slate-900 tracking-tight font-heading">
+                            ¡Bienvenido de nuevo!
                         </CardTitle>
-                        <CardDescription className="text-slate-500">
-                            Accede a tu cuenta de PriceHive
+                        <CardDescription className="text-muted-foreground font-medium mt-2">
+                            La inteligencia colectiva de precios te espera.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="pt-6">
-                        {/* Google Login Button */}
+                    <CardContent className="p-8 pt-6">
                         <Button
-                            type="button"
                             variant="outline"
-                            className="w-full h-12 gap-3 border-slate-300 hover:bg-slate-50 mb-6"
+                            className="w-full h-14 gap-3 mb-8 border-border hover:bg-primary/5 hover:border-primary/30 rounded-2xl font-bold transition-all"
                             onClick={handleGoogleLogin}
                             data-testid="google-login-btn"
                         >
@@ -83,16 +77,16 @@ const LoginPage = () => {
                             Continuar con Google
                         </Button>
 
-                        <div className="relative mb-6">
+                        <div className="relative mb-8">
                             <Separator />
-                            <span className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 bg-white px-3 text-sm text-slate-400">
-                                o con email
-                            </span>
+                            <div className="absolute inset-0 flex items-center justify-center">
+                                <span className="bg-white px-4 text-[10px] font-black uppercase tracking-widest text-muted-foreground/60">O usa tu email</span>
+                            </div>
                         </div>
 
-                        <form onSubmit={handleSubmit} className="space-y-5">
+                        <form onSubmit={handleSubmit} className="space-y-6">
                             <div className="space-y-2">
-                                <Label htmlFor="email" className="text-slate-700">Email</Label>
+                                <Label htmlFor="email" className="text-secondary font-bold">Email</Label>
                                 <Input
                                     id="email"
                                     type="email"
@@ -100,12 +94,15 @@ const LoginPage = () => {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="h-12 bg-slate-50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500"
+                                    className="h-14 bg-stone-50 border-border/60 focus:border-primary rounded-xl font-medium"
                                     data-testid="login-email-input"
                                 />
                             </div>
                             <div className="space-y-2">
-                                <Label htmlFor="password" className="text-slate-700">Contraseña</Label>
+                                <div className="flex items-center justify-between">
+                                    <Label htmlFor="password" className="text-secondary font-bold">Contraseña</Label>
+                                    <span className="text-xs font-bold text-primary hover:underline cursor-pointer">¿Olvidaste tu contraseña?</span>
+                                </div>
                                 <Input
                                     id="password"
                                     type="password"
@@ -113,24 +110,24 @@ const LoginPage = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="h-12 bg-slate-50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500"
+                                    className="h-14 bg-stone-50 border-border/60 focus:border-primary rounded-xl font-medium"
                                     data-testid="login-password-input"
                                 />
                             </div>
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold btn-lift"
+                                className="w-full h-12 rounded-xl font-bold text-base"
                                 data-testid="login-submit-btn"
                             >
-                                {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
+                                {loading ? "Conectando..." : "Iniciar Sesión"}
                             </Button>
                         </form>
-                        <div className="mt-6 text-center">
-                            <p className="text-slate-600">
-                                ¿No tienes cuenta?{" "}
-                                <Link to="/register" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                                    Regístrate
+                        <div className="mt-8 text-center">
+                            <p className="text-muted-foreground font-medium">
+                                ¿Nuevo por aquí?{" "}
+                                <Link to="/register" className="text-primary hover:text-primary/80 font-bold underline-offset-4 hover:underline">
+                                    Regístrate gratis
                                 </Link>
                             </p>
                         </div>

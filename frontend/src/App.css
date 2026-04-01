@@ -1,11 +1,11 @@
 /* PriceHive Custom Styles */
 
 .hero-gradient {
-    background: linear-gradient(135deg, #ecfdf5 0%, #f1f5f9 100%);
+    background: linear-gradient(135deg, #fff7ed 0%, #fafaf9 100%);
 }
 
 .dark .hero-gradient {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
+    background: linear-gradient(135deg, #18181b 0%, #27272a 100%);
 }
 
 /* Animations */
@@ -56,7 +56,7 @@
 
 .btn-lift:hover {
     transform: translateY(-2px);
-    box-shadow: 0 8px 25px rgba(16, 185, 129, 0.25);
+    box-shadow: 0 8px 25px rgba(245, 158, 11, 0.25);
 }
 
 /* Card hover effects */
@@ -67,7 +67,7 @@
 .card-interactive:hover {
     transform: translateY(-4px);
     box-shadow: 0 12px 40px rgba(0,0,0,0.08);
-    border-color: #10b981;
+    border-color: #f59e0b;
 }
 
 /* Scrollbar styling */
@@ -108,7 +108,7 @@
 }
 
 .price-down {
-    @apply text-emerald-500;
+    @apply text-amber-600;
 }
 
 /* Stats card gradient borders */
@@ -124,5 +124,5 @@
     left: 0;
     right: 0;
     height: 3px;
-    background: linear-gradient(90deg, #10b981, #84cc16);
+    background: linear-gradient(90deg, #f59e0b, #d97706);
 }

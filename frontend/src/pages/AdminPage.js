@@ -374,7 +374,7 @@ const AdminPage = () => {
     ).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
 
     const getCatalogStatusMeta = (status) => {
-        if (status === "active") return { label: "Activo", className: "bg-emerald-100 text-emerald-700 border border-emerald-200" };
+        if (status === "active") return { label: "Activo", className: "bg-primary/10 text-primary border border-primary/20" };
         if (status === "planned") return { label: "Planeado", className: "bg-blue-100 text-blue-700 border border-blue-200" };
         if (status === "discontinued") return { label: "Descatalogado", className: "bg-rose-100 text-rose-700 border border-rose-200" };
         return { label: "Sin estado", className: "bg-slate-100 text-slate-700 border border-slate-200" };
@@ -676,7 +676,7 @@ const AdminPage = () => {
         <Layout>
             <div className="space-y-6">
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    <h1 className="text-3xl font-bold text-slate-900 font-heading">
                         Panel de Administracion
                     </h1>
                     <p className="text-slate-500 mt-1">Gestion avanzada del sistema</p>
@@ -716,7 +716,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Productos</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">{filteredProductsTable.length} registros</p>
                                             </div>
-                                            <Button onClick={() => { setEditingItem(null); setProductForm({ name: "", brand_id: "", category_id: "", unit_id: "", barcode: "", image_url: "" }); setProductDialog(true); }} className="bg-emerald-500" data-testid="new-product-btn"><Plus className="w-4 h-4 mr-2" /> Nuevo Producto</Button>
+                                            <Button onClick={() => { setEditingItem(null); setProductForm({ name: "", brand_id: "", category_id: "", unit_id: "", barcode: "", image_url: "" }); setProductDialog(true); }} className="bg-primary" data-testid="new-product-btn"><Plus className="w-4 h-4 mr-2" /> Nuevo Producto</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -761,7 +761,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Atributos de Producto</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">{filteredAttributesTable.length} registros</p>
                                             </div>
-                                            <Button onClick={() => { setEditingItem(null); setAttributeForm({ name: "", description: "" }); setAttributeDialog(true); }} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Nuevo Atributo</Button>
+                                            <Button onClick={() => { setEditingItem(null); setAttributeForm({ name: "", description: "" }); setAttributeDialog(true); }} className="bg-primary"><Plus className="w-4 h-4 mr-2" /> Nuevo Atributo</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -801,7 +801,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Marcas</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">{filteredBrandsTable.length} registros</p>
                                             </div>
-                                            <Button onClick={() => { setEditingItem(null); setBrandForm({ name: "", logo_url: "" }); setBrandDialog(true); }} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Nueva Marca</Button>
+                                            <Button onClick={() => { setEditingItem(null); setBrandForm({ name: "", logo_url: "" }); setBrandDialog(true); }} className="bg-primary"><Plus className="w-4 h-4 mr-2" /> Nueva Marca</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -835,7 +835,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Supermercados</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">{filteredSupermarketsTable.length} registros</p>
                                             </div>
-                                            <Button onClick={() => { setEditingItem(null); setSupermarketForm({ name: "", logo_url: "" }); setSupermarketDialog(true); }} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Nuevo Supermercado</Button>
+                                            <Button onClick={() => { setEditingItem(null); setSupermarketForm({ name: "", logo_url: "" }); setSupermarketDialog(true); }} className="bg-primary"><Plus className="w-4 h-4 mr-2" /> Nuevo Supermercado</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -869,7 +869,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Unidades</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">{filteredUnitsTable.length} registros</p>
                                             </div>
-                                            <Button onClick={() => { setEditingItem(null); setUnitForm({ name: "", abbreviation: "" }); setUnitDialog(true); }} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Nueva Unidad</Button>
+                                            <Button onClick={() => { setEditingItem(null); setUnitForm({ name: "", abbreviation: "" }); setUnitDialog(true); }} className="bg-primary"><Plus className="w-4 h-4 mr-2" /> Nueva Unidad</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -904,7 +904,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Categorias</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">{filteredCategoriesTable.length} registros</p>
                                             </div>
-                                            <Button onClick={() => { setEditingItem(null); setCategoryForm({ name: "", description: "" }); setCategoryDialog(true); }} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Nueva Categoria</Button>
+                                            <Button onClick={() => { setEditingItem(null); setCategoryForm({ name: "", description: "" }); setCategoryDialog(true); }} className="bg-primary"><Plus className="w-4 h-4 mr-2" /> Nueva Categoria</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -950,7 +950,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Catálogo Supermercado</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">Gestiona qué marcas están disponibles en cada establecimiento.</p>
                                             </div>
-                                            <Button onClick={() => setAddSupermarketToCatalogDialog(true)} className="bg-emerald-500" data-testid="new-sellable-btn"><Plus className="w-4 h-4 mr-2" /> Añadir Supermercado</Button>
+                                            <Button onClick={() => setAddSupermarketToCatalogDialog(true)} className="bg-primary" data-testid="new-sellable-btn"><Plus className="w-4 h-4 mr-2" /> Añadir Supermercado</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -967,11 +967,11 @@ const AdminPage = () => {
                                                                 <span className="font-semibold text-slate-800">{supermarket.name}</span>
                                                                 <div className="flex gap-2">
                                                                     <Badge variant="secondary" className="bg-slate-100 text-slate-600">{supermarket.brands_count} marcas</Badge>
-                                                                    <Badge variant="secondary" className="bg-emerald-50 text-emerald-600">{supermarket.total_products_count} productos activos</Badge>
+                                                                    <Badge variant="secondary" className="bg-primary/5 text-primary">{supermarket.total_products_count} productos activos</Badge>
                                                                 </div>
                                                             </div>
                                                             <div className="flex gap-2" onClick={(e) => e.stopPropagation()}>
-                                                                <Button size="sm" variant="outline" className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50" onClick={(e) => { e.stopPropagation(); setSellableForm({ ...sellableForm, supermarket_id: supermarket.id, brand_id: "", catalog_entry_ids: [] }); setSupermarketBrandDialog(true); }}>
+                                                                <Button size="sm" variant="outline" className="h-8 border-primary/20 text-primary hover:bg-primary/5" onClick={(e) => { e.stopPropagation(); setSellableForm({ ...sellableForm, supermarket_id: supermarket.id, brand_id: "", catalog_entry_ids: [] }); setSupermarketBrandDialog(true); }}>
                                                                     <Plus className="w-3.5 h-3.5 mr-1.5" /> Añadir Marca
                                                                 </Button>
                                                             </div>
@@ -1012,7 +1012,7 @@ const AdminPage = () => {
                                                                             <Button
                                                                                 variant="ghost"
                                                                                 size="sm"
-                                                                                className="h-7 px-2 text-[10px] text-slate-400 hover:text-emerald-700 hover:bg-emerald-50 gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
+                                                                                className="h-7 px-2 text-[10px] text-slate-400 hover:text-primary hover:bg-primary/5 gap-1 opacity-0 group-hover:opacity-100 transition-opacity"
                                                                                 title="Sincronizar productos del catálogo de marca"
                                                                                 onClick={(e) => { e.stopPropagation(); handleSyncBrandInSupermarket(supermarket.id, brand.id, brand.name, supermarket.name); }}
                                                                             >
@@ -1052,7 +1052,7 @@ const AdminPage = () => {
                                                 <CardTitle className="text-lg">Catalogo Marca</CardTitle>
                                                 <p className="text-sm text-slate-500 mt-1">Portfolio conceptual de marca con estado editable</p>
                                             </div>
-                                            <Button onClick={() => setAddBrandGlobalDialog(true)} className="bg-emerald-500"><Plus className="w-4 h-4 mr-2" /> Gestionar Marcas</Button>
+                                            <Button onClick={() => setAddBrandGlobalDialog(true)} className="bg-primary"><Plus className="w-4 h-4 mr-2" /> Gestionar Marcas</Button>
                                         </div>
                                         <div className="relative">
                                             <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -1073,7 +1073,7 @@ const AdminPage = () => {
                                                                 <Button
                                                                     size="sm"
                                                                     variant="outline"
-                                                                    className="h-8 border-emerald-200 text-emerald-700 hover:bg-emerald-50 gap-1.5"
+                                                                    className="h-8 border-primary/20 text-primary hover:bg-primary/5 gap-1.5"
                                                                     onClick={(e) => { e.stopPropagation(); setCatalogForm({ ...catalogForm, brand_id: brand.id, product_ids: [], status: "active" }); setCatalogDialog(true); }}
                                                                 >
                                                                     <Plus className="w-3.5 h-3.5" /> Añadir Productos
@@ -1164,7 +1164,7 @@ const AdminPage = () => {
                                                                                                                     key={val}
                                                                                                                     className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs cursor-pointer transition-all ${
                                                                                                                         product.allowed_attributes?.[attrId]?.includes(val)
-                                                                                                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
+                                                                                                                        ? 'bg-primary/5 border-primary/20 text-primary shadow-sm'
                                                                                                                         : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
                                                                                                                     }`}
                                                                                                                     onClick={async (e) => {
@@ -1183,7 +1183,7 @@ const AdminPage = () => {
                                                                                                                         } catch (e) { toast.error("Error al actualizar"); }
                                                                                                                     }}
                                                                                                                 >
-                                                                                                                    <div className={`w-2 h-2 rounded-full ${product.allowed_attributes?.[attrId]?.includes(val) ? 'bg-emerald-500' : 'bg-slate-200'}`} />
+                                                                                                                    <div className={`w-2 h-2 rounded-full ${product.allowed_attributes?.[attrId]?.includes(val) ? 'bg-primary' : 'bg-slate-200'}`} />
                                                                                                                     {val}
                                                                                                                 </div>
                                                                                                             ))}
@@ -1448,7 +1448,7 @@ const AdminPage = () => {
                             <Input value={productForm.image_url || ""} onChange={e => setProductForm({ ...productForm, image_url: e.target.value })} placeholder="https://..." />
                         </div>
 
-                        <Button onClick={handleSaveProduct} className="w-full bg-emerald-500" data-testid="save-product-btn">Guardar Concepto de Producto</Button>
+                        <Button onClick={handleSaveProduct} className="w-full bg-primary" data-testid="save-product-btn">Guardar Concepto de Producto</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1492,12 +1492,12 @@ const AdminPage = () => {
                             </div>
                             <div className="flex flex-wrap gap-2 min-h-10 p-2 border rounded bg-slate-50">
                                 {attributeForm.values?.map((v, i) => (
-                                    <Badge key={i} className="gap-1 pr-1 bg-emerald-100 text-emerald-700 hover:bg-emerald-100">
+                                    <Badge key={i} className="gap-1 pr-1 bg-primary/10 text-primary hover:bg-primary/10">
                                         {v}
                                         <Button
                                             variant="ghost"
                                             size="icon"
-                                            className="h-4 w-4 rounded-full hover:bg-emerald-200"
+                                            className="h-4 w-4 rounded-full hover:bg-primary/20"
                                             onClick={() => setAttributeForm({ ...attributeForm, values: attributeForm.values.filter((_, idx) => idx !== i) })}
                                         >
                                             <Trash2 className="h-3 w-3" />
@@ -1508,7 +1508,7 @@ const AdminPage = () => {
                             </div>
                         </div>
 
-                        <Button onClick={handleSaveAttribute} className="w-full bg-emerald-500">Guardar Atributo</Button>
+                        <Button onClick={handleSaveAttribute} className="w-full bg-primary">Guardar Atributo</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1518,7 +1518,7 @@ const AdminPage = () => {
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nueva"} Marca</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <Label>Nombre</Label><Input value={brandForm.name} onChange={e => setBrandForm({ ...brandForm, name: e.target.value })} placeholder="Nombre de la marca" data-testid="brand-name-input" />
-                        <Button onClick={handleSaveBrand} className="w-full bg-emerald-500" data-testid="save-brand-btn">Guardar</Button>
+                        <Button onClick={handleSaveBrand} className="w-full bg-primary" data-testid="save-brand-btn">Guardar</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1528,7 +1528,7 @@ const AdminPage = () => {
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Supermercado</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <Label>Nombre</Label><Input value={supermarketForm.name} onChange={e => setSupermarketForm({ ...supermarketForm, name: e.target.value })} placeholder="Nombre del supermercado" data-testid="supermarket-name-input" />
-                        <Button onClick={handleSaveSupermarket} className="w-full bg-emerald-500" data-testid="save-supermarket-btn">Guardar</Button>
+                        <Button onClick={handleSaveSupermarket} className="w-full bg-primary" data-testid="save-supermarket-btn">Guardar</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1539,7 +1539,7 @@ const AdminPage = () => {
                     <div className="space-y-4 pt-4">
                         <Label>Nombre</Label><Input value={unitForm.name} onChange={e => setUnitForm({ ...unitForm, name: e.target.value })} placeholder="Ej: Litro" />
                         <Label>Abreviatura</Label><Input value={unitForm.abbreviation} onChange={e => setUnitForm({ ...unitForm, abbreviation: e.target.value })} placeholder="Ej: L" />
-                        <Button onClick={handleSaveUnit} className="w-full bg-emerald-500">Guardar</Button>
+                        <Button onClick={handleSaveUnit} className="w-full bg-primary">Guardar</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1549,7 +1549,7 @@ const AdminPage = () => {
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nueva"} Categoría</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <Label>Nombre</Label><Input value={categoryForm.name} onChange={e => setCategoryForm({ ...categoryForm, name: e.target.value })} placeholder="Nombre de la categoría" />
-                        <Button onClick={handleSaveCategory} className="w-full bg-emerald-500">Guardar</Button>
+                        <Button onClick={handleSaveCategory} className="w-full bg-primary">Guardar</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1569,7 +1569,7 @@ const AdminPage = () => {
                                     <div key={brand.id} className="relative group">
                                         <Button
                                             variant={isLinked ? "secondary" : "outline"}
-                                            className={`w-full justify-start h-auto py-2 px-3 pr-8 ${isLinked ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}`}
+                                            className={`w-full justify-start h-auto py-2 px-3 pr-8 ${isLinked ? 'border-primary/20 bg-primary/5 text-primary' : ''}`}
                                             onClick={async () => {
                                                 if (isLinked) {
                                                     toast.info("Esta marca ya está vinculada.");
@@ -1652,7 +1652,7 @@ const AdminPage = () => {
                                             JSON.stringify(sp.attribute_values || {}) === JSON.stringify(bc.attribute_values || {})
                                         );
                                         return (
-                                            <div key={bc.id} className={`flex items-center space-x-2 p-2 rounded transition-colors border ${alreadyInSM ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white hover:border-emerald-200 shadow-sm'}`}>
+                                            <div key={bc.id} className={`flex items-center space-x-2 p-2 rounded transition-colors border ${alreadyInSM ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white hover:border-primary/20 shadow-sm'}`}>
                                                 <Checkbox
                                                     id={`sp-${bc.id}`}
                                                     disabled={alreadyInSM}
@@ -1688,12 +1688,12 @@ const AdminPage = () => {
                                     </div>
                                 )}
                             </div>
-                            <p className="text-xs text-emerald-600 font-semibold">{sellableForm.catalog_entry_ids.length} variantes nuevas seleccionadas</p>
+                            <p className="text-xs text-primary font-semibold">{sellableForm.catalog_entry_ids.length} variantes nuevas seleccionadas</p>
                         </div>
 
                         <div className="flex gap-3 mt-6">
                             <Button variant="outline" className="flex-1" onClick={() => setSellableDialog(false)}>Cancelar</Button>
-                            <Button onClick={handleSaveSellable} className="flex-[2] bg-emerald-500" disabled={sellableForm.catalog_entry_ids.length === 0}>
+                            <Button onClick={handleSaveSellable} className="flex-[2] bg-primary" disabled={sellableForm.catalog_entry_ids.length === 0}>
                                 Confirmar Vinculación ({sellableForm.catalog_entry_ids.length})
                             </Button>
                         </div>
@@ -1742,7 +1742,7 @@ const AdminPage = () => {
                                         .map(p => {
                                             const alreadyInCatalog = brandCatalog.some(bc => bc.brand_id === catalogForm.brand_id && bc.product_id === p.id);
                                             return (
-                                                <div key={p.id} className={`flex items-center space-x-2 p-2 rounded transition-colors border ${alreadyInCatalog ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white hover:border-emerald-200 shadow-sm'}`}>
+                                                <div key={p.id} className={`flex items-center space-x-2 p-2 rounded transition-colors border ${alreadyInCatalog ? 'bg-slate-100 border-slate-200 opacity-60' : 'bg-white hover:border-primary/20 shadow-sm'}`}>
                                                     <Checkbox
                                                         id={`cat-${p.id}`}
                                                         disabled={alreadyInCatalog}
@@ -1762,7 +1762,7 @@ const AdminPage = () => {
                             </div>
                         )}
 
-                        <Button onClick={handleSaveCatalog} className="w-full bg-emerald-500 mt-2 h-11 text-base font-semibold" disabled={catalogForm.product_ids.length === 0 || !catalogForm.brand_id}>
+                        <Button onClick={handleSaveCatalog} className="w-full bg-primary mt-2 h-11 text-base font-semibold" disabled={catalogForm.product_ids.length === 0 || !catalogForm.brand_id}>
                             Añadir {catalogForm.product_ids.length} productos
                         </Button>
                     </div>
@@ -1839,7 +1839,7 @@ const AdminPage = () => {
                             )}
                         </div>
 
-                        <Button onClick={handleSaveCatalogStatus} className="w-full bg-emerald-500">Guardar Cambios</Button>
+                        <Button onClick={handleSaveCatalogStatus} className="w-full bg-primary">Guardar Cambios</Button>
                     </div>
                 </DialogContent>
             </Dialog>
@@ -1878,7 +1878,7 @@ const AdminPage = () => {
                                     <div key={brand.id} className="relative group">
                                         <Button
                                             variant={isLinked ? "secondary" : "outline"}
-                                            className={`w-full justify-start h-auto py-2 px-3 pr-8 ${isLinked ? 'border-emerald-200 bg-emerald-50 text-emerald-700' : ''}`}
+                                            className={`w-full justify-start h-auto py-2 px-3 pr-8 ${isLinked ? 'border-primary/20 bg-primary/5 text-primary' : ''}`}
                                             onClick={() => {
                                                 setCatalogForm({ ...catalogForm, brand_id: brand.id, product_ids: [], status: "active", attribute_combinations: [] });
                                                 setAddBrandGlobalDialog(false);
@@ -1939,7 +1939,7 @@ const AdminPage = () => {
                                 </label>
                             ))}
                         </div>
-                        <Button onClick={handleSaveProductUnits} disabled={relationSaving || relationLoading} className="w-full bg-emerald-500">
+                        <Button onClick={handleSaveProductUnits} disabled={relationSaving || relationLoading} className="w-full bg-primary">
                             {relationSaving ? "Guardando..." : "Guardar Unidades"}
                         </Button>
                     </div>

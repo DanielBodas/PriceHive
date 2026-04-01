@@ -311,9 +311,9 @@ const AnalyticsPage = () => {
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
             return (
-                <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
-                    <p className="text-sm text-slate-500">{formatDateTime(label)}</p>
-                    <p className="font-mono font-semibold text-emerald-600">
+                <div className="bg-white/95 backdrop-blur-sm border border-border rounded-xl p-3 shadow-lg">
+                    <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">{formatDateTime(label)}</p>
+                    <p className="text-lg font-black text-primary">
                         {formatCurrency(payload[0].value)}
                     </p>
                 </div>
@@ -326,18 +326,18 @@ const AnalyticsPage = () => {
         return products.find(p => p.id === selectedProduct);
     }, [products, selectedProduct]);
 
-    // Color palette for bar chart
-    const BAR_COLORS = ["#10b981", "#34d399", "#6ee7b7", "#a7f3d0", "#059669", "#047857"];
+    // Color palette for bar chart (Honey/Amber tones)
+    const BAR_COLORS = ["#f59e0b", "#fbbf24", "#fcd34d", "#fef3c7", "#d97706", "#b45309"];
 
     return (
         <Layout>
-            <div className="space-y-6" data-testid="analytics-page">
+            <div className="space-y-6 animate-fade-in-up" data-testid="analytics-page">
                 {/* Header */}
                 <div>
-                    <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                    <h1 className="text-4xl font-extrabold text-secondary tracking-tight font-heading">
                         Analisis de Precios
                     </h1>
-                    <p className="text-slate-500 mt-1">Explora evolucion, comparativas y oportunidades de ahorro</p>
+                    <p className="text-muted-foreground font-medium mt-1">Explora evolución, comparativas y oportunidades de la comunidad</p>
                 </div>
 
                 {/* Search & Filters */}
@@ -448,7 +448,7 @@ const AnalyticsPage = () => {
                                 <Button 
                                     onClick={runAnalysis}
                                     disabled={analyticsLoading || !selectedProduct}
-                                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 gap-2"
+                                    className="flex-1 bg-primary hover:bg-primary/90 text-white font-bold rounded-xl btn-lift shadow-lg shadow-primary/20 gap-2"
                                     data-testid="analyze-btn"
                                 >
                                     <TrendingUp className="w-4 h-4" />
@@ -517,11 +517,11 @@ const AnalyticsPage = () => {
                                         {trend.direction === "up" ? (
                                             <TrendingUp className="w-5 h-5 text-rose-600" />
                                         ) : trend.direction === "down" ? (
-                                            <TrendingDown className="w-5 h-5 text-emerald-600" />
+                                            <TrendingDown className="w-5 h-5 text-primary" />
                                         ) : (
                                             <BarChart3 className="w-5 h-5 text-slate-500" />
                                         )}
-                                        <p className={`text-2xl font-bold ${trend.direction === "up" ? "text-rose-600" : trend.direction === "down" ? "text-emerald-600" : "text-slate-700"}`}>
+                                        <p className={`text-2xl font-bold ${trend.direction === "up" ? "text-rose-600" : trend.direction === "down" ? "text-primary" : "text-slate-700"}`}>
                                             {trend.deltaPct > 0 ? "+" : ""}{trend.deltaPct.toFixed(1)}%
                                         </p>
                                     </div>
@@ -548,13 +548,13 @@ const AnalyticsPage = () => {
 
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm text-slate-600">Ahorro Potencial</CardTitle>
+                                <CardTitle className="text-sm font-bold text-muted-foreground uppercase tracking-wider">Ahorro Potencial</CardTitle>
                             </CardHeader>
                             <CardContent>
                                 {priceSpread ? (
                                     <>
-                                        <p className="text-2xl font-bold text-emerald-600">{formatCurrency(priceSpread.delta)}</p>
-                                        <p className="text-xs text-slate-400 mt-1">entre el más barato y más caro</p>
+                                        <p className="text-2xl font-black text-primary">{formatCurrency(priceSpread.delta)}</p>
+                                        <p className="text-xs font-medium text-muted-foreground mt-1">entre el más barato y más caro</p>
                                     </>
                                 ) : (
                                     <p className="text-sm text-slate-500">Sin comparativa</p>
@@ -568,10 +568,10 @@ const AnalyticsPage = () => {
                 <div className="grid lg:grid-cols-2 gap-6">
                     {/* Price Evolution Chart */}
                     {productAnalytics && (
-                        <Card className="border-slate-200" data-testid="evolution-card">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                                    <TrendingUp className="w-5 h-5 text-emerald-500" />
+                        <Card className="border-border/50 shadow-sm overflow-hidden" data-testid="evolution-card">
+                            <CardHeader className="bg-stone-50/50 border-b border-border/40">
+                                <CardTitle className="flex items-center gap-2 text-xl font-bold text-secondary font-heading">
+                                    <TrendingUp className="w-5 h-5 text-primary" />
                                     Evolucion de Precio
                                 </CardTitle>
                             </CardHeader>
@@ -606,9 +606,9 @@ const AnalyticsPage = () => {
                                                     {formatCurrency(productAnalytics.avg_price)}
                                                 </p>
                                             </div>
-                                            <div className="text-center p-3 bg-emerald-50 rounded-lg">
-                                                <p className="text-xs text-emerald-600">Minimo</p>
-                                                <p className="font-mono font-semibold text-emerald-600">
+                                            <div className="text-center p-3 bg-primary/10 rounded-xl border border-primary/10">
+                                                <p className="text-[10px] font-bold text-primary uppercase tracking-widest">Minimo</p>
+                                                <p className="font-mono font-bold text-primary">
                                                     {formatCurrency(productAnalytics.min_price)}
                                                 </p>
                                             </div>
@@ -638,10 +638,10 @@ const AnalyticsPage = () => {
                                                     <Line 
                                                         type="monotone" 
                                                         dataKey="price" 
-                                                        stroke="#10b981" 
-                                                        strokeWidth={2}
-                                                        dot={{ fill: '#10b981', strokeWidth: 2 }}
-                                                        activeDot={{ r: 6, fill: '#10b981' }}
+                                                        stroke="#f59e0b"
+                                                        strokeWidth={3}
+                                                        dot={{ fill: '#f59e0b', strokeWidth: 2, r: 4 }}
+                                                        activeDot={{ r: 7, fill: '#f59e0b', stroke: '#fff', strokeWidth: 2 }}
                                                     />
                                                 </LineChart>
                                             </ResponsiveContainer>
@@ -662,10 +662,10 @@ const AnalyticsPage = () => {
 
                     {/* Comparison Chart */}
                     {comparison && (
-                        <Card className="border-slate-200" data-testid="comparison-card">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                                    <BarChart3 className="w-5 h-5 text-emerald-500" />
+                        <Card className="border-border/50 shadow-sm overflow-hidden" data-testid="comparison-card">
+                            <CardHeader className="bg-stone-50/50 border-b border-border/40">
+                                <CardTitle className="flex items-center gap-2 text-xl font-bold text-secondary font-heading">
+                                    <BarChart3 className="w-5 h-5 text-primary" />
                                     Comparacion por Supermercado
                                 </CardTitle>
                             </CardHeader>
@@ -684,26 +684,34 @@ const AnalyticsPage = () => {
                                     <>
                                         {/* Best Price Highlight */}
                                         {bestPrice && (
-                                            <div className="mb-6 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
-                                                <div className="flex items-center justify-between">
+                                            <div className="mb-6 p-5 bg-primary/10 rounded-2xl border border-primary/20 relative overflow-hidden">
+                                                <div className="absolute top-0 right-0 p-2">
+                                                    <Sparkles className="w-12 h-12 text-primary/10 rotate-12" />
+                                                </div>
+                                                <div className="flex items-center justify-between relative">
                                                     <div>
-                                                        <p className="text-sm text-emerald-600 font-medium">Mejor Precio</p>
-                                                        <p className="font-semibold text-slate-900">{bestPrice.supermarket_name}</p>
+                                                        <p className="text-[10px] font-black text-primary uppercase tracking-[0.2em] mb-1">Mejor Oportunidad</p>
+                                                        <p className="text-xl font-extrabold text-secondary">{bestPrice.supermarket_name}</p>
                                                         {bestPrice.brand_name && (
-                                                            <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
-                                                                <Tag className="w-3 h-3" />
+                                                            <p className="text-sm font-bold text-muted-foreground flex items-center gap-1 mt-1">
+                                                                <Tag className="w-3.5 h-3.5" />
                                                                 {bestPrice.brand_name}
                                                             </p>
                                                         )}
-                                                        <p className="text-xs text-slate-500">Actualizado: {formatDateTime(bestPrice.updated_at)}</p>
-                                                        {priceSpread && (
-                                                            <p className="text-xs text-slate-500 mt-1">
-                                                                Brecha entre supers: {formatCurrency(priceSpread.delta)} ({priceSpread.deltaPct.toFixed(1)}%)
+                                                        <div className="mt-3 flex items-center gap-4">
+                                                            <p className="text-[10px] font-bold text-muted-foreground/60 flex items-center gap-1">
+                                                                <Clock className="w-3 h-3" />
+                                                                {formatDateTime(bestPrice.updated_at)}
                                                             </p>
-                                                        )}
+                                                            {priceSpread && (
+                                                                <p className="text-[10px] font-black text-primary bg-primary/10 px-2 py-0.5 rounded-full">
+                                                                    AHORRO: {formatCurrency(priceSpread.delta)}
+                                                                </p>
+                                                            )}
+                                                        </div>
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="font-mono text-2xl font-bold text-emerald-600">
+                                                        <p className="text-3xl font-black text-primary tracking-tighter">
                                                             {formatCurrency(bestPrice.price)}
                                                         </p>
                                                     </div>
@@ -746,13 +754,13 @@ const AnalyticsPage = () => {
                                                     />
                                                     <Bar 
                                                         dataKey="price" 
-                                                        radius={[0, 4, 4, 0]}
+                                                        radius={[0, 8, 8, 0]}
                                                     >
                                                         {comparisonSorted.map((entry, index) => (
                                                             <Cell 
                                                                 key={`cell-${index}`} 
-                                                                fill={index === 0 ? "#10b981" : BAR_COLORS[index % BAR_COLORS.length]}
-                                                                opacity={index === 0 ? 1 : 0.8}
+                                                                fill={index === 0 ? "#f59e0b" : BAR_COLORS[index % BAR_COLORS.length]}
+                                                                opacity={index === 0 ? 1 : 0.7}
                                                             />
                                                         ))}
                                                     </Bar>
@@ -765,29 +773,29 @@ const AnalyticsPage = () => {
                                             {comparisonSorted.map((item, index) => (
                                                 <div 
                                                     key={index}
-                                                    className={`flex items-center justify-between p-3 rounded-lg ${
-                                                        index === 0 ? 'bg-emerald-50 border border-emerald-100' : 'bg-slate-50'
+                                                    className={`flex items-center justify-between p-4 rounded-xl transition-all ${
+                                                        index === 0 ? 'bg-primary/5 border border-primary/20' : 'bg-stone-50 border border-transparent'
                                                     }`}
                                                 >
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2">
-                                                            {index === 0 && <TrendingDown className="w-4 h-4 text-emerald-600" />}
-                                                            <span className="text-slate-700 font-medium">{item.supermarket_name}</span>
+                                                            {index === 0 && <TrendingDown className="w-4 h-4 text-primary" />}
+                                                            <span className="text-secondary font-bold">{item.supermarket_name}</span>
                                                         </div>
-                                                        <div className="flex items-center gap-2 mt-0.5">
+                                                        <div className="flex items-center gap-3 mt-1">
                                                             {item.brand_name && (
-                                                                <span className="text-xs text-slate-400 flex items-center gap-1">
-                                                                    <Tag className="w-2.5 h-2.5" />
+                                                                <span className="text-[10px] font-bold text-muted-foreground flex items-center gap-1 uppercase">
+                                                                    <Tag className="w-3 h-3" />
                                                                     {item.brand_name}
                                                                 </span>
                                                             )}
-                                                            <span className="text-xs text-slate-400">
+                                                            <span className="text-[10px] font-bold text-muted-foreground/50 uppercase">
                                                                 {index === 0 ? "Referencia más barata" : `+${formatCurrency(item.price - bestPrice.price)} vs mejor`}
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <span className={`font-mono font-semibold ${
-                                                        index === 0 ? 'text-emerald-600' : 'text-slate-900'
+                                                    <span className={`text-lg font-black tracking-tight ${
+                                                        index === 0 ? 'text-primary' : 'text-secondary'
                                                     }`}>
                                                         {formatCurrency(item.price)}
                                                     </span>
@@ -818,12 +826,12 @@ const AnalyticsPage = () => {
                         </CardHeader>
                         <CardContent className="space-y-3">
                             {selectedVsBest && selectedSupermarketRow && (
-                                <div className="rounded-lg border p-3 bg-slate-50 text-sm">
-                                    En {selectedSupermarketRow.supermarket_name}, el producto esta{" "}
-                                    <span className={selectedVsBest.delta > 0 ? "text-rose-600 font-semibold" : "text-emerald-600 font-semibold"}>
+                                <div className="rounded-xl border border-border/60 p-4 bg-stone-50 text-sm font-medium text-secondary">
+                                    En <span className="font-bold">{selectedSupermarketRow.supermarket_name}</span>, el producto está{" "}
+                                    <span className={selectedVsBest.delta > 0 ? "text-rose-600 font-bold" : "text-primary font-bold"}>
                                         {selectedVsBest.delta > 0 ? "+" : ""}{formatCurrency(selectedVsBest.delta)}
                                     </span>{" "}
-                                    frente al mejor precio disponible.
+                                    frente al mejor precio disponible detectado por la comunidad.
                                 </div>
                             )}
 
