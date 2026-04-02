@@ -54,7 +54,7 @@ async def auth_google_callback(code: str, response: Response):
         google_data = user_info_resp.json()
 
     email = google_data["email"]
-    user = await db.users.find_one({"email": email}, {"_id": 0})
+    user = await db.users.find_one({"email": email}, {"_id": 0, "password": 0})
 
     if not user:
         user_id = str(uuid.uuid4())
@@ -153,7 +153,7 @@ async def login(credentials: UserLogin):
     user_email = credentials.email.lower().strip()
     user = await db.users.find_one({"email": user_email}, {"_id": 0})
 
-    if not user or not verify_password(credentials.password, user["password"]):
+    if not user or "password" not in user or not verify_password(credentials.password, user["password"]):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 
     token = create_token(user["id"], user["email"], user["role"])
