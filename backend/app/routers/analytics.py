@@ -38,18 +38,51 @@ async def get_product_analytics(product_id: str, supermarket_id: Optional[str] =
         )
 
     price_values = [p["price"] for p in prices]
+
+    # Calculate unit prices
+    unit_prices = []
+    history = []
+    for p in prices:
+        qty = p.get("quantity", 1) or 1
+        u_p = p["price"] / qty
+        unit_prices.append(u_p)
+        history.append(PriceHistoryResponse(
+            date=p["created_at"],
+            price=p["price"],
+            unit_price=u_p,
+            quantity=qty
+        ))
+
     supermarket = await db.supermarkets.find_one({"id": supermarket_id}, {"_id": 0}) if supermarket_id else None
+
+    # Get unit name from product or its base
+    unit_name = None
+    unit_id = product.get("unit_id")
+    if not unit_id and product.get("base_product_id"):
+        base_p = await db.products.find_one({"id": product["base_product_id"]}, {"_id": 0})
+        if base_p:
+            unit_id = base_p.get("unit_id")
+
+    if unit_id:
+        unit = await db.units.find_one({"id": unit_id}, {"_id": 0})
+        if unit:
+            unit_name = unit.get("abbreviation") or unit.get("name")
 
     return ProductAnalyticsResponse(
         product_id=product_id,
         product_name=product["name"],
         supermarket_id=supermarket_id,
         supermarket_name=supermarket["name"] if supermarket else None,
+        unit_name=unit_name,
         current_price=prices[-1]["price"],
+        current_unit_price=unit_prices[-1],
         avg_price=sum(price_values) / len(price_values),
+        avg_unit_price=sum(unit_prices) / len(unit_prices),
         min_price=min(price_values),
+        min_unit_price=min(unit_prices),
         max_price=max(price_values),
-        price_history=[PriceHistoryResponse(date=p["created_at"], price=p["price"]) for p in prices]
+        max_unit_price=max(unit_prices),
+        price_history=history
     )
 
 @router.get("/analytics/compare/{product_id}")
@@ -62,6 +95,19 @@ async def compare_product_prices(product_id: str, user: dict = Depends(get_curre
     supermarkets = {s.get("id") or str(s.get("_id")): s["name"] for s in await db.supermarkets.find({}).to_list(1000)}
     brands = {b.get("id") or str(b.get("_id")): b["name"] for b in await db.brands.find({}).to_list(1000)}
 
+    # Get unit name
+    unit_name = None
+    unit_id = product.get("unit_id")
+    if not unit_id and product.get("base_product_id"):
+        base_p = await db.products.find_one({"id": product["base_product_id"]}, {"_id": 0})
+        if base_p:
+            unit_id = base_p.get("unit_id")
+
+    if unit_id:
+        unit = await db.units.find_one({"id": unit_id}, {"_id": 0})
+        if unit:
+            unit_name = unit.get("abbreviation") or unit.get("name")
+
     comparison = []
     for sp in sps:
         sp_id = sp.get("id") or str(sp.get("_id"))
@@ -72,19 +118,24 @@ async def compare_product_prices(product_id: str, user: dict = Depends(get_curre
         )
         if latest:
             brand_id = sp.get("brand_id")
+            qty = latest.get("quantity", 1) or 1
+            u_p = latest["price"] / qty
             comparison.append({
                 "supermarket_id": sp["supermarket_id"],
                 "supermarket_name": supermarkets.get(sp["supermarket_id"]),
                 "brand_id": brand_id,
                 "brand_name": brands.get(brand_id),
                 "price": latest["price"],
+                "unit_price": u_p,
+                "quantity": qty,
                 "updated_at": latest["created_at"]
             })
 
-    comparison.sort(key=lambda x: x["price"])
+    comparison.sort(key=lambda x: x["unit_price"])
     return {
         "product_id": product_id,
         "product_name": product["name"],
+        "unit_name": unit_name,
         "comparison": comparison,
         "best_price": comparison[0] if comparison else None
     }

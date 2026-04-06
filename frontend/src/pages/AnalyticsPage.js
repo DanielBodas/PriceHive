@@ -189,6 +189,7 @@ const AnalyticsPage = () => {
     };
 
     const formatCurrency = (value) => `${Number(value || 0).toFixed(2)} €`;
+    const formatUnitPrice = (value, unit) => `${Number(value || 0).toFixed(2)} €${unit ? `/${unit}` : ''}`;
 
     const daysBetween = (fromDateString, toDate = new Date()) => {
         if (!fromDateString) return null;
@@ -198,14 +199,18 @@ const AnalyticsPage = () => {
     };
 
     const historyData = useMemo(
-        () => (productAnalytics?.price_history || []).map((row) => ({ ...row, price: Number(row.price) })),
+        () => (productAnalytics?.price_history || []).map((row) => ({
+            ...row,
+            price: Number(row.price),
+            unit_price: Number(row.unit_price || row.price)
+        })),
         [productAnalytics]
     );
 
     const trend = useMemo(() => {
         if (historyData.length < 2) return null;
-        const first = historyData[0].price;
-        const last = historyData[historyData.length - 1].price;
+        const first = historyData[0].unit_price;
+        const last = historyData[historyData.length - 1].unit_price;
         const delta = last - first;
         const deltaPct = first > 0 ? (delta / first) * 100 : 0;
         return {
@@ -248,7 +253,8 @@ const AnalyticsPage = () => {
         if (selectedBrand && selectedBrand !== "all") {
             rows = rows.filter(r => r.brand_id === selectedBrand);
         }
-        return rows.sort((a, b) => a.price - b.price);
+        // Use unit_price for sorting and analysis
+        return rows.sort((a, b) => (a.unit_price || a.price) - (b.unit_price || b.price));
     }, [comparisonEnriched, selectedBrand]);
 
     const bestPrice = comparisonSorted.length > 0 ? comparisonSorted[0] : null;
@@ -256,8 +262,10 @@ const AnalyticsPage = () => {
 
     const priceSpread = useMemo(() => {
         if (!bestPrice || !worstPrice || comparisonSorted.length < 2) return null;
-        const delta = worstPrice.price - bestPrice.price;
-        const deltaPct = bestPrice.price > 0 ? (delta / bestPrice.price) * 100 : 0;
+        const bestUP = bestPrice.unit_price || bestPrice.price;
+        const worstUP = worstPrice.unit_price || worstPrice.price;
+        const delta = worstUP - bestUP;
+        const deltaPct = bestUP > 0 ? (delta / bestUP) * 100 : 0;
         return { delta, deltaPct };
     }, [bestPrice, worstPrice, comparisonSorted]);
 
@@ -268,8 +276,10 @@ const AnalyticsPage = () => {
 
     const selectedVsBest = useMemo(() => {
         if (!selectedSupermarketRow || !bestPrice) return null;
-        const delta = selectedSupermarketRow.price - bestPrice.price;
-        const deltaPct = bestPrice.price > 0 ? (delta / bestPrice.price) * 100 : 0;
+        const selectedUP = selectedSupermarketRow.unit_price || selectedSupermarketRow.price;
+        const bestUP = bestPrice.unit_price || bestPrice.price;
+        const delta = selectedUP - bestUP;
+        const deltaPct = bestUP > 0 ? (delta / bestUP) * 100 : 0;
         return { delta, deltaPct };
     }, [selectedSupermarketRow, bestPrice]);
 
@@ -310,12 +320,18 @@ const AnalyticsPage = () => {
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
+            const data = payload[0].payload;
             return (
                 <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
-                    <p className="text-sm text-slate-500">{formatDateTime(label)}</p>
+                    <p className="text-sm text-slate-500 mb-1">{formatDateTime(label)}</p>
                     <p className="font-mono font-semibold text-emerald-600">
-                        {formatCurrency(payload[0].value)}
+                        {formatUnitPrice(data.unit_price, productAnalytics?.unit_name)}
                     </p>
+                    {data.quantity && data.quantity !== 1 && (
+                        <p className="text-[10px] text-slate-400 mt-0.5">
+                            Precio final: {formatCurrency(data.price)} por {data.quantity} {productAnalytics?.unit_name || "unidades"}
+                        </p>
+                    )}
                 </div>
             );
         }
@@ -496,7 +512,12 @@ const AnalyticsPage = () => {
                             </CardHeader>
                             <CardContent>
                                 <p className="text-2xl font-bold text-slate-900">
-                                    {productAnalytics?.current_price != null ? formatCurrency(productAnalytics.current_price) : "-"}
+                            {productAnalytics?.current_unit_price != null
+                                ? formatUnitPrice(productAnalytics.current_unit_price, productAnalytics.unit_name)
+                                : productAnalytics?.current_price != null
+                                    ? formatCurrency(productAnalytics.current_price)
+                                    : "-"
+                            }
                                 </p>
                                 {productAnalytics?.supermarket_name && (
                                     <p className="text-xs text-slate-400 mt-1 flex items-center gap-1">
@@ -533,12 +554,12 @@ const AnalyticsPage = () => {
 
                         <Card>
                             <CardHeader className="pb-2">
-                                <CardTitle className="text-sm text-slate-600">Rango Historico</CardTitle>
+                                <CardTitle className="text-sm text-slate-600">Rango Unitario</CardTitle>
                             </CardHeader>
                             <CardContent>
-                                {productAnalytics?.min_price != null && productAnalytics?.max_price != null ? (
+                                {productAnalytics?.min_unit_price != null && productAnalytics?.max_unit_price != null ? (
                                     <p className="text-sm font-mono text-slate-900">
-                                        {formatCurrency(productAnalytics.min_price)} — {formatCurrency(productAnalytics.max_price)}
+                                        {formatUnitPrice(productAnalytics.min_unit_price, productAnalytics.unit_name)} — {formatUnitPrice(productAnalytics.max_unit_price, productAnalytics.unit_name)}
                                     </p>
                                 ) : (
                                     <p className="text-sm text-slate-500">Sin datos</p>
@@ -597,25 +618,25 @@ const AnalyticsPage = () => {
                                             <div className="text-center p-3 bg-slate-50 rounded-lg">
                                                 <p className="text-xs text-slate-500">Actual</p>
                                                 <p className="font-mono font-semibold text-slate-900">
-                                                    {formatCurrency(productAnalytics.current_price)}
+                                                    {formatUnitPrice(productAnalytics.current_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
                                             <div className="text-center p-3 bg-slate-50 rounded-lg">
                                                 <p className="text-xs text-slate-500">Media</p>
                                                 <p className="font-mono font-semibold text-slate-900">
-                                                    {formatCurrency(productAnalytics.avg_price)}
+                                                    {formatUnitPrice(productAnalytics.avg_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
                                             <div className="text-center p-3 bg-emerald-50 rounded-lg">
                                                 <p className="text-xs text-emerald-600">Minimo</p>
                                                 <p className="font-mono font-semibold text-emerald-600">
-                                                    {formatCurrency(productAnalytics.min_price)}
+                                                    {formatUnitPrice(productAnalytics.min_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
                                             <div className="text-center p-3 bg-rose-50 rounded-lg">
                                                 <p className="text-xs text-rose-600">Maximo</p>
                                                 <p className="font-mono font-semibold text-rose-600">
-                                                    {formatCurrency(productAnalytics.max_price)}
+                                                    {formatUnitPrice(productAnalytics.max_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
                                         </div>
@@ -637,7 +658,7 @@ const AnalyticsPage = () => {
                                                     <Tooltip content={<CustomTooltip />} />
                                                     <Line 
                                                         type="monotone" 
-                                                        dataKey="price" 
+                                                        dataKey="unit_price"
                                                         stroke="#10b981" 
                                                         strokeWidth={2}
                                                         dot={{ fill: '#10b981', strokeWidth: 2 }}
@@ -698,13 +719,16 @@ const AnalyticsPage = () => {
                                                         <p className="text-xs text-slate-500">Actualizado: {formatDateTime(bestPrice.updated_at)}</p>
                                                         {priceSpread && (
                                                             <p className="text-xs text-slate-500 mt-1">
-                                                                Brecha entre supers: {formatCurrency(priceSpread.delta)} ({priceSpread.deltaPct.toFixed(1)}%)
+                                                                Diferencia máx: {formatUnitPrice(priceSpread.delta, comparison.unit_name)} ({priceSpread.deltaPct.toFixed(1)}%)
                                                             </p>
                                                         )}
                                                     </div>
                                                     <div className="text-right">
                                                         <p className="font-mono text-2xl font-bold text-emerald-600">
-                                                            {formatCurrency(bestPrice.price)}
+                                                            {formatUnitPrice(bestPrice.unit_price || bestPrice.price, comparison.unit_name)}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-400">
+                                                            Precio final: {formatCurrency(bestPrice.price)}
                                                         </p>
                                                     </div>
                                                 </div>
@@ -733,8 +757,8 @@ const AnalyticsPage = () => {
                                                     />
                                                     <Tooltip 
                                                         formatter={(value, name, props) => [
-                                                            formatCurrency(value),
-                                                            "Precio"
+                                                            formatUnitPrice(value, comparison.unit_name),
+                                                            "Precio Unitario"
                                                         ]}
                                                         labelFormatter={(label) => label}
                                                         contentStyle={{ 
@@ -745,7 +769,7 @@ const AnalyticsPage = () => {
                                                         }}
                                                     />
                                                     <Bar 
-                                                        dataKey="price" 
+                                                        dataKey="unit_price"
                                                         radius={[0, 4, 4, 0]}
                                                     >
                                                         {comparisonSorted.map((entry, index) => (
@@ -782,15 +806,20 @@ const AnalyticsPage = () => {
                                                                 </span>
                                                             )}
                                                             <span className="text-xs text-slate-400">
-                                                                {index === 0 ? "Referencia más barata" : `+${formatCurrency(item.price - bestPrice.price)} vs mejor`}
+                                                                {index === 0 ? "Referencia más barata" : `+${formatUnitPrice(item.unit_price - bestPrice.unit_price, comparison.unit_name)} vs mejor`}
                                                             </span>
                                                         </div>
                                                     </div>
-                                                    <span className={`font-mono font-semibold ${
-                                                        index === 0 ? 'text-emerald-600' : 'text-slate-900'
-                                                    }`}>
-                                                        {formatCurrency(item.price)}
-                                                    </span>
+                                                    <div className="text-right">
+                                                        <p className={`font-mono font-semibold ${
+                                                            index === 0 ? 'text-emerald-600' : 'text-slate-900'
+                                                        }`}>
+                                                            {formatUnitPrice(item.unit_price || item.price, comparison.unit_name)}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-400">
+                                                            Total: {formatCurrency(item.price)}
+                                                        </p>
+                                                    </div>
                                                 </div>
                                             ))}
                                         </div>
@@ -821,9 +850,9 @@ const AnalyticsPage = () => {
                                 <div className="rounded-lg border p-3 bg-slate-50 text-sm">
                                     En {selectedSupermarketRow.supermarket_name}, el producto esta{" "}
                                     <span className={selectedVsBest.delta > 0 ? "text-rose-600 font-semibold" : "text-emerald-600 font-semibold"}>
-                                        {selectedVsBest.delta > 0 ? "+" : ""}{formatCurrency(selectedVsBest.delta)}
+                                        {selectedVsBest.delta > 0 ? "+" : ""}{formatUnitPrice(selectedVsBest.delta, productAnalytics?.unit_name || comparison?.unit_name)}
                                     </span>{" "}
-                                    frente al mejor precio disponible.
+                                    frente al mejor precio disponible (unitario).
                                 </div>
                             )}
 

@@ -34,16 +34,23 @@ class ReactionCreate(BaseModel):
 class PriceHistoryResponse(BaseModel):
     date: str
     price: float
+    unit_price: Optional[float] = None
+    quantity: Optional[float] = None
 
 class ProductAnalyticsResponse(BaseModel):
     product_id: str
     product_name: str
     supermarket_id: Optional[str] = None
     supermarket_name: Optional[str] = None
+    unit_name: Optional[str] = None
     current_price: Optional[float] = None
+    current_unit_price: Optional[float] = None
     avg_price: Optional[float] = None
+    avg_unit_price: Optional[float] = None
     min_price: Optional[float] = None
+    min_unit_price: Optional[float] = None
     max_price: Optional[float] = None
+    max_unit_price: Optional[float] = None
     price_history: List[PriceHistoryResponse]
 
 # Alert
