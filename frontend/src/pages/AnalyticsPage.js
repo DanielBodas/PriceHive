@@ -188,8 +188,8 @@ const AnalyticsPage = () => {
         });
     };
 
-    const formatCurrency = (value) => `${Number(value || 0).toFixed(2)} €`;
-    const formatUnitPrice = (value, unit) => `${Number(value || 0).toFixed(2)} €${unit ? `/${unit}` : ''}`;
+    const formatCurrency = (value) => `${Number(value || 0).toFixed(2)}€`;
+    const formatUnitPrice = (value, unit) => `${Number(value || 0).toFixed(2)}€${unit ? `/${unit}` : ''}`;
 
     const daysBetween = (fromDateString, toDate = new Date()) => {
         if (!fromDateString) return null;
@@ -302,8 +302,8 @@ const AnalyticsPage = () => {
             }
         }
 
-        if (priceSpread?.delta >= 0.2) {
-            items.push(`Cambiar de super puede ahorrar ${formatCurrency(priceSpread.delta)} (${priceSpread.deltaPct.toFixed(1)}%).`);
+        if (priceSpread?.delta >= 0.05) {
+            items.push(`Cambiar de super puede ahorrar ${formatUnitPrice(priceSpread.delta, productAnalytics?.unit_name || comparison?.unit_name)} (${priceSpread.deltaPct.toFixed(1)}%).`);
         }
 
         const bestAge = daysBetween(bestPrice?.updated_at);
@@ -574,8 +574,10 @@ const AnalyticsPage = () => {
                             <CardContent>
                                 {priceSpread ? (
                                     <>
-                                        <p className="text-2xl font-bold text-emerald-600">{formatCurrency(priceSpread.delta)}</p>
-                                        <p className="text-xs text-slate-400 mt-1">entre el más barato y más caro</p>
+                                        <p className="text-2xl font-bold text-emerald-600">
+                                            {formatUnitPrice(priceSpread.delta, productAnalytics?.unit_name || comparison?.unit_name)}
+                                        </p>
+                                        <p className="text-xs text-slate-400 mt-1">entre el más barato y más caro (unitario)</p>
                                     </>
                                 ) : (
                                     <p className="text-sm text-slate-500">Sin comparativa</p>
