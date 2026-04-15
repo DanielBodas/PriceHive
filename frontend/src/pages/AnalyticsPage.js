@@ -156,22 +156,6 @@ const AnalyticsPage = () => {
         }
     };
 
-    const runComparisonOnly = async () => {
-        if (!selectedProduct) {
-            toast.error("Selecciona un producto");
-            return;
-        }
-        setAnalyticsLoading(true);
-        try {
-            const comparisonRes = await fetchComparison();
-            setComparison(comparisonRes);
-        } catch (error) {
-            toast.error("Error al cargar comparacion");
-        } finally {
-            setAnalyticsLoading(false);
-        }
-    };
-
     const formatDate = (dateString) => {
         const date = new Date(dateString);
         return date.toLocaleDateString('es-ES', { day: '2-digit', month: 'short' });
@@ -468,17 +452,7 @@ const AnalyticsPage = () => {
                                     data-testid="analyze-btn"
                                 >
                                     <TrendingUp className="w-4 h-4" />
-                                    Analizar
-                                </Button>
-                                <Button 
-                                    onClick={runComparisonOnly}
-                                    disabled={analyticsLoading || !selectedProduct}
-                                    variant="outline"
-                                    className="flex-1 gap-2"
-                                    data-testid="compare-btn"
-                                >
-                                    <BarChart3 className="w-4 h-4" />
-                                    Comparar
+                                    Ver Análisis Completo
                                 </Button>
                             </div>
                         </div>
@@ -842,10 +816,10 @@ const AnalyticsPage = () => {
                     )}
                 </div>
 
-                {(productAnalytics || comparison) && (
+                {(productAnalytics || comparison) && (recommendations.length > 0 || (selectedVsBest && selectedSupermarketRow)) && (
                     <Card className="border-slate-200">
                         <CardHeader>
-                            <CardTitle className="text-lg">Recomendaciones utiles</CardTitle>
+                            <CardTitle className="text-lg" style={{ fontFamily: 'Manrope, sans-serif' }}>Recomendaciones y Hallazgos</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
                             {selectedVsBest && selectedSupermarketRow && (
@@ -875,9 +849,11 @@ const AnalyticsPage = () => {
                 {!productAnalytics && !comparison && (
                     <Card className="border-slate-200">
                         <CardContent className="p-12 text-center">
-                            <BarChart3 className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                            <p className="text-slate-500 text-lg">Selecciona un producto</p>
-                            <p className="text-sm text-slate-400 mt-1">Pulsa en Analizar para ver evolucion y comparativa</p>
+                            <Search className="w-16 h-16 text-slate-300 mx-auto mb-4" />
+                            <p className="text-slate-500 text-lg font-semibold">Selecciona un producto</p>
+                            <p className="text-sm text-slate-400 mt-1">
+                                Elige un producto arriba para visualizar su comparativa de precios entre supermercados y su evolución histórica.
+                            </p>
                             {!loading && products.length === 0 && (
                                 <p className="text-xs text-amber-500 mt-3 bg-amber-50 border border-amber-100 rounded-lg p-3 max-w-sm mx-auto">
                                     No hay productos con datos operativos. Configura el catálogo desde el Panel de Administración.
