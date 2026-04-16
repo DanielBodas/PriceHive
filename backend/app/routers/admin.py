@@ -745,12 +745,14 @@ async def delete_brand_catalog_entry(entry_id: str, user: dict = Depends(get_adm
 
 # --- SYSTEM MANAGEMENT (Bulk Export/Import) ---
 @router.get("/system/export")
-async def export_system_data(format: str = "xlsx", user: dict = Depends(get_admin_user)):
+async def export_system_data(format: str = "xlsx", include_prices: bool = False, user: dict = Depends(get_admin_user)):
     collections = [
         "categories", "brands", "supermarkets", "attributes", 
         "units", "products", "product_units", "brand_product_catalog", 
         "sellable_products", "sellable_product_units"
     ]
+    if include_prices:
+        collections.append("prices")
     
     output = io.BytesIO()
     engine = 'openpyxl' if format == "xlsx" else 'odf'
@@ -790,7 +792,7 @@ async def import_system_data(file: UploadFile = File(...), user: dict = Depends(
         valid_collections = [
             "categories", "brands", "supermarkets", "attributes", 
             "units", "products", "product_units", "brand_product_catalog", 
-            "sellable_products", "sellable_product_units"
+            "sellable_products", "sellable_product_units", "prices"
         ]
         
         if sheet_name not in valid_collections:

@@ -5,6 +5,7 @@ import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card"
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import { Badge } from "../components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from "recharts";
 import { toast } from "sonner";
 import { 
@@ -15,7 +16,8 @@ import {
     Package,
     Search,
     Tag,
-    Layers
+    Layers,
+    Download
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -26,6 +28,7 @@ const AnalyticsPage = () => {
     const [categories, setCategories] = useState([]);
     const [brands, setBrands] = useState([]);
     const [sellableProducts, setSellableProducts] = useState([]);
+    const [productUnits, setProductUnits] = useState([]);
     const [loading, setLoading] = useState(true);
     
     const [searchQuery, setSearchQuery] = useState("");
@@ -49,18 +52,20 @@ const AnalyticsPage = () => {
 
     const fetchBaseData = async () => {
         try {
-            const [productsRes, supermarketsRes, categoriesRes, brandsRes, sellableRes] = await Promise.all([
+            const [productsRes, supermarketsRes, categoriesRes, brandsRes, sellableRes, unitsRes] = await Promise.all([
                 axios.get(`${API}/admin/products`),
                 axios.get(`${API}/admin/supermarkets`),
                 axios.get(`${API}/public/categories`),
                 axios.get(`${API}/admin/brands`),
-                axios.get(`${API}/admin/sellable-products`)
+                axios.get(`${API}/admin/sellable-products`),
+                axios.get(`${API}/admin/product-units`)
             ]);
             setProducts(productsRes.data);
             setSupermarkets(supermarketsRes.data);
             setCategories(categoriesRes.data);
             setBrands(brandsRes.data);
             setSellableProducts(sellableRes.data);
+            setProductUnits(unitsRes.data);
         } catch (error) {
             console.error("Error fetching data:", error);
             toast.error("Error al cargar datos");
@@ -151,6 +156,31 @@ const AnalyticsPage = () => {
             setComparison(comparisonRes);
         } catch (error) {
             toast.error("Error al cargar analisis");
+        } finally {
+            setAnalyticsLoading(false);
+        }
+    };
+
+    const handleExportAnalytics = async (format) => {
+        if (!selectedProduct) return;
+        try {
+            setAnalyticsLoading(true);
+            const response = await axios({
+                url: `${API}/analytics/export/${selectedProduct}?format=${format}`,
+                method: 'GET',
+                responseType: 'blob',
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `analisis_${selectedProductData?.name.replace(/ /g, '_')}.${format}`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success(`Análisis exportado en formato ${format.toUpperCase()}`);
+        } catch (error) {
+            console.error("Export error:", error);
+            toast.error("Error al exportar los datos analíticos");
         } finally {
             setAnalyticsLoading(false);
         }
@@ -326,6 +356,11 @@ const AnalyticsPage = () => {
         return products.find(p => p.id === selectedProduct);
     }, [products, selectedProduct]);
 
+    const selectedProductUnits = useMemo(() => {
+        if (!selectedProduct) return [];
+        return productUnits.filter(pu => pu.product_id === selectedProduct);
+    }, [selectedProduct, productUnits]);
+
     // Color palette for bar chart
     const BAR_COLORS = ["#10b981", "#34d399", "#6ee7b7", "#a7f3d0", "#059669", "#047857"];
 
@@ -469,10 +504,36 @@ const AnalyticsPage = () => {
                                 <span className="text-slate-500">
                                     {availableBrandsForProduct.length} marca{availableBrandsForProduct.length !== 1 ? 's' : ''} disponible{availableBrandsForProduct.length !== 1 ? 's' : ''}
                                 </span>
-                                <span className="text-slate-400">·</span>
                                 <span className="text-slate-500">
                                     {availableSupermarketsForProduct.length} supermercado{availableSupermarketsForProduct.length !== 1 ? 's' : ''}
                                 </span>
+                                {selectedProductUnits.length > 0 && (
+                                    <>
+                                        <span className="text-slate-400">·</span>
+                                        <div className="flex items-center gap-1">
+                                            <span className="text-[11px] text-slate-400 mr-1">Unidades:</span>
+                                            {selectedProductUnits.map(u => (
+                                                <Badge key={u.id} variant="secondary" className="text-[10px] h-5 px-1.5 bg-slate-100 text-slate-600 border-none font-normal">
+                                                    {u.unit_name}
+                                                </Badge>
+                                            ))}
+                                        </div>
+                                    </>
+                                )}
+                                <div className="ml-auto">
+                                    {(productAnalytics || comparison) && (
+                                        <Select onValueChange={handleExportAnalytics}>
+                                            <SelectTrigger className="w-auto gap-2 bg-white text-slate-700 border-slate-200 h-8 text-xs px-3" data-testid="export-analytics-select">
+                                                <Download className="w-3.5 h-3.5" />
+                                                <SelectValue placeholder="Exportar Análisis" />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="xlsx">Excel (.xlsx)</SelectItem>
+                                                <SelectItem value="ods">OpenOffice (.ods)</SelectItem>
+                                            </SelectContent>
+                                        </Select>
+                                    )}
+                                </div>
                             </div>
                         )}
                     </CardContent>

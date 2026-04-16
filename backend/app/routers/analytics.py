@@ -3,6 +3,9 @@ from typing import Optional, List
 from ..core.database import db
 from ..core.auth import get_current_user
 from ..models.extras import ProductAnalyticsResponse, PriceHistoryResponse, LeaderboardEntry
+import pandas as pd
+import io
+from fastapi.responses import StreamingResponse
 
 router = APIRouter(prefix="", tags=["analytics"])
 
@@ -139,6 +142,66 @@ async def compare_product_prices(product_id: str, user: dict = Depends(get_curre
         "comparison": comparison,
         "best_price": comparison[0] if comparison else None
     }
+
+@router.get("/analytics/export/{product_id}")
+async def export_product_analytics(product_id: str, format: str = "xlsx", user: dict = Depends(get_current_user)):
+    product = await db.products.find_one({"id": product_id}, {"_id": 0})
+    if not product:
+        raise HTTPException(status_code=404, detail="Product not found")
+
+    # Get Comparison
+    sps = await db.sellable_products.find({"product_id": product_id}).to_list(1000)
+    supermarkets = {s.get("id") or str(s.get("_id")): s["name"] for s in await db.supermarkets.find({}).to_list(1000)}
+    brands = {b.get("id") or str(b.get("_id")): b["name"] for b in await db.brands.find({}).to_list(1000)}
+    
+    sp_ids = [sp.get("id") or str(sp.get("_id")) for sp in sps]
+    comparison_data = []
+    for sp in sps:
+        sp_id = sp.get("id") or str(sp.get("_id"))
+        latest = await db.prices.find_one({"sellable_product_id": sp_id}, sort=[("created_at", -1)])
+        if latest:
+            qty = latest.get("quantity", 1) or 1
+            comparison_data.append({
+                "Supermercado": supermarkets.get(sp["supermarket_id"]),
+                "Marca": brands.get(sp.get("brand_id")),
+                "Precio Final": latest["price"],
+                "Precio Unitario": latest["price"] / qty,
+                "Cantidad": qty,
+                "Ultima Actualización": latest["created_at"]
+            })
+
+    # Get History
+    prices = await db.prices.find({"sellable_product_id": {"$in": sp_ids}}).sort("created_at", -1).to_list(5000)
+    history_data = []
+    for p in prices:
+        sp = next((s for s in sps if (s.get("id") or str(s.get("_id"))) == p["sellable_product_id"]), {})
+        qty = p.get("quantity", 1) or 1
+        history_data.append({
+            "Fecha": p["created_at"],
+            "Supermercado": supermarkets.get(sp.get("supermarket_id")),
+            "Marca": brands.get(sp.get("brand_id")),
+            "Precio": p["price"],
+            "Precio Unitario": p["price"] / qty,
+            "Cantidad": qty
+        })
+
+    output = io.BytesIO()
+    engine = 'openpyxl' if format == "xlsx" else 'odf'
+    filename = f"analytics_{product['name'].replace(' ', '_')}.{format}"
+    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if format == "xlsx" else "application/vnd.oasis.opendocument.spreadsheet"
+
+    with pd.ExcelWriter(output, engine=engine) as writer:
+        if comparison_data:
+            pd.DataFrame(comparison_data).to_excel(writer, sheet_name="Comparativa Actual", index=False)
+        if history_data:
+            pd.DataFrame(history_data).to_excel(writer, sheet_name="Historial de Precios", index=False)
+
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
 
 import logging
 

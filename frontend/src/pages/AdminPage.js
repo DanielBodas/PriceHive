@@ -116,6 +116,7 @@ const AdminPage = () => {
     });
     const [systemLoading, setSystemLoading] = useState(false);
     const [exportFormat, setExportFormat] = useState("xlsx");
+    const [includePrices, setIncludePrices] = useState(false);
     const [systemDialog, setSystemDialog] = useState(false);
 
     useEffect(() => {
@@ -681,7 +682,7 @@ const AdminPage = () => {
         try {
             setSystemLoading(true);
             const response = await axios({
-                url: `${API}/admin/system/export?format=${exportFormat}`,
+                url: `${API}/admin/system/export?format=${exportFormat}&include_prices=${includePrices}`,
                 method: 'GET',
                 responseType: 'blob',
             });
@@ -2062,6 +2063,19 @@ const AdminPage = () => {
                                                 ODS
                                             </button>
                                         </div>
+                                    </div>
+                                    <div className="flex items-center space-x-2 p-2 bg-slate-50 rounded-lg border border-slate-100 mb-2">
+                                        <Checkbox 
+                                            id="includePrices" 
+                                            checked={includePrices} 
+                                            onCheckedChange={setIncludePrices}
+                                        />
+                                        <label 
+                                            htmlFor="includePrices" 
+                                            className="text-[10px] font-medium text-slate-600 cursor-pointer select-none"
+                                        >
+                                            Incluir historial de precios (Datos de usuarios)
+                                        </label>
                                     </div>
                                     <Button 
                                         onClick={handleExportDB} 
