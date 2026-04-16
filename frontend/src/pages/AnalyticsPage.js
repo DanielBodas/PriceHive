@@ -300,7 +300,7 @@ const AnalyticsPage = () => {
         }
 
         return items;
-    }, [trend, productAnalytics, priceSpread, bestPrice, historyData]);
+    }, [trend, productAnalytics, priceSpread, bestPrice, historyData, comparison]);
 
     const CustomTooltip = ({ active, payload, label }) => {
         if (active && payload && payload.length) {
