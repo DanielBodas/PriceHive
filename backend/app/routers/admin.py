@@ -12,6 +12,10 @@ from ..models.product import (
     BrandProductCatalogCreate, BrandProductCatalogBulkCreate, BrandProductCatalogResponse,
     AttributeCreate, AttributeResponse
 )
+import pandas as pd
+import io
+from fastapi.responses import StreamingResponse
+from fastapi import UploadFile, File
 
 router = APIRouter(prefix="/admin", tags=["admin"])
 
@@ -738,3 +742,96 @@ async def delete_brand_catalog_entry(entry_id: str, user: dict = Depends(get_adm
         raise HTTPException(status_code=404, detail=f"Catalog entry with ID {entry_id} not found")
 
     return {"message": "Brand catalog entry deleted"}
+
+# --- SYSTEM MANAGEMENT (Bulk Export/Import) ---
+@router.get("/system/export")
+async def export_system_data(format: str = "xlsx", user: dict = Depends(get_admin_user)):
+    collections = [
+        "categories", "brands", "supermarkets", "attributes", 
+        "units", "products", "product_units", "brand_product_catalog", 
+        "sellable_products", "prices"
+    ]
+    
+    output = io.BytesIO()
+    engine = 'openpyxl' if format == "xlsx" else 'odf'
+    filename = f"pricehive_system_data.{format}"
+    media_type = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" if format == "xlsx" else "application/vnd.oasis.opendocument.spreadsheet"
+    
+    with pd.ExcelWriter(output, engine=engine) as writer:
+        for coll in collections:
+            data = await db[coll].find({}, {"_id": 0}).to_list(10000)
+            if data:
+                df = pd.DataFrame(data)
+                df.to_excel(writer, sheet_name=coll, index=False)
+            else:
+                pd.DataFrame().to_excel(writer, sheet_name=coll, index=False)
+                
+    output.seek(0)
+    return StreamingResponse(
+        output,
+        media_type=media_type,
+        headers={"Content-Disposition": f"attachment; filename={filename}"}
+    )
+
+@router.post("/system/import")
+async def import_system_data(file: UploadFile = File(...), user: dict = Depends(get_admin_user)):
+    if not file.filename.endswith(('.xlsx', '.xls', '.ods')):
+        raise HTTPException(status_code=400, detail="Only Excel (.xlsx, .xls) and OpenDocument (.ods) files are supported")
+    
+    contents = await file.read()
+    df_dict = pd.read_excel(io.BytesIO(contents), sheet_name=None)
+    
+    results = {}
+    for sheet_name, df in df_dict.items():
+        if df.empty:
+            continue
+            
+        # Standard collections only
+        valid_collections = [
+            "categories", "brands", "supermarkets", "attributes", 
+            "units", "products", "product_units", "brand_product_catalog", 
+            "sellable_products", "prices"
+        ]
+        
+        if sheet_name not in valid_collections:
+            continue
+            
+        records = df.to_dict(orient='records')
+        
+        # Clean records (remove NaNs which Mongo doesn't like)
+        clean_records = []
+        for rec in records:
+            clean_rec = {k: v for k, v in rec.items() if pd.notnull(v)}
+            
+            # Special handling for JSON fields if they come back as strings
+            # In Excel, dicts/lists often end up as strings like "{'a': 1}"
+            import ast
+            for k, v in clean_rec.items():
+                if isinstance(v, str) and ((v.startswith('{') and v.endswith('}')) or (v.startswith('[') and v.endswith(']'))):
+                    try:
+                        clean_rec[k] = ast.literal_eval(v)
+                    except:
+                        pass
+            
+            clean_records.append(clean_rec)
+        
+        if not clean_records:
+            continue
+            
+        # Bulk Upsert strategy: use 'id' as the key
+        # If 'id' is missing, we can't upsert reliably, so we just insert
+        ops = []
+        for rec in clean_records:
+            if "id" in rec:
+                from pymongo import UpdateOne
+                ops.append(UpdateOne({"id": rec["id"]}, {"$set": rec}, upsert=True))
+        
+        if ops:
+            await db[sheet_name].bulk_write(ops)
+            results[sheet_name] = len(ops)
+        else:
+            # If no "id", just insert many (less safe, but fallback)
+            await db[sheet_name].insert_many(clean_records)
+            results[sheet_name] = len(clean_records)
+            
+    return {"message": "Import completed successfully", "results": results}
