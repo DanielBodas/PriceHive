@@ -28,7 +28,10 @@ import {
     Link2,
     ChevronDown,
     ChevronRight,
-    RefreshCw
+    RefreshCw,
+    Download,
+    Upload,
+    Database
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -109,7 +112,10 @@ const AdminPage = () => {
         brand_name: "",
         product_name: "",
         status: "active",
+        attribute_values: {},
     });
+    const [systemLoading, setSystemLoading] = useState(false);
+    const [exportFormat, setExportFormat] = useState("xlsx");
 
     useEffect(() => {
         fetchAllData();
@@ -504,7 +510,7 @@ const AdminPage = () => {
     };
 
     const handleDeleteBrand = async (id) => {
-        if (!window.confirm("Ãƒâ€šÃ‚Â¿Eliminar?")) return;
+        if (!window.confirm("¿Eliminar?")) return;
         try { await axios.delete(`${API}/admin/brands/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
@@ -518,7 +524,7 @@ const AdminPage = () => {
     };
 
     const handleDeleteSupermarket = async (id) => {
-        if (!window.confirm("Ãƒâ€šÃ‚Â¿Eliminar?")) return;
+        if (!window.confirm("¿Eliminar?")) return;
         try { await axios.delete(`${API}/admin/supermarkets/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
@@ -532,7 +538,7 @@ const AdminPage = () => {
     };
 
     const handleDeleteUnit = async (id) => {
-        if (!window.confirm("Ãƒâ€šÃ‚Â¿Eliminar?")) return;
+        if (!window.confirm("¿Eliminar?")) return;
         try { await axios.delete(`${API}/admin/units/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
@@ -551,7 +557,7 @@ const AdminPage = () => {
     };
 
     const handleDeleteProduct = async (id) => {
-        if (!window.confirm("Ãƒâ€šÃ‚Â¿Eliminar?")) return;
+        if (!window.confirm("¿Eliminar?")) return;
         try { await axios.delete(`${API}/admin/products/${id}`); fetchAllData(); toast.success("Eliminado"); } catch (e) { toast.error("Error"); }
     };
 
@@ -670,6 +676,54 @@ const AdminPage = () => {
         }
     };
 
+    const handleExportDB = async () => {
+        try {
+            setSystemLoading(true);
+            const response = await axios({
+                url: `${API}/admin/system/export?format=${exportFormat}`,
+                method: 'GET',
+                responseType: 'blob',
+            });
+            const url = window.URL.createObjectURL(new Blob([response.data]));
+            const link = document.createElement('a');
+            link.href = url;
+            link.setAttribute('download', `pricehive_db_${new Date().toISOString().split('T')[0]}.${exportFormat}`);
+            document.body.appendChild(link);
+            link.click();
+            link.remove();
+            toast.success("Base de datos exportada con éxito");
+        } catch (error) {
+            console.error("Export error:", error);
+            toast.error("Error al exportar la base de datos");
+        } finally {
+            setSystemLoading(false);
+        }
+    };
+
+    const handleImportDB = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const formData = new FormData();
+        formData.append('file', file);
+
+        try {
+            setSystemLoading(true);
+            const res = await axios.post(`${API}/admin/system/import`, formData, {
+                headers: { 'Content-Type': 'multipart/form-data' }
+            });
+            toast.success("Base de datos importada correctamente");
+            console.log("Import results:", res.data.results);
+            await fetchAllData();
+        } catch (error) {
+            console.error("Import error:", error);
+            toast.error(error.response?.data?.detail || "Error al importar la base de datos");
+        } finally {
+            setSystemLoading(false);
+            e.target.value = ''; // clear input
+        }
+    };
+
     if (loading) return <Layout><div className="flex items-center justify-center min-h-[400px]">Cargando panel de administracion...</div></Layout>;
 
     return (
@@ -677,10 +731,22 @@ const AdminPage = () => {
             <div className="space-y-6">
                 <div>
                     <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                        Panel de Administracion
+                        Panel de Administración
                     </h1>
-                    <p className="text-slate-500 mt-1">Gestion avanzada del sistema</p>
+                    <p className="text-slate-500 mt-1">Gestión avanzada del sistema</p>
                 </div>
+
+                {systemLoading && (
+                    <div className="fixed inset-0 bg-white/60 backdrop-blur-[2px] z-[100] flex items-center justify-center transition-all animate-in fade-in duration-300">
+                        <Card className="w-80 border-emerald-100 shadow-2xl shadow-emerald-200/50">
+                            <CardContent className="pt-6 text-center">
+                                <RefreshCw className="w-8 h-8 text-emerald-500 animate-spin mx-auto mb-4" />
+                                <h3 className="font-bold text-slate-800">Procesando sistema...</h3>
+                                <p className="text-xs text-slate-500 mt-2">Sincronizando base de datos y refrescando catálogo. No cierres la ventana.</p>
+                            </CardContent>
+                        </Card>
+                    </div>
+                )}
 
                 <Tabs defaultValue="catalogos" className="space-y-6">
                     <TabsList className="bg-slate-100 p-1 flex-wrap h-auto">
@@ -693,9 +759,12 @@ const AdminPage = () => {
                         <TabsTrigger value="overview" className="gap-2 data-[state=active]:bg-white">
                             <Layers className="w-4 h-4" /> Vision General
                         </TabsTrigger>
+                        <TabsTrigger value="sistema" className="gap-2 data-[state=active]:bg-white">
+                            <Database className="w-4 h-4" /> Sistema
+                        </TabsTrigger>
                     </TabsList>
 
-                    {/* SECCIÃƒÆ’Ã¢â‚¬Å“N COSAS UNITARIAS */}
+                    {/* SECCIÓN COSAS UNITARIAS */}
                     <TabsContent value="maestros" className="space-y-6">
                         <Tabs defaultValue="categories">
                             <TabsList className="bg-slate-50 border p-1 mb-4 flex-wrap h-auto">
@@ -932,7 +1001,7 @@ const AdminPage = () => {
                         </Tabs>
                     </TabsContent>
 
-                    {/* SECCIÃƒÆ’Ã¢â‚¬Å“N CATÃƒÆ’Ã‚ÂLOGOS */}
+                    {/* SECCIÓN CATÁLOGOS */}
                     <TabsContent value="catalogos" className="space-y-6">
                         <Tabs defaultValue="sellable" className="space-y-4">
                             <TabsList className="bg-slate-50 border p-1 mb-4 h-auto flex-wrap">
@@ -1300,7 +1369,7 @@ const AdminPage = () => {
                                                                         </label>
                                                                     </div>
                                                                 ))}
-                                                                {attributes.length === 0 && <p className="text-xs text-slate-400 italic">No hay atributos definidos. Créalos en 'Datos Base > Atributos'.</p>}
+                                                                {attributes.length === 0 && <p className="text-xs text-slate-400 italic">No hay atributos definidos. Créalos en 'Datos Base &gt; Atributos'.</p>}
                                                             </div>
                                                         </div>
                                                     </AccordionContent>
@@ -1415,6 +1484,107 @@ const AdminPage = () => {
                                 </CardContent>
                             </Card>
                         </div>
+                    </TabsContent>
+
+                    <TabsContent value="sistema" className="space-y-6">
+                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <Card className="border-emerald-100 bg-emerald-50/30">
+                                <CardHeader>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
+                                            <Download className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg">Exportar Configuración</CardTitle>
+                                            <p className="text-sm text-slate-500">Descarga toda la estructura del sistema en un solo archivo Excel.</p>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm text-slate-600 mb-6">
+                                        Este archivo incluye Categorías, Marcas, Productos conceptuales, Atributos, Unidades y las relaciones entre ellos. 
+                                        Ideal para auditoría o para realizar cambios masivos fuera del panel.
+                                    </p>
+                                    <div className="flex flex-col gap-4">
+                                        <div className="flex items-center justify-between p-3 bg-white rounded-lg border border-emerald-100">
+                                            <span className="text-sm font-medium text-emerald-900">Formato de salida</span>
+                                            <div className="flex p-0.5 bg-slate-100 rounded-md">
+                                                <button 
+                                                    onClick={() => setExportFormat("xlsx")}
+                                                    className={`px-3 py-1 text-xs font-bold rounded-sm transition-all ${exportFormat === "xlsx" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400"}`}
+                                                >
+                                                    Excel (.xlsx)
+                                                </button>
+                                                <button 
+                                                    onClick={() => setExportFormat("ods")}
+                                                    className={`px-3 py-1 text-xs font-bold rounded-sm transition-all ${exportFormat === "ods" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400"}`}
+                                                >
+                                                    Open Office (.ods)
+                                                </button>
+                                            </div>
+                                        </div>
+                                        <Button 
+                                            onClick={handleExportDB} 
+                                            disabled={systemLoading}
+                                            className="w-full bg-emerald-600 hover:bg-emerald-700 h-12 shadow-md shadow-emerald-200"
+                                        >
+                                            {systemLoading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
+                                            Descargar Base de Datos
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+
+                            <Card className="border-blue-100 bg-blue-50/30">
+                                <CardHeader>
+                                    <div className="flex items-center gap-3">
+                                        <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
+                                            <Upload className="w-5 h-5" />
+                                        </div>
+                                        <div>
+                                            <CardTitle className="text-lg">Carga Masiva (Importar)</CardTitle>
+                                            <p className="text-sm text-slate-500">Actualiza o inicializa datos desde un archivo Excel.</p>
+                                        </div>
+                                    </div>
+                                </CardHeader>
+                                <CardContent>
+                                    <p className="text-sm text-slate-600 mb-6">
+                                        Usa el mismo formato que la exportación. El sistema actualizará los registros existentes comparando el ID 
+                                        y creará los nuevos. <span className="font-bold text-rose-600 italic">¡Atención! Acción irreversible.</span>
+                                    </p>
+                                    <div className="relative group">
+                                        <Input 
+                                            type="file" 
+                                            accept=".xlsx, .xls, .ods"
+                                            onChange={handleImportDB}
+                                            disabled={systemLoading}
+                                            className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                                        />
+                                        <Button 
+                                            variant="outline" 
+                                            disabled={systemLoading}
+                                            className="w-full h-12 border-blue-200 text-blue-700 bg-white hover:bg-blue-50"
+                                        >
+                                            {systemLoading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
+                                            Subir y Actualizar Datos
+                                        </Button>
+                                    </div>
+                                </CardContent>
+                            </Card>
+                        </div>
+
+                        <Card>
+                            <CardHeader>
+                                <CardTitle className="text-sm font-medium">Información sobre la Estructura</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <div className="space-y-2 text-sm text-slate-600">
+                                    <p>• El archivo (Excel u ODS) debe contener una pestaña por cada colección (categories, brands, products, etc.).</p>
+                                    <p>• Si un registro tiene una columna <code className="bg-slate-100 px-1 rounded text-rose-600">id</code>, el sistema intentará actualizar el registro existente.</p>
+                                    <p>• Los campos de texto que contienen JSON (como <code className="bg-slate-100 px-1 rounded">allowed_attribute_ids</code> o <code className="bg-slate-100 px-1 rounded">attribute_values</code>) se procesarán automáticamente.</p>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </TabsContent>
                 </Tabs>
             </div>
