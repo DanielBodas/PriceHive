@@ -784,6 +784,8 @@ async def import_system_data(file: UploadFile = File(...), user: dict = Depends(
     df_dict = pd.read_excel(io.BytesIO(contents), sheet_name=None)
     
     results = {}
+    import json
+    import ast
     for sheet_name, df in df_dict.items():
         if df.empty:
             continue
@@ -807,13 +809,18 @@ async def import_system_data(file: UploadFile = File(...), user: dict = Depends(
             
             # Special handling for JSON fields if they come back as strings
             # In Excel, dicts/lists often end up as strings like "{'a': 1}"
-            import ast
             for k, v in clean_rec.items():
                 if isinstance(v, str) and ((v.startswith('{') and v.endswith('}')) or (v.startswith('[') and v.endswith(']'))):
                     try:
-                        clean_rec[k] = ast.literal_eval(v)
-                    except:
-                        pass
+                        # Attempt to parse as strict JSON first for performance/security
+                        clean_rec[k] = json.loads(v)
+                    except json.JSONDecodeError:
+                        try:
+                            # Fallback to ast.literal_eval for Python-style string representations (single quotes)
+                            # which are commonly produced by Excel exports of Python dicts
+                            clean_rec[k] = ast.literal_eval(v)
+                        except Exception:
+                            pass
             
             clean_records.append(clean_rec)
         
