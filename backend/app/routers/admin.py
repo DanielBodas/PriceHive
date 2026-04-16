@@ -749,7 +749,7 @@ async def export_system_data(format: str = "xlsx", user: dict = Depends(get_admi
     collections = [
         "categories", "brands", "supermarkets", "attributes", 
         "units", "products", "product_units", "brand_product_catalog", 
-        "sellable_products", "prices"
+        "sellable_products", "sellable_product_units"
     ]
     
     output = io.BytesIO()
@@ -790,7 +790,7 @@ async def import_system_data(file: UploadFile = File(...), user: dict = Depends(
         valid_collections = [
             "categories", "brands", "supermarkets", "attributes", 
             "units", "products", "product_units", "brand_product_catalog", 
-            "sellable_products", "prices"
+            "sellable_products", "sellable_product_units"
         ]
         
         if sheet_name not in valid_collections:
