@@ -33,7 +33,7 @@ const LandingPage = () => {
         <div className="min-h-screen bg-slate-50">
             {/* Navigation */}
             <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-slate-200/50">
-                <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-3 sm:py-4 flex items-center justify-between">
                     <div className="flex items-center gap-2">
                         <div className="w-10 h-10 rounded-xl bg-emerald-500 flex items-center justify-center">
                             <Tag className="w-5 h-5 text-white" />
@@ -60,7 +60,7 @@ const LandingPage = () => {
             </nav>
 
             {/* Hero Section */}
-            <section className="hero-gradient pt-32 pb-24 px-6">
+            <section className="hero-gradient pt-24 sm:pt-32 pb-16 sm:pb-24 px-4 sm:px-6">
                 <div className="max-w-7xl mx-auto">
                     <div className="grid lg:grid-cols-2 gap-16 items-center">
                         <div className="animate-fade-in-up">
@@ -68,7 +68,7 @@ const LandingPage = () => {
                                 <Shield className="w-4 h-4" />
                                 Protege tu bolsillo
                             </div>
-                            <h1 className="text-4xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight mb-6" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                            <h1 className="text-3xl sm:text-5xl lg:text-6xl font-extrabold text-slate-900 leading-tight mb-6" style={{ fontFamily: 'Manrope, sans-serif' }}>
                                 No más{" "}
                                 <span className="text-emerald-500">falsas ofertas</span>
                             </h1>

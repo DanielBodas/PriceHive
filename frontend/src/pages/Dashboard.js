@@ -74,14 +74,14 @@ const Dashboard = () => {
                 </div>
 
                 {/* Stats Grid */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                <div className="grid grid-cols-1 xs:grid-cols-2 lg:grid-cols-4 gap-4">
                     {statCards.map((stat, index) => (
                         <Card 
                             key={index} 
                             className="border-slate-200 stats-card overflow-hidden"
                             data-testid={`stat-card-${index}`}
                         >
-                            <CardContent className="p-6">
+                            <CardContent className="p-4 sm:p-6">
                                 <div className="flex items-start justify-between">
                                     <div>
                                         <p className="text-sm text-slate-500 mb-1">{stat.label}</p>

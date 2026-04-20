@@ -541,7 +541,7 @@ const ShoppingListPage = () => {
                                                             Añadir
                                                         </Button>
                                                     </DialogTrigger>
-                                                    <DialogContent className="max-h-[90vh] overflow-y-auto">
+                                                    <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
                                                         <DialogHeader>
                                                             <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>{editingItemIndex !== null ? "Editar Producto" : "Añadir Producto"}</DialogTitle>
                                                         </DialogHeader>
@@ -690,24 +690,26 @@ const ShoppingListPage = () => {
                                                     {selectedList.items?.map((item, index) => (
                                                         <div
                                                             key={index}
-                                                            className={`p-3 sm:p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 ${item.purchased ? 'bg-slate-50/70 border-l border-emerald-500' : 'hover:bg-slate-50/50 border-l border-transparent'}`}
+                                                            className={`p-3 sm:p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-3 sm:gap-4 ${item.purchased ? 'bg-slate-50/70 border-l border-emerald-500' : 'hover:bg-slate-50/50 border-l border-transparent'}`}
                                                             data-testid={`list-item-${index}`}
                                                         >
-                                                            <div className="flex items-center gap-3 sm:gap-4 flex-1">
+                                                            <div className="flex items-start sm:items-center gap-3 sm:gap-4 flex-1">
                                                                 {/* Checkbox */}
-                                                                <Checkbox
-                                                                    checked={item.purchased}
-                                                                    onCheckedChange={(checked) => handleUpdateItem(index, { purchased: checked })}
-                                                                    className="w-6 h-6 rounded-md data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 mt-1"
-                                                                    data-testid={`item-checkbox-${index}`}
-                                                                />
+                                                                <div className="pt-1 sm:pt-0">
+                                                                    <Checkbox
+                                                                        checked={item.purchased}
+                                                                        onCheckedChange={(checked) => handleUpdateItem(index, { purchased: checked })}
+                                                                        className="w-6 h-6 rounded-md data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500"
+                                                                        data-testid={`item-checkbox-${index}`}
+                                                                    />
+                                                                </div>
 
                                                                 {/* Main Product Info & Quantity Row */}
                                                                 <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
                                                                     {/* Title & Brand */}
                                                                     <div className="flex-1 min-w-0 flex flex-col">
                                                                         <div className="flex items-center gap-2">
-                                                                            <h3 className={`font-medium text-sm sm:text-base truncate transition-all ${item.purchased ? 'line-through text-slate-400' : 'text-slate-900'}`}>
+                                                                            <h3 className={`font-medium text-sm sm:text-base break-words transition-all ${item.purchased ? 'line-through text-slate-400' : 'text-slate-900'}`}>
                                                                                 {item.product_name}
                                                                             </h3>
                                                                         </div>
@@ -896,7 +898,7 @@ const ShoppingListPage = () => {
 
             {/* ─── Confirm Estimate Dialog ─── */}
             <Dialog open={confirmEstimateOpen} onOpenChange={setConfirmEstimateOpen}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-[95vw] sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-indigo-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
                             <Sparkles className="w-5 h-5" />
@@ -932,7 +934,7 @@ const ShoppingListPage = () => {
 
             {/* ─── Confirm Submit Prices Dialog ─── */}
             <Dialog open={confirmSubmitOpen} onOpenChange={setConfirmSubmitOpen}>
-                <DialogContent className="max-w-md">
+                <DialogContent className="max-w-[95vw] sm:max-w-md">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2 text-emerald-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
                             <CheckCircle2 className="w-5 h-5" />

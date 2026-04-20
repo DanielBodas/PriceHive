@@ -346,8 +346,8 @@ const Layout = ({ children }) => {
             </nav>
 
             {/* Main Content */}
-            <main className="pt-16 min-h-screen">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
+            <main className="pt-16 min-h-screen pb-[env(safe-area-inset-bottom)]">
+                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6 sm:py-8">
                     {children}
                 </div>
             </main>

@@ -802,31 +802,57 @@ const AdminPage = () => {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                        <Table>
-                                            <TableHeader><TableRow><TableHead>Concepto de Producto</TableHead><TableHead>Categoria</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {filteredProductsTable.map(p => (
-                                                    <TableRow key={p.id}>
-                                                        <TableCell className="font-medium">
-                                                            {p.name}
-                                                            {p.attribute_values && Object.entries(p.attribute_values).length > 0 && (
-                                                                <div className="flex flex-wrap gap-1 mt-1">
-                                                                    {Object.entries(p.attribute_values).map(([attrId, val]) => {
-                                                                        const attr = attributes.find(a => a.id === attrId);
-                                                                        return <Badge key={attrId} variant="outline" className="text-[10px]">{attr?.name}: {val}</Badge>
-                                                                    })}
-                                                                </div>
-                                                            )}
-                                                        </TableCell>
-                                                        <TableCell>{p.category_name}</TableCell>
-                                                        <TableCell className="flex justify-end gap-1 pr-4">
-                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(p); setProductForm({ ...p, attribute_values: p.attribute_values || {} }); setProductDialog(true); }}><Pencil className="w-4 h-4" /></Button>
-                                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(p.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                        <div className="md:hidden divide-y">
+                                            {filteredProductsTable.map(p => (
+                                                <div key={p.id} className="p-4 space-y-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="font-bold text-slate-900">{p.name}</p>
+                                                            <p className="text-xs text-slate-500">{p.category_name}</p>
+                                                        </div>
+                                                        <div className="flex gap-1">
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingItem(p); setProductForm({ ...p, attribute_values: p.attribute_values || {} }); setProductDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => handleDeleteProduct(p.id)}><Trash2 className="w-4 h-4" /></Button>
+                                                        </div>
+                                                    </div>
+                                                    {p.attribute_values && Object.entries(p.attribute_values).length > 0 && (
+                                                        <div className="flex flex-wrap gap-1">
+                                                            {Object.entries(p.attribute_values).map(([attrId, val]) => {
+                                                                const attr = attributes.find(a => a.id === attrId);
+                                                                return <Badge key={attrId} variant="outline" className="text-[10px]">{attr?.name}: {val}</Badge>
+                                                            })}
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="hidden md:block">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>Concepto de Producto</TableHead><TableHead>Categoria</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {filteredProductsTable.map(p => (
+                                                        <TableRow key={p.id}>
+                                                            <TableCell className="font-medium">
+                                                                {p.name}
+                                                                {p.attribute_values && Object.entries(p.attribute_values).length > 0 && (
+                                                                    <div className="flex flex-wrap gap-1 mt-1">
+                                                                        {Object.entries(p.attribute_values).map(([attrId, val]) => {
+                                                                            const attr = attributes.find(a => a.id === attrId);
+                                                                            return <Badge key={attrId} variant="outline" className="text-[10px]">{attr?.name}: {val}</Badge>
+                                                                        })}
+                                                                    </div>
+                                                                )}
+                                                            </TableCell>
+                                                            <TableCell>{p.category_name}</TableCell>
+                                                            <TableCell className="flex justify-end gap-1 pr-4">
+                                                                <Button variant="ghost" size="icon" onClick={() => { setEditingItem(p); setProductForm({ ...p, attribute_values: p.attribute_values || {} }); setProductDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(p.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -847,26 +873,47 @@ const AdminPage = () => {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                        <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Descripción</TableHead><TableHead>Valores</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {filteredAttributesTable.map(a => (
-                                                    <TableRow key={a.id}>
-                                                        <TableCell className="font-medium">{a.name}</TableCell>
-                                                        <TableCell>{a.description}</TableCell>
-                                                        <TableCell>
-                                                            <div className="flex flex-wrap gap-1">
-                                                                {a.values?.map((v, i) => <Badge key={i} variant="secondary" className="text-[10px]">{v}</Badge>)}
-                                                            </div>
-                                                        </TableCell>
-                                                        <TableCell className="flex justify-end gap-1 pr-4">
-                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(a); setAttributeForm({ ...a, values: a.values || [] }); setAttributeDialog(true); }}><Pencil className="w-4 h-4" /></Button>
-                                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteAttribute(a.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                        <div className="md:hidden divide-y">
+                                            {filteredAttributesTable.map(a => (
+                                                <div key={a.id} className="p-4 space-y-3">
+                                                    <div className="flex justify-between items-start">
+                                                        <div>
+                                                            <p className="font-bold text-slate-900">{a.name}</p>
+                                                            <p className="text-xs text-slate-500">{a.description}</p>
+                                                        </div>
+                                                        <div className="flex gap-1">
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingItem(a); setAttributeForm({ ...a, values: a.values || [] }); setAttributeDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                            <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => handleDeleteAttribute(a.id)}><Trash2 className="w-4 h-4" /></Button>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex flex-wrap gap-1">
+                                                        {a.values?.map((v, i) => <Badge key={i} variant="secondary" className="text-[10px]">{v}</Badge>)}
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="hidden md:block">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Descripción</TableHead><TableHead>Valores</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {filteredAttributesTable.map(a => (
+                                                        <TableRow key={a.id}>
+                                                            <TableCell className="font-medium">{a.name}</TableCell>
+                                                            <TableCell>{a.description}</TableCell>
+                                                            <TableCell>
+                                                                <div className="flex flex-wrap gap-1">
+                                                                    {a.values?.map((v, i) => <Badge key={i} variant="secondary" className="text-[10px]">{v}</Badge>)}
+                                                                </div>
+                                                            </TableCell>
+                                                            <TableCell className="flex justify-end gap-1 pr-4">
+                                                                <Button variant="ghost" size="icon" onClick={() => { setEditingItem(a); setAttributeForm({ ...a, values: a.values || [] }); setAttributeDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteAttribute(a.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -887,20 +934,33 @@ const AdminPage = () => {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                        <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {filteredBrandsTable.map(b => (
-                                                    <TableRow key={b.id}>
-                                                        <TableCell className="font-medium">{b.name}</TableCell>
-                                                        <TableCell className="flex justify-end gap-1 pr-4">
-                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(b); setBrandForm(b); setBrandDialog(true); }}><Pencil className="w-4 h-4" /></Button>
-                                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteBrand(b.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                        <div className="md:hidden divide-y">
+                                            {filteredBrandsTable.map(b => (
+                                                <div key={b.id} className="p-4 flex items-center justify-between">
+                                                    <p className="font-bold text-slate-900">{b.name}</p>
+                                                    <div className="flex gap-1">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingItem(b); setBrandForm(b); setBrandDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => handleDeleteBrand(b.id)}><Trash2 className="w-4 h-4" /></Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="hidden md:block">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {filteredBrandsTable.map(b => (
+                                                        <TableRow key={b.id}>
+                                                            <TableCell className="font-medium">{b.name}</TableCell>
+                                                            <TableCell className="flex justify-end gap-1 pr-4">
+                                                                <Button variant="ghost" size="icon" onClick={() => { setEditingItem(b); setBrandForm(b); setBrandDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteBrand(b.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -921,20 +981,33 @@ const AdminPage = () => {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                        <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {filteredSupermarketsTable.map(s => (
-                                                    <TableRow key={s.id}>
-                                                        <TableCell className="font-medium">{s.name}</TableCell>
-                                                        <TableCell className="flex justify-end gap-1 pr-4">
-                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(s); setSupermarketForm(s); setSupermarketDialog(true); }}><Pencil className="w-4 h-4" /></Button>
-                                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteSupermarket(s.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                        <div className="md:hidden divide-y">
+                                            {filteredSupermarketsTable.map(s => (
+                                                <div key={s.id} className="p-4 flex items-center justify-between">
+                                                    <p className="font-bold text-slate-900">{s.name}</p>
+                                                    <div className="flex gap-1">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingItem(s); setSupermarketForm(s); setSupermarketDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => handleDeleteSupermarket(s.id)}><Trash2 className="w-4 h-4" /></Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="hidden md:block">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {filteredSupermarketsTable.map(s => (
+                                                        <TableRow key={s.id}>
+                                                            <TableCell className="font-medium">{s.name}</TableCell>
+                                                            <TableCell className="flex justify-end gap-1 pr-4">
+                                                                <Button variant="ghost" size="icon" onClick={() => { setEditingItem(s); setSupermarketForm(s); setSupermarketDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteSupermarket(s.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -955,21 +1028,37 @@ const AdminPage = () => {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                        <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Abreviatura</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {filteredUnitsTable.map(u => (
-                                                    <TableRow key={u.id}>
-                                                        <TableCell className="font-medium">{u.name}</TableCell>
-                                                        <TableCell className="font-mono">{u.abbreviation}</TableCell>
-                                                        <TableCell className="flex justify-end gap-1 pr-4">
-                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(u); setUnitForm(u); setUnitDialog(true); }}><Pencil className="w-4 h-4" /></Button>
-                                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteUnit(u.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                        <div className="md:hidden divide-y">
+                                            {filteredUnitsTable.map(u => (
+                                                <div key={u.id} className="p-4 flex items-center justify-between">
+                                                    <div>
+                                                        <p className="font-bold text-slate-900">{u.name}</p>
+                                                        <p className="text-xs font-mono text-slate-500">{u.abbreviation}</p>
+                                                    </div>
+                                                    <div className="flex gap-1">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingItem(u); setUnitForm(u); setUnitDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => handleDeleteUnit(u.id)}><Trash2 className="w-4 h-4" /></Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="hidden md:block">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Abreviatura</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {filteredUnitsTable.map(u => (
+                                                        <TableRow key={u.id}>
+                                                            <TableCell className="font-medium">{u.name}</TableCell>
+                                                            <TableCell className="font-mono">{u.abbreviation}</TableCell>
+                                                            <TableCell className="flex justify-end gap-1 pr-4">
+                                                                <Button variant="ghost" size="icon" onClick={() => { setEditingItem(u); setUnitForm(u); setUnitDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteUnit(u.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -990,20 +1079,33 @@ const AdminPage = () => {
                                         </div>
                                     </CardHeader>
                                     <CardContent className="p-0">
-                                        <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
-                                            <TableBody>
-                                                {filteredCategoriesTable.map(c => (
-                                                    <TableRow key={c.id}>
-                                                        <TableCell className="font-medium">{c.name}</TableCell>
-                                                        <TableCell className="flex justify-end gap-1 pr-4">
-                                                            <Button variant="ghost" size="icon" onClick={() => { setEditingItem(c); setCategoryForm(c); setCategoryDialog(true); }}><Pencil className="w-4 h-4" /></Button>
-                                                            <Button variant="ghost" size="icon" onClick={() => handleDeleteCategory(c.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
-                                                        </TableCell>
-                                                    </TableRow>
-                                                ))}
-                                            </TableBody>
-                                        </Table>
+                                        <div className="md:hidden divide-y">
+                                            {filteredCategoriesTable.map(c => (
+                                                <div key={c.id} className="p-4 flex items-center justify-between">
+                                                    <p className="font-bold text-slate-900">{c.name}</p>
+                                                    <div className="flex gap-1">
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8" onClick={() => { setEditingItem(c); setCategoryForm(c); setCategoryDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                        <Button variant="ghost" size="icon" className="h-8 w-8 text-rose-600" onClick={() => handleDeleteCategory(c.id)}><Trash2 className="w-4 h-4" /></Button>
+                                                    </div>
+                                                </div>
+                                            ))}
+                                        </div>
+                                        <div className="hidden md:block">
+                                            <Table>
+                                                <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                                <TableBody>
+                                                    {filteredCategoriesTable.map(c => (
+                                                        <TableRow key={c.id}>
+                                                            <TableCell className="font-medium">{c.name}</TableCell>
+                                                            <TableCell className="flex justify-end gap-1 pr-4">
+                                                                <Button variant="ghost" size="icon" onClick={() => { setEditingItem(c); setCategoryForm(c); setCategoryDialog(true); }}><Pencil className="w-4 h-4" /></Button>
+                                                                <Button variant="ghost" size="icon" onClick={() => handleDeleteCategory(c.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
+                                                            </TableCell>
+                                                        </TableRow>
+                                                    ))}
+                                                </TableBody>
+                                            </Table>
+                                        </div>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
@@ -1499,7 +1601,7 @@ const AdminPage = () => {
 
             {/* Diálogos */}
             <Dialog open={productDialog} onOpenChange={setProductDialog}>
-                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Producto Conceptual</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <div className="space-y-2">
@@ -1532,7 +1634,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={attributeDialog} onOpenChange={setAttributeDialog}>
-                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Atributo</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <div className="space-y-2">
@@ -1592,7 +1694,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={brandDialog} onOpenChange={setBrandDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-[95vw] sm:max-w-md">
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nueva"} Marca</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <Label>Nombre</Label><Input value={brandForm.name} onChange={e => setBrandForm({ ...brandForm, name: e.target.value })} placeholder="Nombre de la marca" data-testid="brand-name-input" />
@@ -1602,7 +1704,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={supermarketDialog} onOpenChange={setSupermarketDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-[95vw] sm:max-w-md">
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nuevo"} Supermercado</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <Label>Nombre</Label><Input value={supermarketForm.name} onChange={e => setSupermarketForm({ ...supermarketForm, name: e.target.value })} placeholder="Nombre del supermercado" data-testid="supermarket-name-input" />
@@ -1612,7 +1714,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={unitDialog} onOpenChange={setUnitDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-[95vw] sm:max-w-md">
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nueva"} Unidad</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <Label>Nombre</Label><Input value={unitForm.name} onChange={e => setUnitForm({ ...unitForm, name: e.target.value })} placeholder="Ej: Litro" />
@@ -1623,7 +1725,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={categoryDialog} onOpenChange={setCategoryDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-[95vw] sm:max-w-md">
                     <DialogHeader><DialogTitle>{editingItem ? "Editar" : "Nueva"} Categoría</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <Label>Nombre</Label><Input value={categoryForm.name} onChange={e => setCategoryForm({ ...categoryForm, name: e.target.value })} placeholder="Nombre de la categoría" />
@@ -1633,7 +1735,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={supermarketBrandDialog} onOpenChange={setSupermarketBrandDialog}>
-                <DialogContent className="max-w-xl">
+                <DialogContent className="max-w-[95vw] sm:max-w-xl">
                     <DialogHeader><DialogTitle>Gestionar Marcas en {supermarkets.find(s => s.id === sellableForm.supermarket_id)?.name}</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <div className="relative">
@@ -1702,7 +1804,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={sellableDialog} onOpenChange={(val) => { setSellableDialog(val); if (!val) setProductSearch(""); }}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Vincular Productos: {brands.find(b => b.id === sellableForm.brand_id)?.name}</DialogTitle>
                         <p className="text-sm text-slate-500">Supermercado: {supermarkets.find(s => s.id === sellableForm.supermarket_id)?.name}</p>
@@ -1780,7 +1882,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={catalogDialog} onOpenChange={(val) => { setCatalogDialog(val); if (!val) { setProductSearch(""); } }}>
-                <DialogContent className="max-w-xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-[95vw] sm:max-w-xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle>Añadir Productos al Catálogo</DialogTitle>
                         <p className="text-sm text-slate-500">Selecciona los productos conceptuales que esta marca comercializa.</p>
@@ -1849,7 +1951,7 @@ const AdminPage = () => {
 
 
             <Dialog open={catalogStatusDialog} onOpenChange={setCatalogStatusDialog}>
-                <DialogContent className="max-w-md max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>Configurar Entrada de Catálogo</DialogTitle></DialogHeader>
                     <div className="space-y-5 pt-4">
                         <div className="rounded-lg border bg-slate-50 p-3 text-sm text-slate-600">
@@ -1923,7 +2025,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={addSupermarketToCatalogDialog} onOpenChange={setAddSupermarketToCatalogDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-[95vw] sm:max-w-md">
                     <DialogHeader><DialogTitle>Añadir Supermercado al Catálogo</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <Label>Selecciona Supermercado</Label>
@@ -1942,7 +2044,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={addBrandGlobalDialog} onOpenChange={setAddBrandGlobalDialog}>
-                <DialogContent>
+                <DialogContent className="max-w-[95vw] sm:max-w-md">
                     <DialogHeader><DialogTitle>Gestionar Marcas en el Catálogo</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <div className="relative">
@@ -1995,7 +2097,7 @@ const AdminPage = () => {
             </Dialog>
 
             <Dialog open={productUnitDialog} onOpenChange={setProductUnitDialog}>
-                <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+                <DialogContent className="max-w-[95vw] sm:max-w-2xl max-h-[90vh] overflow-y-auto">
                     <DialogHeader><DialogTitle>Editar Unidades Permitidas</DialogTitle></DialogHeader>
                     <div className="space-y-4 pt-4">
                         <div className="rounded-lg border bg-slate-50 p-3 text-sm text-slate-600">
