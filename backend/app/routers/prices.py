@@ -11,7 +11,7 @@ router = APIRouter(prefix="/prices", tags=["prices"])
 
 @router.post("", response_model=PriceResponse)
 async def create_price(data: PriceCreate, user: dict = Depends(get_current_user)):
-    query = {}
+    query = {"status": {"$ne": "invalid"}}
     if data.sellable_product_id:
         query["sellable_product_id"] = data.sellable_product_id
     else:
@@ -31,7 +31,8 @@ async def create_price(data: PriceCreate, user: dict = Depends(get_current_user)
         "price": data.price,
         "quantity": data.quantity,
         "user_id": user["id"],
-        "created_at": created_at
+        "created_at": created_at,
+        "status": "active"
     }
 
     if data.sellable_product_id:
@@ -101,11 +102,12 @@ async def get_prices(
     limit: int = 100,
     user: dict = Depends(get_current_user)
 ):
-    query = {}
+    query = {"status": {"$ne": "invalid"}}
     if sellable_product_id:
         query["sellable_product_id"] = sellable_product_id
 
     prices = await db.prices.find(query).sort("created_at", -1).to_list(limit)
+
 
     supermarkets = {s.get("id") or str(s.get("_id")): s["name"] for s in await db.supermarkets.find({}).to_list(1000)}
     products = {p.get("id") or str(p.get("_id")): p["name"] for p in await db.products.find({}).to_list(1000)}
@@ -151,7 +153,7 @@ async def get_latest_price(product_id: str, supermarket_id: Optional[str] = None
     if not sp_ids:
         return {"price": None, "message": "No sellable product found"}
 
-    query = {"sellable_product_id": {"$in": sp_ids}}
+    query = {"sellable_product_id": {"$in": sp_ids}, "status": {"$ne": "invalid"}}
     price = await db.prices.find_one(query, {"_id": 0}, sort=[("created_at", -1)])
     if not price:
         return {"price": None, "message": "No price found"}

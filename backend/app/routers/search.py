@@ -40,7 +40,8 @@ async def search_products(
         # Get latest price across all sellable variants
         sps = await db.sellable_products.find({"product_id": pid}).to_list(1000)
         sp_ids = [sp.get("id") or str(sp.get("_id")) for sp in sps]
-        latest_price = await db.prices.find_one({"sellable_product_id": {"$in": sp_ids}}, {"_id": 0}, sort=[("created_at", -1)]) if sp_ids else None
+        latest_price = await db.prices.find_one({"sellable_product_id": {"$in": sp_ids}, "status": {"$ne": "invalid"}}, {"_id": 0}, sort=[("created_at", -1)]) if sp_ids else None
+
 
         result.append({
             **p,
