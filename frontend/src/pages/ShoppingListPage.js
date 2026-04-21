@@ -1,31 +1,132 @@
 import { useEffect, useState } from "react";
 import axios from "axios";
 import Layout from "../components/Layout";
-import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
-import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from "../components/ui/dialog";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { Checkbox } from "../components/ui/checkbox";
+import { Badge } from "../components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { toast } from "sonner";
+import { useShoppingListTutorial } from "../hooks/useShoppingListTutorial";
 import {
     ShoppingCart,
     Plus,
     Trash2,
     Store,
     Package,
-    Calculator,
     RefreshCcw,
     CheckCircle2,
     Sparkles,
-    Eye,
     AlertTriangle,
-    Zap,
-    PanelLeft
+    PanelLeft,
+    Copy,
+    TrendingUp,
+    TrendingDown,
+    Loader,
+    HelpCircle,
+    Clock
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
+
+const serializeItems = (items = []) => items.map((item) => ({
+    sellable_product_id: item.sellable_product_id,
+    quantity: item.quantity,
+    unit_id: item.unit_id,
+    price: item.price,
+    purchased: item.purchased,
+    attribute_values: item.attribute_values
+}));
+
+const upsertList = (collection, updatedList) => {
+    const exists = collection.some((list) => list.id === updatedList.id);
+    if (!exists) {
+        return [updatedList, ...collection];
+    }
+
+    return collection.map((list) => (list.id === updatedList.id ? updatedList : list));
+};
+
+const formatCurrency = (value) => {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+        return "-";
+    }
+
+    return `${Number(value).toFixed(2)} EUR`;
+};
+
+const getPriceInsight = (item) => {
+    if (!item?.estimated_price || !item?.price) {
+        return null;
+    }
+
+    const difference = Number(item.price) - Number(item.estimated_price);
+    const percentage = Number(item.estimated_price) ? (difference / Number(item.estimated_price)) * 100 : 0;
+    const isHigher = difference > 0;
+
+    return {
+        difference,
+        percentage,
+        isHigher,
+        label: isHigher
+            ? `${percentage.toFixed(1)}% por encima del estimado`
+            : `${Math.abs(percentage).toFixed(1)}% por debajo del estimado`
+    };
+};
+
+const getTutorialBubbleStyle = (step, rect) => {
+    const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
+    const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 720;
+    const width = Math.min(360, Math.max(280, viewportWidth - 32));
+    const margin = 16;
+
+    if (!step?.element || !rect) {
+        return {
+            top: "50%",
+            left: "50%",
+            transform: "translate(-50%, -50%)",
+            width: `${width}px`
+        };
+    }
+
+    const centerX = rect.left + (rect.width / 2);
+    const safeLeft = Math.min(Math.max(centerX - (width / 2), margin), viewportWidth - width - margin);
+
+    if (step.position === "top") {
+        return {
+            top: `${Math.max(rect.top - 18, margin + 12)}px`,
+            left: `${safeLeft}px`,
+            transform: "translateY(-100%)",
+            width: `${width}px`
+        };
+    }
+
+    if (step.position === "right") {
+        const preferredLeft = rect.right + 18;
+        const fitsRight = preferredLeft + width <= viewportWidth - margin;
+        const top = Math.min(Math.max(rect.top, margin), viewportHeight - 260);
+
+        return {
+            top: `${top}px`,
+            left: fitsRight ? `${preferredLeft}px` : `${safeLeft}px`,
+            transform: "none",
+            width: `${width}px`
+        };
+    }
+
+    const preferredTop = rect.bottom + 18;
+    const fitsBottom = preferredTop + 260 <= viewportHeight - margin;
+    return {
+        top: fitsBottom ? `${preferredTop}px` : `${Math.max(rect.top - 18, margin + 12)}px`,
+        left: `${safeLeft}px`,
+        transform: fitsBottom ? "none" : "translateY(-100%)",
+        width: `${width}px`
+    };
+};
 
 const ShoppingListPage = () => {
     const [lists, setLists] = useState([]);
@@ -41,15 +142,16 @@ const ShoppingListPage = () => {
     const [dialogOpen, setDialogOpen] = useState(false);
     const [addItemDialogOpen, setAddItemDialogOpen] = useState(false);
     const [showEstimated, setShowEstimated] = useState(false);
-    const [listsExpanded, setListsExpanded] = useState(true);
     const [confirmEstimateOpen, setConfirmEstimateOpen] = useState(false);
     const [confirmSubmitOpen, setConfirmSubmitOpen] = useState(false);
+    const [autoSaving, setAutoSaving] = useState(false);
+    const [pendingChanges, setPendingChanges] = useState(false);
+    const [activeTab, setActiveTab] = useState("prepare");
+    const { startTutorial, tutorial, nextStep, prevStep, closeTutorial } = useShoppingListTutorial(lists.length === 0);
 
-    // New list form
     const [newListName, setNewListName] = useState("");
     const [newListSupermarket, setNewListSupermarket] = useState("");
 
-    // New item form
     const [newItemProduct, setNewItemProduct] = useState("");
     const [newItemBrandId, setNewItemBrandId] = useState("");
     const [newItemAttrValues, setNewItemAttrValues] = useState({});
@@ -58,83 +160,24 @@ const ShoppingListPage = () => {
     const [newItemUnit, setNewItemUnit] = useState("");
     const [editingItemIndex, setEditingItemIndex] = useState(null);
 
-    // Filtered selection states
     const [availableBrandsForProduct, setAvailableBrandsForProduct] = useState([]);
     const [availableUnits, setAvailableUnits] = useState([]);
 
-    useEffect(() => {
-        fetchData();
-    }, []);
+    const selectedItems = selectedList?.items || [];
+    const totalItems = selectedItems.length;
+    const purchasedCount = selectedItems.filter((item) => item.purchased).length;
+    const pricedCount = selectedItems.filter((item) => item.price !== null && item.price !== undefined).length;
+    const readyToSubmitCount = selectedItems.filter((item) => item.purchased && item.price).length;
+    const missingPriceCount = selectedItems.filter((item) => item.purchased && !item.price).length;
+    const estimatedCount = selectedItems.filter((item) => item.estimated_price).length;
+    const remainingCount = totalItems - purchasedCount;
+    const totalTrackedItems = lists.reduce((sum, list) => sum + (list.items?.length || 0), 0);
+    const tutorialBubbleStyle = getTutorialBubbleStyle(tutorial.activeStep, tutorial.highlightRect);
 
-    // 1. When product changes, find available brands in this supermarket
-    useEffect(() => {
-        if (newItemProduct && selectedList) {
-            const brandIds = Array.from(new Set(
-                sellableProducts
-                    .filter(sp => sp.product_id === newItemProduct && sp.supermarket_id === selectedList.supermarket_id)
-                    .map(sp => sp.brand_id)
-            ));
-            const filteredBrands = brands.filter(b => brandIds.includes(b.id));
-            setAvailableBrandsForProduct(filteredBrands);
-        } else {
-            setAvailableBrandsForProduct([]);
-        }
-    }, [newItemProduct, selectedList, sellableProducts, brands]);
-
-    // 2. Clear brand and attributes when product changes
-    useEffect(() => {
-        setNewItemBrandId("");
-        setNewItemAttrValues({});
-        setNewItemSellable("");
-    }, [newItemProduct]);
-
-    // 3. Resolve sellable product when brand or attributes change
-    useEffect(() => {
-        if (newItemProduct && newItemBrandId && selectedList) {
-            const cleanedAttrs = Object.fromEntries(
-                Object.entries(newItemAttrValues).filter(([_, v]) => v !== "" && v !== null && v !== "none")
-            );
-
-            // Our new logic:
-            // A sellable product represents a BRAND'S product in a SUPERMARKET.
-            // We only need the ID of that sellable product.
-            // Attributes are just metadata for the list item now.
-            const match = sellableProducts.find(sp =>
-                sp.product_id === newItemProduct &&
-                sp.brand_id === newItemBrandId &&
-                sp.supermarket_id === selectedList.supermarket_id
-            );
-
-            if (match) {
-                setNewItemSellable(match.id);
-            } else {
-                setNewItemSellable("");
-            }
-        }
-    }, [newItemBrandId, newItemAttrValues, newItemProduct, selectedList, sellableProducts]);
-
-    useEffect(() => {
-        const fetchUnits = async () => {
-            if (newItemProduct && newItemSellable && selectedList) {
-                const sp = sellableProducts.find(sp => sp.id === newItemSellable);
-                if (sp) {
-                    try {
-                        const res = await axios.get(`${API}/admin/sellable-product-units/${sp.id}`);
-                        setAvailableUnits(res.data);
-                        if (res.data.length === 1) {
-                            setNewItemUnit(res.data[0].unit_id);
-                        }
-                    } catch (e) {
-                        console.error("Error fetching units", e);
-                    }
-                }
-            } else {
-                setAvailableUnits([]);
-                setNewItemUnit("");
-            }
-        };
-        fetchUnits();
-    }, [newItemSellable, newItemProduct, selectedList, sellableProducts]);
+    const syncListState = (updatedList) => {
+        setSelectedList(updatedList);
+        setLists((prev) => upsertList(prev, updatedList));
+    };
 
     const resetNewItemForm = () => {
         setNewItemProduct("");
@@ -146,28 +189,221 @@ const ShoppingListPage = () => {
         setEditingItemIndex(null);
     };
 
+    const saveList = async (itemsToSave, options = {}) => {
+        const {
+            listId = selectedList?.id,
+            silent = false,
+            updateSelected = true
+        } = options;
+
+        if (!listId) {
+            return null;
+        }
+
+        try {
+            const response = await axios.put(`${API}/shopping-lists/${listId}`, {
+                items: serializeItems(itemsToSave)
+            });
+
+            setLists((prev) => upsertList(prev, response.data));
+            if (updateSelected && selectedList?.id === response.data.id) {
+                setSelectedList(response.data);
+            }
+
+            return response.data;
+        } catch (error) {
+            if (!silent) {
+                toast.error("Error al guardar cambios");
+            }
+            throw error;
+        }
+    };
+
     const fetchData = async () => {
         setLoading(true);
-        try {
-            // Fetch everything but individually to be more robust
-            const fetchLists = axios.get(`${API}/shopping-lists`).then(r => setLists(r.data)).catch(e => console.error("Lists fetch error", e));
-            const fetchProducts = axios.get(`${API}/public/products`).then(r => setProducts(r.data)).catch(e => console.error("Products fetch error", e));
-            const fetchAttributes = axios.get(`${API}/admin/attributes`).then(r => setAttributes(r.data)).catch(e => console.error("Attributes fetch error", e));
-            const fetchSupermarkets = axios.get(`${API}/admin/supermarkets`).then(r => setSupermarkets(r.data)).catch(e => console.error("Supermarkets fetch error", e));
-            const fetchUnits = axios.get(`${API}/admin/units`).then(r => {
-                setUnits(r.data);
-                if (r.data.length > 0) setNewItemUnit(r.data[0].id);
-            }).catch(e => console.error("Units fetch error", e));
-            const fetchBrands = axios.get(`${API}/admin/brands`).then(r => setBrands(r.data)).catch(e => console.error("Brands fetch error", e));
-            const fetchBrandCatalog = axios.get(`${API}/admin/brand-catalog`).then(r => setBrandCatalog(r.data)).catch(e => console.error("Brand Catalog fetch error", e));
-            const fetchSellable = axios.get(`${API}/admin/sellable-products`).then(r => setSellableProducts(r.data)).catch(e => console.error("Sellable fetch error", e));
 
-            await Promise.allSettled([fetchLists, fetchProducts, fetchAttributes, fetchSupermarkets, fetchUnits, fetchBrands, fetchBrandCatalog, fetchSellable]);
+        try {
+            const fetchLists = axios.get(`${API}/shopping-lists`).then((response) => {
+                setLists(response.data);
+                setSelectedList((current) => {
+                    if (!response.data.length) {
+                        return null;
+                    }
+
+                    if (!current) {
+                        return response.data[0];
+                    }
+
+                    return response.data.find((list) => list.id === current.id) || response.data[0];
+                });
+            }).catch((error) => console.error("Lists fetch error", error));
+
+            const fetchProducts = axios.get(`${API}/public/products`).then((response) => {
+                setProducts(response.data);
+            }).catch((error) => console.error("Products fetch error", error));
+
+            const fetchAttributes = axios.get(`${API}/admin/attributes`).then((response) => {
+                setAttributes(response.data);
+            }).catch((error) => console.error("Attributes fetch error", error));
+
+            const fetchSupermarkets = axios.get(`${API}/admin/supermarkets`).then((response) => {
+                setSupermarkets(response.data);
+            }).catch((error) => console.error("Supermarkets fetch error", error));
+
+            const fetchUnits = axios.get(`${API}/admin/units`).then((response) => {
+                setUnits(response.data);
+                if (response.data.length > 0) {
+                    setNewItemUnit(response.data[0].id);
+                }
+            }).catch((error) => console.error("Units fetch error", error));
+
+            const fetchBrands = axios.get(`${API}/admin/brands`).then((response) => {
+                setBrands(response.data);
+            }).catch((error) => console.error("Brands fetch error", error));
+
+            const fetchBrandCatalog = axios.get(`${API}/admin/brand-catalog`).then((response) => {
+                setBrandCatalog(response.data);
+            }).catch((error) => console.error("Brand catalog fetch error", error));
+
+            const fetchSellable = axios.get(`${API}/admin/sellable-products`).then((response) => {
+                setSellableProducts(response.data);
+            }).catch((error) => console.error("Sellable fetch error", error));
+
+            await Promise.allSettled([
+                fetchLists,
+                fetchProducts,
+                fetchAttributes,
+                fetchSupermarkets,
+                fetchUnits,
+                fetchBrands,
+                fetchBrandCatalog,
+                fetchSellable
+            ]);
         } catch (error) {
-            console.error("General error in fetchData:", error);
+            console.error("General error in fetchData", error);
         } finally {
             setLoading(false);
         }
+    };
+
+    useEffect(() => {
+        fetchData();
+    }, []);
+
+    useEffect(() => {
+        if (!pendingChanges || !selectedList) {
+            return undefined;
+        }
+
+        const autoSaveTimer = setTimeout(async () => {
+            setAutoSaving(true);
+
+            try {
+                const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
+                    items: serializeItems(selectedList.items)
+                });
+
+                syncListState(response.data);
+                setPendingChanges(false);
+            } catch (error) {
+                console.error("Auto-save error", error);
+            } finally {
+                setAutoSaving(false);
+            }
+        }, 1200);
+
+        return () => clearTimeout(autoSaveTimer);
+    }, [pendingChanges, selectedList]);
+
+    useEffect(() => {
+        if (newItemProduct && selectedList) {
+            const brandIds = Array.from(new Set(
+                sellableProducts
+                    .filter((sellableProduct) => (
+                        sellableProduct.product_id === newItemProduct &&
+                        sellableProduct.supermarket_id === selectedList.supermarket_id
+                    ))
+                    .map((sellableProduct) => sellableProduct.brand_id)
+            ));
+
+            setAvailableBrandsForProduct(brands.filter((brand) => brandIds.includes(brand.id)));
+        } else {
+            setAvailableBrandsForProduct([]);
+        }
+    }, [newItemProduct, selectedList, sellableProducts, brands]);
+
+    useEffect(() => {
+        setNewItemBrandId("");
+        setNewItemAttrValues({});
+        setNewItemSellable("");
+    }, [newItemProduct]);
+
+    useEffect(() => {
+        if (newItemProduct && newItemBrandId && selectedList) {
+            const match = sellableProducts.find((sellableProduct) => (
+                sellableProduct.product_id === newItemProduct &&
+                sellableProduct.brand_id === newItemBrandId &&
+                sellableProduct.supermarket_id === selectedList.supermarket_id
+            ));
+
+            setNewItemSellable(match ? match.id : "");
+        }
+    }, [newItemBrandId, newItemProduct, selectedList, sellableProducts]);
+
+    useEffect(() => {
+        const fetchAvailableUnits = async () => {
+            if (!newItemProduct || !newItemSellable || !selectedList) {
+                setAvailableUnits([]);
+                setNewItemUnit("");
+                return;
+            }
+
+            const sellableProduct = sellableProducts.find((candidate) => candidate.id === newItemSellable);
+            if (!sellableProduct) {
+                setAvailableUnits([]);
+                setNewItemUnit("");
+                return;
+            }
+
+            try {
+                const response = await axios.get(`${API}/admin/sellable-product-units/${sellableProduct.id}`);
+                setAvailableUnits(response.data);
+                if (response.data.length === 1) {
+                    setNewItemUnit(response.data[0].unit_id);
+                }
+            } catch (error) {
+                console.error("Error fetching units", error);
+            }
+        };
+
+        fetchAvailableUnits();
+    }, [newItemSellable, newItemProduct, selectedList, sellableProducts]);
+
+    useEffect(() => {
+        const items = selectedList?.items || [];
+        setShowEstimated(Boolean(items.some((item) => item.estimated_price)));
+    }, [selectedList]);
+
+    const handleSelectList = async (list) => {
+        if (!list || list.id === selectedList?.id) {
+            return;
+        }
+
+        if (pendingChanges && selectedList) {
+            try {
+                await saveList(selectedList.items, {
+                    listId: selectedList.id,
+                    silent: true,
+                    updateSelected: false
+                });
+                setPendingChanges(false);
+            } catch (error) {
+                console.error("Error saving before switching list", error);
+            }
+        }
+
+        setSelectedList(list);
+        setActiveTab("prepare");
     };
 
     const handleCreateList = async () => {
@@ -175,13 +411,17 @@ const ShoppingListPage = () => {
             toast.error("Completa todos los campos");
             return;
         }
+
         try {
             const response = await axios.post(`${API}/shopping-lists`, {
                 name: newListName,
                 supermarket_id: newListSupermarket,
                 items: []
             });
-            setLists([response.data, ...lists]);
+
+            setLists((prev) => [response.data, ...prev]);
+            setSelectedList(response.data);
+            setActiveTab("prepare");
             setNewListName("");
             setNewListSupermarket("");
             setDialogOpen(false);
@@ -192,142 +432,164 @@ const ShoppingListPage = () => {
     };
 
     const handleAddItem = async () => {
-        if (!newItemProduct || !newItemSellable || !newItemUnit) {
+        if (!newItemProduct || !newItemSellable || !newItemUnit || !selectedList) {
             toast.error("Completa todos los campos");
             return;
         }
 
-        const sp = sellableProducts.find(sp => sp.id === newItemSellable);
-
-        if (!sp) {
+        const sellableProduct = sellableProducts.find((candidate) => candidate.id === newItemSellable);
+        if (!sellableProduct) {
             toast.error("Producto no disponible");
             return;
         }
 
         try {
             const cleanedAttrs = Object.fromEntries(
-                Object.entries(newItemAttrValues).filter(([_, v]) => v !== "" && v !== null && v !== "none")
+                Object.entries(newItemAttrValues).filter(([, value]) => value !== "" && value !== null && value !== "none")
             );
 
-            const currentItems = selectedList.items.map(item => ({
-                sellable_product_id: item.sellable_product_id,
-                quantity: item.quantity,
-                unit_id: item.unit_id,
-                price: item.price,
-                purchased: item.purchased,
-                attribute_values: item.attribute_values
-            }));
-
+            const currentItems = serializeItems(selectedList.items);
             const newItem = {
-                sellable_product_id: sp.id,
+                sellable_product_id: sellableProduct.id,
                 quantity: parseFloat(newItemQuantity) || 1,
                 unit_id: newItemUnit,
-                price: editingItemIndex !== null ? currentItems[editingItemIndex].price : null,
-                purchased: editingItemIndex !== null ? currentItems[editingItemIndex].purchased : false,
+                price: editingItemIndex !== null ? currentItems[editingItemIndex]?.price ?? null : null,
+                purchased: editingItemIndex !== null ? Boolean(currentItems[editingItemIndex]?.purchased) : false,
                 attribute_values: cleanedAttrs
             };
 
-            let updatedItems;
-            if (editingItemIndex !== null) {
-                updatedItems = [...currentItems];
-                updatedItems[editingItemIndex] = newItem;
-            } else {
-                updatedItems = [...currentItems, newItem];
-            }
+            const updatedItems = editingItemIndex !== null
+                ? currentItems.map((item, index) => (index === editingItemIndex ? newItem : item))
+                : [...currentItems, newItem];
 
-            const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
-                items: updatedItems
+            const updatedList = await saveList(updatedItems, {
+                listId: selectedList.id,
+                updateSelected: true
             });
 
-            setSelectedList(response.data);
-            setLists(lists.map(l => l.id === selectedList.id ? response.data : l));
-            resetNewItemForm();
-            setAddItemDialogOpen(false);
-            toast.success(editingItemIndex !== null ? "Producto actualizado" : "Producto añadido");
+            if (updatedList) {
+                setPendingChanges(false);
+                resetNewItemForm();
+                setAddItemDialogOpen(false);
+                toast.success(editingItemIndex !== null ? "Producto actualizado" : "Producto anadido");
+            }
         } catch (error) {
             toast.error("Error al guardar producto");
         }
     };
 
     const updateLocalItem = (index, updates) => {
+        if (!selectedList) {
+            return [];
+        }
+
         const newItems = [...selectedList.items];
         newItems[index] = { ...newItems[index], ...updates };
         setSelectedList({ ...selectedList, items: newItems });
+        setPendingChanges(true);
         return newItems;
     };
 
-    const saveList = async (itemsToSave) => {
+    const handleDuplicateList = async (listToDuplicate) => {
         try {
-            // Map items to the format expected by the backend
-            const cleanedItems = itemsToSave.map(item => ({
-                sellable_product_id: item.sellable_product_id,
-                quantity: item.quantity,
-                unit_id: item.unit_id,
-                price: item.price,
-                purchased: item.purchased,
-                attribute_values: item.attribute_values
-            }));
-
-            const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
-                items: cleanedItems
+            const response = await axios.post(`${API}/shopping-lists`, {
+                name: `${listToDuplicate.name} (Copia ${new Date().toLocaleDateString("es-ES")})`,
+                supermarket_id: listToDuplicate.supermarket_id,
+                items: listToDuplicate.items.map((item) => ({
+                    sellable_product_id: item.sellable_product_id,
+                    quantity: item.quantity,
+                    unit_id: item.unit_id,
+                    price: null,
+                    purchased: false,
+                    attribute_values: item.attribute_values
+                }))
             });
 
+            setLists((prev) => [response.data, ...prev]);
             setSelectedList(response.data);
-            setLists(lists.map(l => l.id === selectedList.id ? response.data : l));
+            setActiveTab("prepare");
+            toast.success("Lista duplicada correctamente");
         } catch (error) {
-            toast.error("Error al guardar cambios");
+            toast.error("Error al duplicar lista");
         }
     };
 
-    const handleUpdateItem = async (index, updates) => {
-        const newItems = updateLocalItem(index, updates);
-        await saveList(newItems);
-    };
-
     const handleRemoveItem = async (index) => {
-        const updatedItems = selectedList.items
-            .filter((_, i) => i !== index)
-            .map(item => ({
-                sellable_product_id: item.sellable_product_id,
-                quantity: item.quantity,
-                unit_id: item.unit_id,
-                price: item.price,
-                purchased: item.purchased
-            }));
+        if (!selectedList) {
+            return;
+        }
+
+        const updatedItems = selectedList.items.filter((_, itemIndex) => itemIndex !== index);
 
         try {
-            const response = await axios.put(`${API}/shopping-lists/${selectedList.id}`, {
-                items: updatedItems
+            const updatedList = await saveList(updatedItems, {
+                listId: selectedList.id,
+                updateSelected: true
             });
-            setSelectedList(response.data);
-            setLists(lists.map(l => l.id === selectedList.id ? response.data : l));
-            toast.success("Producto eliminado");
+
+            if (updatedList) {
+                setPendingChanges(false);
+                toast.success("Producto eliminado");
+            }
         } catch (error) {
             toast.error("Error al eliminar");
         }
     };
 
     const handleSubmitPrices = async () => {
+        if (!selectedList) {
+            return;
+        }
+
         setConfirmSubmitOpen(false);
+
         try {
+            if (pendingChanges) {
+                await saveList(selectedList.items, {
+                    listId: selectedList.id,
+                    silent: true,
+                    updateSelected: true
+                });
+                setPendingChanges(false);
+            }
+
             const response = await axios.post(`${API}/shopping-lists/${selectedList.id}/submit-prices`);
-            toast.success(response.data.message);
+            const cleanedItems = selectedList.items.map((item) => ({
+                ...item,
+                purchased: false,
+                price: null
+            }));
+
+            await saveList(cleanedItems, {
+                listId: selectedList.id,
+                silent: true,
+                updateSelected: true
+            });
+
+            setActiveTab("prepare");
+            toast.success(response.data.message || "Precios subidos");
+            toast.success("La lista se ha limpiado y queda preparada para reutilizarse");
         } catch (error) {
             toast.error("Error al subir precios");
         }
     };
 
     const handleConfirmEstimate = async () => {
+        if (!selectedList) {
+            return;
+        }
+
         setConfirmEstimateOpen(false);
+
         try {
             const response = await axios.post(`${API}/shopping-lists/${selectedList.id}/estimate`);
-            setSelectedList(response.data);
-            setLists(lists.map(l => l.id === selectedList.id ? response.data : l));
+            syncListState(response.data);
             setShowEstimated(true);
+            setActiveTab("shop");
             toast.success("Precios estimados calculados");
         } catch (error) {
             if (error.response?.status === 402) {
-                toast.error(error.response.data.detail || "Créditos insuficientes");
+                toast.error(error.response.data.detail || "Creditos insuficientes");
             } else {
                 toast.error("Error al calcular estimaciones");
             }
@@ -335,594 +597,917 @@ const ShoppingListPage = () => {
     };
 
     const handleResetList = async () => {
-        if (!window.confirm("¿Seguro que quieres reiniciar la lista? Se desmarcarán los productos y se borrarán los precios reales.")) return;
-        const resetItems = selectedList.items.map(item => ({
+        if (!selectedList) {
+            return;
+        }
+
+        if (!window.confirm("Seguro que quieres limpiar la compra actual? Mantendremos los productos, pero se borraran checks y precios reales.")) {
+            return;
+        }
+
+        const resetItems = selectedList.items.map((item) => ({
             ...item,
             purchased: false,
             price: null
         }));
-        await saveList(resetItems);
-        toast.success("Lista lista para volver a usar");
+
+        try {
+            const updatedList = await saveList(resetItems, {
+                listId: selectedList.id,
+                updateSelected: true
+            });
+
+            if (updatedList) {
+                setPendingChanges(false);
+                setActiveTab("prepare");
+                toast.success("Lista preparada para una nueva compra");
+            }
+        } catch (error) {
+            toast.error("Error al reiniciar la lista");
+        }
     };
 
     const handleDeleteList = async (listId) => {
         try {
             await axios.delete(`${API}/shopping-lists/${listId}`);
-            setLists(lists.filter(l => l.id !== listId));
-            if (selectedList?.id === listId) {
-                setSelectedList(null);
-            }
+
+            setLists((prev) => {
+                const filteredLists = prev.filter((list) => list.id !== listId);
+                if (selectedList?.id === listId) {
+                    setSelectedList(filteredLists[0] || null);
+                }
+                return filteredLists;
+            });
+
             toast.success("Lista eliminada");
         } catch (error) {
             toast.error("Error al eliminar lista");
         }
     };
 
-    // Get brand name helper
-    const getBrandName = (brandId) => {
-        const brand = brands.find(b => b.id === brandId);
-        return brand?.name || "-";
+    const openEditDialog = (item, index) => {
+        setNewItemProduct(item.product_id);
+        setNewItemBrandId(item.brand_id);
+        setNewItemAttrValues(item.attribute_values || {});
+        setNewItemQuantity(String(item.quantity));
+        setNewItemUnit(item.unit_id);
+        setEditingItemIndex(index);
+        setAddItemDialogOpen(true);
     };
 
     return (
         <>
             <Layout>
-                <div className="space-y-6" data-testid="shopping-list-page">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-4">
-                            <Button
-                                variant="outline"
-                                size="icon"
-                                onClick={() => setListsExpanded(!listsExpanded)}
-                                className={`h-10 w-10 shrink-0 hidden lg:flex transition-colors ${listsExpanded ? 'text-slate-900 bg-slate-100 border-slate-200 hover:bg-slate-200' : 'text-slate-500 hover:text-slate-900 border-slate-200'}`}
-                                title={listsExpanded ? "Ocultar mis listas" : "Mostrar mis listas"}
-                            >
-                                <PanelLeft className="w-5 h-5" />
-                            </Button>
-                            <div>
-                                <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                                    Lista de Compra
-                                </h1>
-                                <p className="text-slate-500 mt-1">Planifica tu compra y registra precios</p>
-                            </div>
-                        </div>
-                        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                            <DialogTrigger asChild>
-                                <Button className="bg-emerald-500 hover:bg-emerald-600 gap-2" data-testid="new-list-btn">
-                                    <Plus className="w-4 h-4" />
-                                    Nueva Lista
-                                </Button>
-                            </DialogTrigger>
-                            <DialogContent>
-                                <DialogHeader>
-                                    <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>Crear Nueva Lista</DialogTitle>
-                                </DialogHeader>
-                                <div className="space-y-4 pt-4">
-                                    <div className="space-y-2">
-                                        <Label>Nombre de la lista</Label>
-                                        <Input
-                                            placeholder="Ej: Compra semanal"
-                                            value={newListName}
-                                            onChange={(e) => setNewListName(e.target.value)}
-                                            data-testid="new-list-name-input"
-                                        />
+                <div className="space-y-4" data-testid="shopping-list-page">
+                    <Card className="overflow-hidden border-slate-200 shadow-sm" data-testid="list-detail-card">
+                        <CardHeader className="border-b border-slate-100 bg-white pb-4">
+                            <div className="flex flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+                                <div className="min-w-0">
+                                    <div className="flex flex-wrap items-center gap-2">
+                                        <CardTitle className="text-2xl text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                            Lista de compra
+                                        </CardTitle>
+                                        {selectedList && (
+                                            <Badge className="rounded-full border-0 bg-emerald-100 px-3 py-1 text-emerald-700">
+                                                {selectedList.name}
+                                            </Badge>
+                                        )}
+                                        {selectedList?.supermarket_name && (
+                                            <Badge className="rounded-full border border-slate-200 bg-white px-3 py-1 text-slate-600">
+                                                {selectedList.supermarket_name}
+                                            </Badge>
+                                        )}
                                     </div>
-                                    <div className="space-y-2">
-                                        <Label>Supermercado</Label>
-                                        <Select value={newListSupermarket} onValueChange={setNewListSupermarket}>
-                                            <SelectTrigger data-testid="new-list-supermarket-select">
-                                                <SelectValue placeholder="Selecciona supermercado" />
-                                            </SelectTrigger>
-                                            <SelectContent>
-                                                {supermarkets.map((sm) => (
-                                                    <SelectItem key={sm.id} value={sm.id}>{sm.name}</SelectItem>
-                                                ))}
-                                            </SelectContent>
-                                        </Select>
-                                    </div>
-                                    <Button onClick={handleCreateList} className="w-full bg-emerald-500 hover:bg-emerald-600" data-testid="create-list-btn">
-                                        Crear Lista
+                                </div>
+
+                                <div className="flex flex-wrap gap-2">
+                                    <Button
+                                        variant="outline"
+                                        onClick={() => startTutorial()}
+                                        className="gap-2 rounded-2xl border-slate-200"
+                                    >
+                                        <HelpCircle className="h-4 w-4" />
+                                        Tutorial
+                                    </Button>
+                                    <Button
+                                        onClick={() => setDialogOpen(true)}
+                                        className="gap-2 rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600"
+                                        data-testid="new-list-btn"
+                                        data-tutorial="new-list-btn"
+                                    >
+                                        <Plus className="h-4 w-4" />
+                                        Nueva lista
                                     </Button>
                                 </div>
-                            </DialogContent>
-                        </Dialog>
-                    </div>
+                            </div>
+                        </CardHeader>
 
-                    <div className="flex gap-0 relative">
-                        {/* Lists Sidebar */}
-                        <div className={`transition-all duration-300 flex shrink-0 ${listsExpanded ? 'w-full lg:w-64' : 'w-0'} overflow-hidden`}>
-                            <div className={`${listsExpanded ? 'w-full lg:w-64' : 'w-0'} overflow-hidden transition-all duration-300`}>
-                                <div className="w-full lg:w-64 pr-0 lg:pr-3">
-                                    <div className="flex items-center justify-between mb-3">
-                                        <h2 className="font-semibold text-slate-900 text-sm" style={{ fontFamily: 'Manrope, sans-serif' }}>Mis Listas</h2>
+                        <CardContent className="p-4 sm:p-5">
+                            <Tabs value={activeTab} onValueChange={setActiveTab}>
+                                <div className="flex flex-col gap-2 rounded-3xl border border-slate-200 bg-slate-50 p-2.5">
+                                    <TabsList className="grid h-auto grid-cols-1 gap-2 bg-transparent p-0 sm:grid-cols-3">
+                                        <TabsTrigger
+                                            value="prepare"
+                                            className="h-auto rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm data-[state=active]:border-emerald-300 data-[state=active]:bg-emerald-50 data-[state=active]:text-slate-900 data-[state=active]:shadow"
+                                            data-tutorial="prepare-tab"
+                                        >
+                                            <div className="flex w-full items-center justify-between gap-2">
+                                                <span className="flex items-center gap-2 text-sm font-semibold">
+                                                    <Package className="h-4 w-4" />
+                                                    Gestionar listas
+                                                </span>
+                                                <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
+                                                    {lists.length}
+                                                </span>
+                                            </div>
+                                        </TabsTrigger>
+
+                                        <TabsTrigger
+                                            value="shop"
+                                            className="h-auto rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm data-[state=active]:border-sky-300 data-[state=active]:bg-sky-50 data-[state=active]:text-slate-900 data-[state=active]:shadow"
+                                            data-tutorial="shop-tab"
+                                        >
+                                            <div className="flex w-full items-center justify-between gap-2">
+                                                <span className="flex items-center gap-2 text-sm font-semibold">
+                                                    <ShoppingCart className="h-4 w-4" />
+                                                    Modo compra
+                                                </span>
+                                                <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
+                                                    {purchasedCount}
+                                                </span>
+                                            </div>
+                                        </TabsTrigger>
+
+                                        <TabsTrigger
+                                            value="finish"
+                                            className="h-auto rounded-2xl border border-slate-200 bg-white px-3 py-2 text-left shadow-sm data-[state=active]:border-amber-300 data-[state=active]:bg-amber-50 data-[state=active]:text-slate-900 data-[state=active]:shadow"
+                                            data-tutorial="finish-tab"
+                                        >
+                                            <div className="flex w-full items-center justify-between gap-2">
+                                                <span className="flex items-center gap-2 text-sm font-semibold">
+                                                    <CheckCircle2 className="h-4 w-4" />
+                                                    Cerrar ticket
+                                                </span>
+                                                <span className="rounded-full bg-slate-100 px-2 py-1 text-[11px] font-medium text-slate-600">
+                                                    {readyToSubmitCount}
+                                                </span>
+                                            </div>
+                                        </TabsTrigger>
+                                    </TabsList>
+
+                                    <div className="flex flex-wrap items-center justify-between gap-2 px-1 text-sm">
+                                        <div className="flex items-center gap-2 font-medium">
+                                            {autoSaving ? (
+                                                <>
+                                                    <Loader className="h-4 w-4 animate-spin text-sky-600" />
+                                                    <span className="text-sky-700">Guardando cambios...</span>
+                                                </>
+                                            ) : pendingChanges ? (
+                                                <>
+                                                    <Clock className="h-4 w-4 text-amber-600" />
+                                                    <span className="text-amber-700">Hay cambios pendientes</span>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    <CheckCircle2 className="h-4 w-4 text-emerald-600" />
+                                                    <span className="text-emerald-700">Todo sincronizado</span>
+                                                </>
+                                            )}
+                                        </div>
+
+                                        {selectedList ? (
+                                            <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 shadow-sm">
+                                                {totalItems} productos
+                                            </span>
+                                        ) : (
+                                            <span className="rounded-full bg-white px-3 py-1 text-xs font-medium text-slate-600 shadow-sm">
+                                                Sin lista seleccionada
+                                            </span>
+                                        )}
                                     </div>
-                                    {loading ? (
-                                        <div className="text-slate-500 text-sm">Cargando...</div>
-                                    ) : lists.length === 0 ? (
-                                        <div className="p-4 text-center bg-white border border-slate-200 rounded-xl">
-                                            <ShoppingCart className="w-8 h-8 text-slate-300 mx-auto mb-2" />
-                                            <p className="text-slate-500 text-xs">Sin listas aún</p>
+                                </div>
+
+                                <TabsContent value="prepare" className="mt-4">
+                                    {!selectedList ? (
+                                        <div className="space-y-4" data-tutorial="lists-sidebar">
+                                            <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <p className="text-sm font-semibold text-slate-900">Gestiona tus listas</p>
+                                                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                                                        {lists.length} listas
+                                                    </span>
+                                                </div>
+                                                <Button
+                                                    onClick={() => setDialogOpen(true)}
+                                                    className="gap-2 rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600"
+                                                >
+                                                    <Plus className="h-4 w-4" />
+                                                    Nueva lista
+                                                </Button>
+                                            </div>
+
+                                            {loading ? (
+                                                <div className="flex items-center gap-2 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-4 text-sm text-slate-500">
+                                                    <Loader className="h-4 w-4 animate-spin" />
+                                                    Cargando listas...
+                                                </div>
+                                            ) : lists.length === 0 ? (
+                                                <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-8 text-center">
+                                                    <ShoppingCart className="mx-auto h-10 w-10 text-slate-300" />
+                                                    <p className="mt-4 text-base font-semibold text-slate-700">No tienes listas</p>
+                                                </div>
+                                            ) : (
+                                                <div className="grid gap-3 lg:grid-cols-2">
+                                                    {lists.map((list) => {
+                                                        const listPurchasedCount = list.items?.filter((item) => item.purchased).length || 0;
+
+                                                        return (
+                                                            <button
+                                                                key={list.id}
+                                                                type="button"
+                                                                className="group rounded-3xl border border-slate-200 bg-white p-4 text-left shadow-sm transition hover:border-emerald-300 hover:bg-emerald-50"
+                                                                onClick={() => handleSelectList(list)}
+                                                                data-testid={`list-card-${list.id}`}
+                                                            >
+                                                                <div className="flex items-start justify-between gap-3">
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="truncate text-sm font-semibold text-slate-900">{list.name}</p>
+                                                                        <p className="mt-1 flex items-center gap-1 text-xs text-slate-500">
+                                                                            <Store className="h-3.5 w-3.5" />
+                                                                            <span className="truncate">{list.supermarket_name}</span>
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <div className="flex items-center gap-1 opacity-100 xl:opacity-0 xl:group-hover:opacity-100">
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(event) => {
+                                                                                event.stopPropagation();
+                                                                                handleDuplicateList(list);
+                                                                            }}
+                                                                            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-sky-50 hover:text-sky-600"
+                                                                            title="Duplicar lista"
+                                                                        >
+                                                                            <Copy className="h-4 w-4" />
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={(event) => {
+                                                                                event.stopPropagation();
+                                                                                handleDeleteList(list.id);
+                                                                            }}
+                                                                            className="flex h-8 w-8 items-center justify-center rounded-xl text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                                                                            data-testid={`delete-list-${list.id}`}
+                                                                            title="Eliminar lista"
+                                                                        >
+                                                                            <Trash2 className="h-4 w-4" />
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+
+                                                                <div className="mt-3 flex flex-wrap items-center gap-2 text-[11px] font-medium">
+                                                                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
+                                                                        {list.items?.length || 0} productos
+                                                                    </span>
+                                                                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
+                                                                        {listPurchasedCount} comprados
+                                                                    </span>
+                                                                </div>
+                                                            </button>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
                                         </div>
                                     ) : (
-                                        <div className="space-y-0.5 max-h-[calc(100vh-240px)] overflow-y-auto pr-1">
-                                            {lists.map((list) => (
-                                                <div
-                                                    key={list.id}
-                                                    className={`group relative flex items-center justify-between px-3 py-2.5 rounded-lg cursor-pointer transition-all ${selectedList?.id === list.id
-                                                        ? 'bg-emerald-500 text-white shadow-sm'
-                                                        : 'hover:bg-slate-100 text-slate-700'
-                                                        }`}
-                                                    onClick={() => {
-                                                        setSelectedList(list);
-                                                        if (window.innerWidth < 1024) setListsExpanded(false);
-                                                    }}
-                                                    data-testid={`list-card-${list.id}`}
-                                                >
-                                                    <div className="flex-1 min-w-0">
-                                                        <p className={`font-medium truncate text-sm leading-tight ${selectedList?.id === list.id ? 'text-white' : 'text-slate-800'}`}>
-                                                            {list.name}
-                                                        </p>
-                                                        <p className={`text-[11px] truncate flex items-center gap-1 mt-0.5 ${selectedList?.id === list.id ? 'text-emerald-100' : 'text-slate-400'}`}>
-                                                            <Store className="w-2.5 h-2.5 shrink-0" />
-                                                            {list.supermarket_name}
-                                                            <span className="ml-auto shrink-0">{list.items?.length || 0}</span>
-                                                        </p>
-                                                    </div>
-                                                    <button
-                                                        onClick={(e) => { e.stopPropagation(); handleDeleteList(list.id); }}
-                                                        className={`ml-2 h-6 w-6 rounded flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shrink-0 ${selectedList?.id === list.id ? 'hover:bg-emerald-400 text-emerald-100' : 'hover:bg-rose-100 text-slate-400 hover:text-rose-600'}`}
-                                                        data-testid={`delete-list-${list.id}`}
-                                                    >
-                                                        <Trash2 className="w-3 h-3" />
-                                                    </button>
-                                                </div>
-                                            ))}
-                                        </div>
-                                    )}
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* List Detail Column */}
-                        <div className="flex-1 min-w-0">
-                            {selectedList ? (
-                                <Card className="border-slate-200" data-testid="list-detail-card">
-                                    <CardHeader className="border-b border-slate-100 pb-4">
-                                        <div className="flex items-center justify-between flex-wrap gap-4">
-                                            <div className="flex items-center gap-3">
-                                                <Button
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    onClick={() => setListsExpanded(!listsExpanded)}
-                                                    className={`h-9 w-9 -ml-2 text-slate-500 hover:bg-slate-100 transition-colors ${listsExpanded ? 'lg:hidden' : 'flex'}`}
-                                                    title={listsExpanded ? 'Ocultar listas' : 'Mostrar listas'}
-                                                >
-                                                    <PanelLeft className="w-5 h-5" />
-                                                </Button>
-                                                <div>
-                                                    <CardTitle style={{ fontFamily: 'Manrope, sans-serif' }}>{selectedList.name}</CardTitle>
-                                                    <p className="text-sm text-slate-500 flex items-center gap-1 mt-1">
-                                                        <Store className="w-4 h-4" />
-                                                        {selectedList.supermarket_name}
+                                        <div className="space-y-4">
+                                            <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+                                                <div className="flex flex-wrap items-center gap-2">
+                                                    <p className="text-sm font-semibold text-slate-900" data-tutorial="add-item-btn">
+                                                        Editando lista
                                                     </p>
+                                                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                                                        {selectedList.name}
+                                                    </span>
+                                                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-medium text-slate-600">
+                                                        {selectedList.supermarket_name}
+                                                    </span>
+                                                </div>
+                                                <div className="flex flex-wrap gap-2">
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => setSelectedList(null)}
+                                                        className="gap-2 rounded-2xl border-slate-200"
+                                                    >
+                                                        Ver otras listas
+                                                    </Button>
+                                                    <Button
+                                                        onClick={() => setAddItemDialogOpen(true)}
+                                                        className="gap-2 rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600"
+                                                    >
+                                                        <Plus className="h-4 w-4" />
+                                                        Anadir producto
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => setActiveTab("shop")}
+                                                        disabled={!totalItems}
+                                                        className="gap-2 rounded-2xl border-slate-200"
+                                                    >
+                                                        Ir a modo compra
+                                                    </Button>
                                                 </div>
                                             </div>
-                                            <div className="flex items-center gap-2">
-                                                <Button
-                                                    variant="outline"
-                                                    onClick={() => {
-                                                        if (showEstimated) {
-                                                            setShowEstimated(false);
-                                                        } else {
-                                                            setConfirmEstimateOpen(true);
-                                                        }
-                                                    }}
-                                                    className={`gap-2 ${showEstimated ? 'bg-indigo-50 text-indigo-700 border-indigo-200 hover:bg-indigo-100 hover:text-indigo-800' : 'text-slate-600 hover:text-indigo-600 hover:bg-indigo-50'}`}
-                                                    title="Calcular Precio Estimado (Usa Créditos)"
-                                                >
-                                                    {showEstimated ? <Eye className="w-4 h-4" /> : <Sparkles className="w-4 h-4" />}
-                                                    <span className="hidden sm:inline">{showEstimated ? 'Ocultar Estimación' : 'Calcular Estimado'}</span>
-                                                </Button>
 
-                                                <Button
-                                                    variant="outline"
-                                                    onClick={handleResetList}
-                                                    className="gap-2 text-slate-600 hover:text-slate-900"
-                                                    title="Reiniciar precios y checks"
-                                                >
-                                                    <RefreshCcw className="w-4 h-4" />
-                                                    <span className="hidden sm:inline">Reiniciar</span>
-                                                </Button>
-                                                <Dialog open={addItemDialogOpen} onOpenChange={(val) => { setAddItemDialogOpen(val); if (!val) resetNewItemForm(); }}>
-                                                    <DialogTrigger asChild>
-                                                        <Button className="gap-2 bg-emerald-500 hover:bg-emerald-600 text-white" data-testid="add-item-btn">
-                                                            <Plus className="w-4 h-4" />
-                                                            Añadir
-                                                        </Button>
-                                                    </DialogTrigger>
-                                                    <DialogContent className="max-h-[90vh] overflow-y-auto">
-                                                        <DialogHeader>
-                                                            <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>{editingItemIndex !== null ? "Editar Producto" : "Añadir Producto"}</DialogTitle>
-                                                        </DialogHeader>
-                                                        <div className="space-y-4 pt-4">
-                                                            <div className="space-y-2">
-                                                                <Label>1. Producto *</Label>
-                                                                <Select value={newItemProduct} onValueChange={setNewItemProduct}>
-                                                                    <SelectTrigger data-testid="add-item-product-select">
-                                                                        <SelectValue placeholder="Selecciona producto" />
-                                                                    </SelectTrigger>
-                                                                    <SelectContent>
-                                                                        {products
-                                                                            .filter(p => sellableProducts.some(sp => sp.product_id === p.id && sp.supermarket_id === selectedList.supermarket_id))
-                                                                            .map((p) => (
-                                                                                <SelectItem key={p.id} value={p.id}>{p.name}</SelectItem>
-                                                                            ))
-                                                                        }
-                                                                    </SelectContent>
-                                                                </Select>
-                                                            </div>
-
-                                                            {newItemProduct && (
-                                                                <div className="space-y-2">
-                                                                    <Label>2. Marca *</Label>
-                                                                    <Select value={newItemBrandId || "none"} onValueChange={(v) => {
-                                                                        setNewItemBrandId(v === "none" ? "" : v);
-                                                                        setNewItemAttrValues({});
-                                                                        setNewItemSellable("");
-                                                                    }}>
-                                                                        <SelectTrigger data-testid="add-item-brand-select">
-                                                                            <SelectValue placeholder="Selecciona marca" />
-                                                                        </SelectTrigger>
-                                                                        <SelectContent>
-                                                                            <SelectItem value="none">Seleccionar marca...</SelectItem>
-                                                                            {availableBrandsForProduct.map((b) => (
-                                                                                <SelectItem key={b.id} value={b.id}>{b.name}</SelectItem>
-                                                                            ))}
-                                                                        </SelectContent>
-                                                                    </Select>
-                                                                </div>
-                                                            )}
-
-                                                            {newItemBrandId && (() => {
-                                                                const product = products.find(p => p.id === newItemProduct);
-                                                                if (!product || !product.allowed_attribute_ids?.length) return null;
-
-                                                                // Check if any attributes have values to show
-                                                                const attrBlocks = product.allowed_attribute_ids.map(attrId => {
-                                                                    const attr = attributes.find(a => a.id === attrId);
-                                                                    if (!attr) return null; // attribute definition not found
-
-                                                                    // Find the catalog entry for THIS brand and product to see allowed attribute values
-                                                                    const catalogEntry = brandCatalog.find(bc => bc.brand_id === newItemBrandId && bc.product_id === newItemProduct);
-                                                                    // Use catalog-specific values if configured, otherwise fall back to all values defined on the attribute
-                                                                    const catalogVals = catalogEntry?.allowed_attributes?.[attrId];
-                                                                    const possibleVals = (catalogVals && catalogVals.length > 0)
-                                                                        ? catalogVals
-                                                                        : (attr?.values || []);
-
-                                                                    if (possibleVals.length === 0) return null;
-
-                                                                    return (
-                                                                        <div key={attrId} className="space-y-1">
-                                                                            <Label className="text-[10px] font-medium text-slate-600">{attr.name}</Label>
-                                                                            <Select
-                                                                                value={newItemAttrValues[attrId] || "none"}
-                                                                                onValueChange={v => setNewItemAttrValues({...newItemAttrValues, [attrId]: v === "none" ? "" : v})}
-                                                                            >
-                                                                                <SelectTrigger className="h-8 text-xs">
-                                                                                    <SelectValue placeholder={`Seleccionar ${attr.name}`} />
-                                                                                </SelectTrigger>
-                                                                                <SelectContent>
-                                                                                    <SelectItem value="none">Cualquier {attr.name}</SelectItem>
-                                                                                    {possibleVals.map(val => <SelectItem key={val} value={val}>{val}</SelectItem>)}
-                                                                                </SelectContent>
-                                                                            </Select>
-                                                                        </div>
-                                                                    );
-                                                                }).filter(Boolean);
-
-                                                                if (attrBlocks.length === 0) return null;
-
-                                                                return (
-                                                                    <div className="space-y-3 p-3 bg-slate-50 rounded-lg border border-dashed">
-                                                                        <Label className="text-xs font-bold text-slate-500 uppercase">3. Variante / Atributos</Label>
-                                                                        {attrBlocks}
-                                                                    </div>
-                                                                );
-                                                            })()}
-
-
-                                                            {newItemSellable && (
-                                                                <div className="grid grid-cols-2 gap-4">
-                                                                    <div className="space-y-2">
-                                                                        <Label>Unidad *</Label>
-                                                                        <Select value={newItemUnit} onValueChange={setNewItemUnit}>
-                                                                            <SelectTrigger data-testid="add-item-unit-select">
-                                                                                <SelectValue placeholder="Unidad" />
-                                                                            </SelectTrigger>
-                                                                            <SelectContent>
-                                                                                {availableUnits.map((u) => (
-                                                                                    <SelectItem key={u.unit_id} value={u.unit_id}>
-                                                                                        {u.unit_name}
-                                                                                    </SelectItem>
-                                                                                ))}
-                                                                            </SelectContent>
-                                                                        </Select>
-                                                                    </div>
-                                                                    <div className="space-y-2">
-                                                                        <Label>Cantidad</Label>
-                                                                        <Input
-                                                                            type="number"
-                                                                            min="0.1"
-                                                                            step="0.1"
-                                                                            value={newItemQuantity}
-                                                                            onChange={(e) => setNewItemQuantity(e.target.value)}
-                                                                        />
-                                                                    </div>
-                                                                </div>
-                                                            )}
-
-                                                            <Button
-                                                                onClick={handleAddItem}
-                                                                disabled={!newItemUnit}
-                                                                className="w-full bg-emerald-500 hover:bg-emerald-600 text-white"
-                                                                data-testid="confirm-add-item-btn"
-                                                            >
-                                                                Añadir a la lista
-                                                            </Button>
-                                                        </div>
-                                                    </DialogContent>
-                                                </Dialog>
-                                            </div>
-                                        </div>
-                                    </CardHeader>
-                                    <CardContent className="p-0">
-                                        {selectedList.items?.length === 0 ? (
-                                            <div className="p-8 text-center">
-                                                <Package className="w-12 h-12 text-slate-300 mx-auto mb-3" />
-                                                <p className="text-slate-500">Lista vacía</p>
-                                                <p className="text-sm text-slate-400">Añade productos para empezar</p>
-                                            </div>
-                                        ) : (
-                                            <>
-                                                <div className="divide-y divide-slate-100">
-                                                    {selectedList.items?.map((item, index) => (
+                                            {totalItems === 0 ? (
+                                                <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                                                    <Package className="mx-auto h-12 w-12 text-slate-300" />
+                                                    <p className="mt-4 text-base font-semibold text-slate-700">La lista esta vacia</p>
+                                                </div>
+                                            ) : (
+                                                <div className="max-h-[64vh] space-y-3 overflow-y-auto pr-1">
+                                                    {selectedItems.map((item, index) => (
                                                         <div
                                                             key={index}
-                                                            className={`p-3 sm:p-4 transition-colors flex flex-col sm:flex-row sm:items-center justify-between gap-2 sm:gap-4 ${item.purchased ? 'bg-slate-50/70 border-l border-emerald-500' : 'hover:bg-slate-50/50 border-l border-transparent'}`}
-                                                            data-testid={`list-item-${index}`}
+                                                            className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm md:flex-row md:items-center md:justify-between"
                                                         >
-                                                            <div className="flex items-center gap-3 sm:gap-4 flex-1">
-                                                                {/* Checkbox */}
-                                                                <Checkbox
-                                                                    checked={item.purchased}
-                                                                    onCheckedChange={(checked) => handleUpdateItem(index, { purchased: checked })}
-                                                                    className="w-6 h-6 rounded-md data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500 mt-1"
-                                                                    data-testid={`item-checkbox-${index}`}
-                                                                />
-
-                                                                {/* Main Product Info & Quantity Row */}
-                                                                <div className="flex-1 min-w-0 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                                                                    {/* Title & Brand */}
-                                                                    <div className="flex-1 min-w-0 flex flex-col">
-                                                                        <div className="flex items-center gap-2">
-                                                                            <h3 className={`font-medium text-sm sm:text-base truncate transition-all ${item.purchased ? 'line-through text-slate-400' : 'text-slate-900'}`}>
-                                                                                {item.product_name}
-                                                                            </h3>
-                                                                        </div>
-                                                                        <div className="flex flex-col gap-1 mt-0.5">
-                                                                            {item.brand_name && (
-                                                                                <p className="text-xs text-slate-500 truncate max-w-[180px]">
-                                                                                    {item.brand_name}
-                                                                                </p>
-                                                                            )}
-                                                                            {item.attribute_values && Object.entries(item.attribute_values).length > 0 && (
-                                                                                <div className="flex flex-wrap gap-1">
-                                                                                    {Object.entries(item.attribute_values).map(([attrId, val]) => (
-                                                                                        <span
-                                                                                            key={attrId}
-                                                                                            className="inline-flex items-center text-[10px] font-medium px-1.5 py-0.5 rounded bg-emerald-50 text-emerald-700 border border-emerald-200"
-                                                                                        >
-                                                                                            {val}
-                                                                                        </span>
-                                                                                    ))}
-                                                                                </div>
-                                                                            )}
-                                                                        </div>
-                                                                    </div>
-
-                                                                    {/* Estimated Price Center Column */}
-                                                                    <div className={`hidden sm:flex flex-col items-center justify-center shrink-0 w-24 transition-opacity duration-300 ${showEstimated ? 'opacity-100' : 'opacity-0 select-none pointer-events-none'}`}>
-                                                                        <span className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider mb-0.5">Estimado</span>
-                                                                        <span className="text-xs font-mono text-indigo-700 bg-indigo-50 px-2 py-0.5 rounded border border-indigo-100 flex items-center shadow-sm">
-                                                                            <Sparkles className="w-2.5 h-2.5 mr-1" />
-                                                                            {item.estimated_price ? `${item.estimated_price.toFixed(2)}€` : '-'}
+                                                            <div className="min-w-0 flex-1">
+                                                                <div className="flex flex-wrap items-center gap-2">
+                                                                    <p className="text-base font-semibold text-slate-900">{item.product_name}</p>
+                                                                    {item.estimated_price && (
+                                                                        <span className="rounded-full bg-indigo-50 px-2.5 py-1 text-[11px] font-medium text-indigo-700">
+                                                                            Estimado {formatCurrency(item.estimated_price)}
                                                                         </span>
-                                                                    </div>
-
-                                                                    {/* Quantity Adjuster & Unit & Mobile Est */}
-                                                                    <div className="flex items-center gap-2 w-full sm:w-auto mt-2 sm:mt-0 justify-between sm:justify-end">
-
-                                                                        {/* Mobile Estimated Price Inline */}
-                                                                        <div className={`sm:hidden overflow-hidden transition-all duration-300 ${showEstimated ? 'max-w-[100px] opacity-100' : 'max-w-0 opacity-0 pointer-events-none select-none'}`}>
-                                                                            <span className="text-[10px] font-mono text-indigo-700 bg-indigo-50 px-1.5 py-0.5 rounded border border-indigo-100 flex items-center shadow-sm w-max">
-                                                                                <Sparkles className="w-2.5 h-2.5 mr-1" />
-                                                                                {item.estimated_price ? `${item.estimated_price.toFixed(2)}€` : '-'}
+                                                                    )}
+                                                                </div>
+                                                                <p className="mt-1 text-sm text-slate-500">{item.brand_name || "Marca sin definir"}</p>
+                                                                <div className="mt-2 flex flex-wrap gap-2 text-xs">
+                                                                    <span className="rounded-full bg-slate-100 px-2.5 py-1 text-slate-600">
+                                                                        {item.quantity} {item.unit_name}
+                                                                    </span>
+                                                                    {item.attribute_values && Object.keys(item.attribute_values).length > 0 && (
+                                                                        Object.entries(item.attribute_values).map(([attrId, value]) => (
+                                                                            <span key={attrId} className="rounded-full bg-emerald-50 px-2.5 py-1 text-emerald-700">
+                                                                                {value}
                                                                             </span>
-                                                                        </div>
-                                                                        <div className="flex items-center bg-transparent border border-slate-200 rounded-md p-0.5">
-                                                                            <Input
-                                                                                type="number"
-                                                                                min="0.1" step="0.1"
-                                                                                value={item.quantity}
-                                                                                onChange={(e) => updateLocalItem(index, { quantity: parseFloat(e.target.value) || 1 })}
-                                                                                onBlur={() => saveList(selectedList.items)}
-                                                                                className={`h-8 w-[60px] text-sm text-center font-mono border-0 focus-visible:ring-0 focus-visible:ring-offset-0 px-1
-                                                                                ${item.purchased ? 'bg-transparent text-slate-500' : 'bg-white text-slate-900'}
-                                                                            `}
-                                                                            />
-                                                                            <span className="text-xs text-slate-500 pr-3 font-medium border-l border-slate-200 pl-2 bg-transparent">{item.unit_name}</span>
-                                                                        </div>
-
-                                                                        {/* Edit icon */}
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => {
-                                                                                setNewItemProduct(item.product_id);
-                                                                                setNewItemBrandId(item.brand_id);
-                                                                                setNewItemAttrValues(item.attribute_values || {});
-                                                                                setNewItemQuantity(item.quantity.toString());
-                                                                                setNewItemUnit(item.unit_id);
-                                                                                setEditingItemIndex(index);
-                                                                                setAddItemDialogOpen(true);
-                                                                            }}
-                                                                            className="h-8 w-8 text-slate-400 hover:text-indigo-600 shrink-0"
-                                                                            title="Editar"
-                                                                        >
-                                                                            <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z" /></svg>
-                                                                        </Button>
-
-                                                                        {/* Delete icon */}
-                                                                        <Button
-                                                                            variant="ghost"
-                                                                            size="icon"
-                                                                            onClick={() => handleRemoveItem(index)}
-                                                                            className="h-8 w-8 text-slate-400 hover:text-rose-600 shrink-0"
-                                                                            title="Eliminar"
-                                                                        >
-                                                                            <Trash2 className="w-4 h-4" />
-                                                                        </Button>
-                                                                    </div>
+                                                                        ))
+                                                                    )}
                                                                 </div>
                                                             </div>
 
-                                                            {/* Right Side: Real Price */}
-                                                            <div className="flex items-center gap-3 w-full sm:w-auto mt-3 sm:mt-0 pt-3 sm:pt-0 border-t sm:border-0 border-slate-100 justify-end">
-
-                                                                {/* Real Price Input */}
-                                                                <div className="relative shrink-0">
-                                                                    <Input
-                                                                        type="number" min="0" step="0.01" placeholder="0.00"
-                                                                        value={item.price || ""}
-                                                                        onChange={(e) => updateLocalItem(index, { price: parseFloat(e.target.value) || null })}
-                                                                        onBlur={() => saveList(selectedList.items)}
-                                                                        className={`h-9 w-[80px] sm:w-[90px] text-right pr-6 font-mono text-sm shadow-sm transition-colors
-                                                                            ${item.price ? 'border-emerald-500 bg-emerald-50/50 font-semibold text-emerald-800' : 'border-slate-200 bg-white placeholder:text-slate-300'} 
-                                                                            ${item.purchased && !item.price ? 'border-amber-300 bg-amber-50 ring-2 ring-amber-100 ring-offset-1' : ''}
-                                                                            ${item.purchased && item.price ? 'bg-transparent' : ''}`}
-                                                                    />
-                                                                    <span className={`absolute right-2.5 top-1/2 -translate-y-1/2 text-xs font-semibold
-                                                                    ${item.price ? 'text-emerald-700' : 'text-slate-400'}
-                                                                `}>€</span>
-                                                                </div>
-
-                                                                {/* Desktop only delete icon */}
+                                                            <div className="flex flex-wrap gap-2">
                                                                 <Button
-                                                                    variant="ghost"
-                                                                    size="icon"
-                                                                    onClick={() => handleRemoveItem(index)}
-                                                                    className="hidden sm:flex h-8 w-8 text-slate-300 hover:text-rose-600 hover:bg-rose-50 shrink-0"
+                                                                    variant="outline"
+                                                                    onClick={() => openEditDialog(item, index)}
+                                                                    className="rounded-2xl border-slate-200"
                                                                 >
-                                                                    <Trash2 className="w-4 h-4" />
+                                                                    Editar
+                                                                </Button>
+                                                                <Button
+                                                                    variant="outline"
+                                                                    onClick={() => handleRemoveItem(index)}
+                                                                    className="rounded-2xl border-rose-200 text-rose-600 hover:bg-rose-50"
+                                                                >
+                                                                    Eliminar
                                                                 </Button>
                                                             </div>
                                                         </div>
                                                     ))}
                                                 </div>
+                                            )}
+                                        </div>
+                                    )}
+                                </TabsContent>
 
-                                                {/* Footer: Totals aligned precisely to card columns */}
-                                                <div className="px-3 sm:px-4 py-3 bg-slate-50 border-t border-slate-200">
-                                                    <div className="flex items-center gap-3 sm:gap-4">
+                                <TabsContent value="shop" className="mt-4 space-y-3">
+                                    <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
+                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
+                                            <span className="text-sm font-semibold text-slate-900">Modo compra</span>
+                                            <div className="w-full sm:w-[280px]">
+                                                <Select
+                                                    value={selectedList?.id || "none"}
+                                                    onValueChange={(value) => {
+                                                        const nextList = lists.find((list) => list.id === value) || null;
+                                                        handleSelectList(nextList);
+                                                    }}
+                                                >
+                                                    <SelectTrigger data-tutorial="shop-list-selector">
+                                                        <SelectValue placeholder="Selecciona lista" />
+                                                    </SelectTrigger>
+                                                    <SelectContent>
+                                                        <SelectItem value="none">Selecciona lista...</SelectItem>
+                                                        {lists.map((list) => (
+                                                            <SelectItem key={list.id} value={list.id}>
+                                                                {list.name}
+                                                            </SelectItem>
+                                                        ))}
+                                                    </SelectContent>
+                                                </Select>
+                                            </div>
+                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                                {purchasedCount} comprados
+                                            </span>
+                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
+                                                {missingPriceCount} sin precio
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => setActiveTab("prepare")}
+                                                className="gap-2 rounded-2xl border-slate-200"
+                                            >
+                                                Cambiar lista
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => setConfirmEstimateOpen(true)}
+                                                disabled={!totalItems}
+                                                className="gap-2 rounded-2xl border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                                            >
+                                                <Sparkles className="h-4 w-4" />
+                                                {showEstimated ? "Actualizar" : "Estimados"}
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => setActiveTab("finish")}
+                                                disabled={!purchasedCount}
+                                                className="gap-2 rounded-2xl border-slate-200"
+                                            >
+                                                Ir a cerrar ticket
+                                            </Button>
+                                        </div>
+                                    </div>
 
-                                                        {/* Submit button — far left */}
-                                                        <Button
-                                                            onClick={() => setConfirmSubmitOpen(true)}
-                                                            className="shrink-0 bg-slate-900 hover:bg-slate-800 text-white gap-1.5 h-9 text-xs rounded-lg transition-all shadow-sm hover:shadow-md"
-                                                            data-testid="submit-prices-btn"
-                                                        >
-                                                            <CheckCircle2 className="w-3.5 h-3.5 flex-shrink-0" />
-                                                            <span className="font-medium hidden sm:inline">Subir Precios</span>
-                                                        </Button>
+                                    {!selectedList ? (
+                                        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                                            <ShoppingCart className="mx-auto h-12 w-12 text-slate-300" />
+                                            <p className="mt-4 text-base font-semibold text-slate-700">Selecciona una lista para comprar</p>
+                                        </div>
+                                    ) : totalItems === 0 ? (
+                                        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                                            <ShoppingCart className="mx-auto h-12 w-12 text-slate-300" />
+                                            <p className="mt-4 text-base font-semibold text-slate-700">No hay productos</p>
+                                        </div>
+                                    ) : (
+                                        <div className="max-h-[64vh] space-y-3 overflow-y-auto pr-1" data-tutorial="shop-list">
+                                            {selectedItems.map((item, index) => {
+                                                const priceInsight = getPriceInsight(item);
 
-                                                        {/* Flex spacer pushes totals to exact right positions */}
-                                                        <div className="flex-1" />
+                                                return (
+                                                    <div
+                                                        key={index}
+                                                        className={`rounded-[28px] border p-4 shadow-sm transition-colors sm:p-5 ${
+                                                            item.purchased
+                                                                ? "border-emerald-300 bg-emerald-50"
+                                                                : "border-slate-200 bg-white"
+                                                        }`}
+                                                    >
+                                                        <div className="flex flex-col gap-4">
+                                                            <div className="flex items-start gap-4">
+                                                                <Checkbox
+                                                                    checked={item.purchased}
+                                                                    onCheckedChange={(checked) => updateLocalItem(index, { purchased: Boolean(checked) })}
+                                                                    className="mt-1 h-7 w-7 rounded-md data-[state=checked]:border-emerald-500 data-[state=checked]:bg-emerald-500"
+                                                                    data-testid={`item-checkbox-${index}`}
+                                                                />
+                                                                <div className="min-w-0 flex-1">
+                                                                    <div className="flex flex-wrap items-center gap-2">
+                                                                        <h3 className={`text-lg font-bold ${item.purchased ? "text-slate-500 line-through" : "text-slate-950"}`}>
+                                                                            {item.product_name}
+                                                                        </h3>
+                                                                        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm">
+                                                                            {item.quantity} {item.unit_name}
+                                                                        </span>
+                                                                    </div>
+                                                                    <p className="mt-1 text-sm text-slate-500">{item.brand_name || "Marca sin definir"}</p>
+                                                                    {item.attribute_values && Object.keys(item.attribute_values).length > 0 && (
+                                                                        <div className="mt-2 flex flex-wrap gap-2">
+                                                                            {Object.entries(item.attribute_values).map(([attrId, value]) => (
+                                                                                <span
+                                                                                    key={attrId}
+                                                                                    className="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-medium text-emerald-700"
+                                                                                >
+                                                                                    {value}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    )}
+                                                                </div>
+                                                            </div>
 
-                                                        {/* Estimated total — same w-24 as center column in cards */}
-                                                        <div className={`hidden sm:flex flex-col items-center justify-center shrink-0 w-24 transition-opacity duration-300 ${showEstimated ? 'opacity-100' : 'opacity-0 pointer-events-none select-none'}`}>
-                                                            <span className="text-[10px] text-indigo-400 font-semibold uppercase tracking-wider mb-0.5 flex items-center gap-0.5">
-                                                                <Sparkles className="w-2.5 h-2.5" /> Estimado
-                                                            </span>
-                                                            <span className="text-sm font-mono text-indigo-700 font-semibold">
-                                                                {selectedList.total_estimated?.toFixed(2) || '0.00'} €
-                                                            </span>
+                                                            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr),320px]">
+                                                                <div className="flex flex-wrap items-end gap-3">
+                                                                    <div className="min-w-[140px] rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+                                                                        <Label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Cantidad</Label>
+                                                                        <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-2 py-1">
+                                                                            <Input
+                                                                                type="number"
+                                                                                min="0.1"
+                                                                                step="0.1"
+                                                                                value={item.quantity}
+                                                                                onChange={(event) => updateLocalItem(index, {
+                                                                                    quantity: parseFloat(event.target.value) || 1
+                                                                                })}
+                                                                                className="h-9 border-0 bg-transparent px-1 text-center font-mono shadow-none focus-visible:ring-0"
+                                                                            />
+                                                                            <span className="pr-2 text-sm font-medium text-slate-500">{item.unit_name}</span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    <Button
+                                                                        variant="outline"
+                                                                        onClick={() => openEditDialog(item, index)}
+                                                                        className="rounded-2xl border-slate-200"
+                                                                    >
+                                                                        Cambiar marca o formato
+                                                                    </Button>
+                                                                </div>
+
+                                                                <div
+                                                                    className="grid gap-3 sm:grid-cols-2"
+                                                                    data-tutorial={index === 0 ? "price-input-example" : undefined}
+                                                                >
+                                                                    <div className={`rounded-2xl border p-3 ${showEstimated ? "border-indigo-200 bg-indigo-50" : "border-slate-200 bg-slate-50"}`}>
+                                                                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-500">Estimado</p>
+                                                                        <p className="mt-2 text-base font-bold text-indigo-700">
+                                                                            {item.estimated_price ? formatCurrency(item.estimated_price) : "Sin referencia"}
+                                                                        </p>
+                                                                    </div>
+
+                                                                    <div className={`rounded-2xl border p-3 ${item.price ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"}`}>
+                                                                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Precio real</p>
+                                                                        <div className="mt-2 flex items-center gap-2">
+                                                                            <Input
+                                                                                type="number"
+                                                                                min="0"
+                                                                                step="0.01"
+                                                                                placeholder="0.00"
+                                                                                value={item.price ?? ""}
+                                                                                onChange={(event) => updateLocalItem(index, {
+                                                                                    price: parseFloat(event.target.value) || null
+                                                                                })}
+                                                                                className="h-10 border-0 bg-transparent px-0 text-right font-mono text-lg font-semibold shadow-none focus-visible:ring-0"
+                                                                            />
+                                                                            <span className="text-xs font-semibold text-slate-400">EUR</span>
+                                                                        </div>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+
+                                                            {priceInsight && (
+                                                                <div className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-medium ${
+                                                                    priceInsight.isHigher
+                                                                        ? "border-amber-200 bg-amber-50 text-amber-800"
+                                                                        : "border-emerald-200 bg-white text-emerald-800"
+                                                                }`}>
+                                                                    {priceInsight.isHigher ? (
+                                                                        <TrendingUp className="h-4 w-4" />
+                                                                    ) : (
+                                                                        <TrendingDown className="h-4 w-4" />
+                                                                    )}
+                                                                    <span>{priceInsight.label}</span>
+                                                                    <span className="ml-auto font-mono">
+                                                                        {formatCurrency(Math.abs(priceInsight.difference))}
+                                                                    </span>
+                                                                </div>
+                                                            )}
                                                         </div>
+                                                    </div>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
+                                </TabsContent>
 
-                                                        {/* Real price total — same w-[90px] as price input in cards */}
-                                                        <div className="flex flex-col items-end justify-center shrink-0 w-[90px]">
-                                                            <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-wider">Total Real</span>
-                                                            <span className="font-mono text-base font-bold text-emerald-600">
-                                                                {selectedList.total_actual?.toFixed(2) || '0.00'} €
+                                <TabsContent value="finish" className="mt-4 space-y-3">
+                                    <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between" data-tutorial="finish-summary">
+                                        <div className="flex flex-wrap gap-2 text-xs font-medium">
+                                            <span className="text-sm font-semibold text-slate-900">Cerrar ticket</span>
+                                            {selectedList && (
+                                                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                                                    {selectedList.name}
+                                                </span>
+                                            )}
+                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                                                {readyToSubmitCount} listos
+                                            </span>
+                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                                                {missingPriceCount} sin precio
+                                            </span>
+                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
+                                                Total {formatCurrency(selectedList?.total_actual || 0)}
+                                            </span>
+                                        </div>
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                variant="outline"
+                                                onClick={() => setActiveTab("shop")}
+                                                disabled={!selectedList}
+                                                className="gap-2 rounded-2xl border-slate-200"
+                                            >
+                                                Volver a compra
+                                            </Button>
+                                            <Button
+                                                onClick={() => setConfirmSubmitOpen(true)}
+                                                disabled={!readyToSubmitCount}
+                                                className="gap-2 rounded-2xl bg-slate-900 text-white hover:bg-slate-800"
+                                                data-testid="submit-prices-btn"
+                                            >
+                                                <CheckCircle2 className="h-4 w-4" />
+                                                Subir precios
+                                            </Button>
+                                            <Button
+                                                variant="outline"
+                                                onClick={handleResetList}
+                                                disabled={!purchasedCount && !pricedCount}
+                                                className="gap-2 rounded-2xl border-slate-200"
+                                            >
+                                                <RefreshCcw className="h-4 w-4" />
+                                                Limpiar compra
+                                            </Button>
+                                        </div>
+                                    </div>
+
+                                    {!selectedList ? (
+                                        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                                            <CheckCircle2 className="mx-auto h-12 w-12 text-slate-300" />
+                                            <p className="mt-4 text-base font-semibold text-slate-700">Primero elige una lista en Gestionar listas</p>
+                                        </div>
+                                    ) : selectedItems.filter((item) => item.purchased).length === 0 ? (
+                                        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                                            <CheckCircle2 className="mx-auto h-12 w-12 text-slate-300" />
+                                            <p className="mt-4 text-base font-semibold text-slate-700">Aun no hay compra cerrada</p>
+                                        </div>
+                                    ) : (
+                                        <div className="max-h-[58vh] space-y-3 overflow-y-auto pr-1">
+                                            {selectedItems.filter((item) => item.purchased).map((item, index) => (
+                                                <div
+                                                    key={`${item.sellable_product_id}-${index}`}
+                                                    className={`flex flex-col gap-2 rounded-3xl border p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between ${
+                                                        item.price
+                                                            ? "border-emerald-200 bg-emerald-50"
+                                                            : "border-amber-200 bg-amber-50"
+                                                    }`}
+                                                >
+                                                    <div>
+                                                        <p className="text-sm font-semibold text-slate-900">{item.product_name}</p>
+                                                        <p className="mt-1 text-sm text-slate-500">
+                                                            {item.brand_name || "Marca sin definir"} • {item.quantity} {item.unit_name}
+                                                        </p>
+                                                    </div>
+                                                    <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
+                                                        <span className="rounded-full bg-white px-3 py-1 text-slate-600 shadow-sm">
+                                                            {item.price ? `Precio real ${formatCurrency(item.price)}` : "Falta precio"}
+                                                        </span>
+                                                        {item.estimated_price && (
+                                                            <span className="rounded-full bg-white px-3 py-1 text-slate-600 shadow-sm">
+                                                                Estimado {formatCurrency(item.estimated_price)}
                                                             </span>
-                                                        </div>
-
-                                                        {/* Spacer matching the delete button column width in cards */}
-                                                        <div className="hidden sm:block w-8 shrink-0" />
+                                                        )}
                                                     </div>
                                                 </div>
-                                            </>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            ) : (
-                                <Card className="border-slate-200">
-                                    <CardContent className="p-12 text-center flex flex-col items-center">
-                                        <ShoppingCart className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                                        <p className="text-slate-600 text-lg font-semibold" style={{ fontFamily: 'Manrope, sans-serif' }}>Selecciona una lista configurada</p>
-                                        <p className="text-sm text-slate-400 mt-2 mb-6 max-w-sm">Abre el panel lateral para elegir una lista de compra existente o crea una nueva.</p>
-                                        {!listsExpanded && (
-                                            <Button onClick={() => setListsExpanded(true)} variant="outline" className="gap-2 border-slate-200 text-slate-600 hover:text-slate-900">
-                                                <PanelLeft className="w-4 h-4" /> Ver mis listas
-                                            </Button>
-                                        )}
-                                    </CardContent>
-                                </Card>
-                            )}
-                        </div>
-                    </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                </TabsContent>
+                            </Tabs>
+                        </CardContent>
+                    </Card>
                 </div>
             </Layout>
 
-            {/* ─── Confirm Estimate Dialog ─── */}
+            <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle style={{ fontFamily: "Manrope, sans-serif" }}>Crear nueva lista</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                            <Label>Nombre de la lista</Label>
+                            <Input
+                                placeholder="Ej: Compra semanal"
+                                value={newListName}
+                                onChange={(event) => setNewListName(event.target.value)}
+                                data-testid="new-list-name-input"
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Supermercado</Label>
+                            <Select value={newListSupermarket} onValueChange={setNewListSupermarket}>
+                                <SelectTrigger data-testid="new-list-supermarket-select">
+                                    <SelectValue placeholder="Selecciona supermercado" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {supermarkets.map((supermarket) => (
+                                        <SelectItem key={supermarket.id} value={supermarket.id}>
+                                            {supermarket.name}
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+                        <Button
+                            onClick={handleCreateList}
+                            className="w-full bg-emerald-500 text-white hover:bg-emerald-600"
+                            data-testid="create-list-btn"
+                        >
+                            Crear lista
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
+            <Dialog
+                open={addItemDialogOpen}
+                onOpenChange={(isOpen) => {
+                    setAddItemDialogOpen(isOpen);
+                    if (!isOpen) {
+                        resetNewItemForm();
+                    }
+                }}
+            >
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle style={{ fontFamily: "Manrope, sans-serif" }}>
+                            {editingItemIndex !== null ? "Editar producto" : "Anadir producto"}
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="space-y-2">
+                            <Label>1. Producto *</Label>
+                            <Select value={newItemProduct} onValueChange={setNewItemProduct}>
+                                <SelectTrigger data-testid="add-item-product-select">
+                                    <SelectValue placeholder="Selecciona producto" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {products
+                                        .filter((product) => sellableProducts.some((candidate) => (
+                                            candidate.product_id === product.id &&
+                                            candidate.supermarket_id === selectedList?.supermarket_id
+                                        )))
+                                        .map((product) => (
+                                            <SelectItem key={product.id} value={product.id}>
+                                                {product.name}
+                                            </SelectItem>
+                                        ))}
+                                </SelectContent>
+                            </Select>
+                        </div>
+
+                        {newItemProduct && (
+                            <div className="space-y-2">
+                                <Label>2. Marca *</Label>
+                                <Select
+                                    value={newItemBrandId || "none"}
+                                    onValueChange={(value) => {
+                                        setNewItemBrandId(value === "none" ? "" : value);
+                                        setNewItemAttrValues({});
+                                        setNewItemSellable("");
+                                    }}
+                                >
+                                    <SelectTrigger data-testid="add-item-brand-select">
+                                        <SelectValue placeholder="Selecciona marca" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        <SelectItem value="none">Seleccionar marca...</SelectItem>
+                                        {availableBrandsForProduct.map((brand) => (
+                                            <SelectItem key={brand.id} value={brand.id}>
+                                                {brand.name}
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+                            </div>
+                        )}
+
+                        {newItemBrandId && (() => {
+                            const product = products.find((candidate) => candidate.id === newItemProduct);
+                            if (!product || !product.allowed_attribute_ids?.length) {
+                                return null;
+                            }
+
+                            const catalogEntry = brandCatalog.find((entry) => (
+                                entry.brand_id === newItemBrandId &&
+                                entry.product_id === newItemProduct
+                            ));
+
+                            const attrBlocks = product.allowed_attribute_ids.map((attrId) => {
+                                const attribute = attributes.find((candidate) => candidate.id === attrId);
+                                if (!attribute) {
+                                    return null;
+                                }
+
+                                const catalogValues = catalogEntry?.allowed_attributes?.[attrId];
+                                const possibleValues = catalogValues?.length ? catalogValues : (attribute.values || []);
+                                if (!possibleValues.length) {
+                                    return null;
+                                }
+
+                                return (
+                                    <div key={attrId} className="space-y-1">
+                                        <Label className="text-[10px] font-medium text-slate-600">{attribute.name}</Label>
+                                        <Select
+                                            value={newItemAttrValues[attrId] || "none"}
+                                            onValueChange={(value) => setNewItemAttrValues({
+                                                ...newItemAttrValues,
+                                                [attrId]: value === "none" ? "" : value
+                                            })}
+                                        >
+                                            <SelectTrigger className="h-8 text-xs">
+                                                <SelectValue placeholder={`Seleccionar ${attribute.name}`} />
+                                            </SelectTrigger>
+                                            <SelectContent>
+                                                <SelectItem value="none">Cualquier {attribute.name}</SelectItem>
+                                                {possibleValues.map((value) => (
+                                                    <SelectItem key={value} value={value}>
+                                                        {value}
+                                                    </SelectItem>
+                                                ))}
+                                            </SelectContent>
+                                        </Select>
+                                    </div>
+                                );
+                            }).filter(Boolean);
+
+                            if (!attrBlocks.length) {
+                                return null;
+                            }
+
+                            return (
+                                <div className="space-y-3 rounded-2xl border border-dashed border-slate-200 bg-slate-50 p-3">
+                                    <Label className="text-xs font-bold uppercase text-slate-500">3. Variante / atributos</Label>
+                                    {attrBlocks}
+                                </div>
+                            );
+                        })()}
+
+                        {newItemSellable && (
+                            <div className="grid gap-4 sm:grid-cols-2">
+                                <div className="space-y-2">
+                                    <Label>Unidad *</Label>
+                                    <Select value={newItemUnit} onValueChange={setNewItemUnit}>
+                                        <SelectTrigger data-testid="add-item-unit-select">
+                                            <SelectValue placeholder="Unidad" />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            {availableUnits.map((unit) => (
+                                                <SelectItem key={unit.unit_id} value={unit.unit_id}>
+                                                    {unit.unit_name}
+                                                </SelectItem>
+                                            ))}
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                                <div className="space-y-2">
+                                    <Label>Cantidad</Label>
+                                    <Input
+                                        type="number"
+                                        min="0.1"
+                                        step="0.1"
+                                        value={newItemQuantity}
+                                        onChange={(event) => setNewItemQuantity(event.target.value)}
+                                    />
+                                </div>
+                            </div>
+                        )}
+
+                        <Button
+                            onClick={handleAddItem}
+                            disabled={!newItemUnit}
+                            className="w-full bg-emerald-500 text-white hover:bg-emerald-600"
+                        >
+                            {editingItemIndex !== null ? "Guardar cambios" : "Anadir a la lista"}
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
             <Dialog open={confirmEstimateOpen} onOpenChange={setConfirmEstimateOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-indigo-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                            <Sparkles className="w-5 h-5" />
-                            Calcular Precio Estimado
+                        <DialogTitle className="flex items-center gap-2 text-indigo-700" style={{ fontFamily: "Manrope, sans-serif" }}>
+                            <Sparkles className="h-5 w-5" />
+                            Calcular precio estimado
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
-                        <div className="bg-indigo-50 border border-indigo-100 rounded-lg p-3 flex gap-3">
-                            <AlertTriangle className="w-5 h-5 text-indigo-400 shrink-0 mt-0.5" />
-                            <div className="text-sm text-indigo-800 space-y-1.5">
-                                <p className="font-semibold">Se estimarán los precios de <span className="underline">{selectedList?.name}</span></p>
-                                <p>Cada producto consume <strong>1 crédito</strong> del sistema. Si el mercado cambia, tendrás que volver a calcular para obtener datos actualizados.</p>
-                                <p className="text-indigo-600 font-medium">Total productos: {selectedList?.items?.length || 0} &rarr; <strong>{selectedList?.items?.length || 0} créditos</strong></p>
+                        <div className="flex gap-3 rounded-2xl border border-indigo-100 bg-indigo-50 p-4">
+                            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-indigo-400" />
+                            <div className="space-y-2 text-sm text-indigo-900">
+                                <p className="font-semibold">Se estimaran los precios de {selectedList?.name}</p>
+                                <p>Cada producto consume 1 credito del sistema y te servira como referencia al comprar.</p>
+                                <p className="font-medium text-indigo-700">
+                                    Productos en la lista: {selectedList?.items?.length || 0}
+                                </p>
                             </div>
                         </div>
-                        <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 flex gap-2 items-start">
-                            <Zap className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                            <p className="text-xs text-amber-700">El precio estimado es un <strong>snapshot</strong> del último precio registrado por la comunidad. No se actualiza automáticamente.</p>
-                        </div>
                         <div className="flex gap-2 pt-1">
-                            <Button variant="outline" className="flex-1" onClick={() => setConfirmEstimateOpen(false)}>Cancelar</Button>
-                            <Button
-                                className="flex-1 bg-indigo-600 hover:bg-indigo-700 text-white gap-2"
-                                onClick={handleConfirmEstimate}
-                            >
-                                <Sparkles className="w-4 h-4" />
+                            <Button variant="outline" className="flex-1" onClick={() => setConfirmEstimateOpen(false)}>
+                                Cancelar
+                            </Button>
+                            <Button className="flex-1 gap-2 bg-indigo-600 text-white hover:bg-indigo-700" onClick={handleConfirmEstimate}>
+                                <Sparkles className="h-4 w-4" />
                                 Calcular ahora
                             </Button>
                         </div>
@@ -930,50 +1515,128 @@ const ShoppingListPage = () => {
                 </DialogContent>
             </Dialog>
 
-            {/* ─── Confirm Submit Prices Dialog ─── */}
             <Dialog open={confirmSubmitOpen} onOpenChange={setConfirmSubmitOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-emerald-700" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                            <CheckCircle2 className="w-5 h-5" />
-                            Subir Precios a la Comunidad
+                        <DialogTitle className="flex items-center gap-2 text-emerald-700" style={{ fontFamily: "Manrope, sans-serif" }}>
+                            <CheckCircle2 className="h-5 w-5" />
+                            Cerrar compra y subir precios
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
-                        <div className="bg-emerald-50 border border-emerald-100 rounded-lg p-3 flex gap-3">
-                            <AlertTriangle className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                            <div className="text-sm text-emerald-900 space-y-1.5">
-                                <p className="font-semibold">Confirma antes de subir</p>
-                                <p>Se enviarán los precios de los productos <strong>marcados como comprados</strong> con precio real registrado.</p>
-                                <p>Estos datos ayudarán a la comunidad a tener estimaciones más precisas. ¡Gracias por contribuir!</p>
+                        <div className="flex gap-3 rounded-2xl border border-emerald-100 bg-emerald-50 p-4">
+                            <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-emerald-500" />
+                            <div className="space-y-2 text-sm text-emerald-900">
+                                <p className="font-semibold">Subiremos solo productos comprados con precio real</p>
+                                <p>Despues limpiaremos checks y precios reales, pero mantendremos la lista para reutilizarla en la siguiente compra.</p>
                             </div>
                         </div>
-                        <div className="bg-slate-50 border border-slate-200 rounded-lg p-3">
-                            <p className="text-xs text-slate-500 font-medium mb-2">Resumen de la lista: <span className="font-bold">{selectedList?.name}</span></p>
-                            <div className="flex justify-between text-sm">
-                                <span className="text-slate-600">Productos comprados con precio</span>
-                                <span className="font-mono font-bold text-emerald-700">
-                                    {selectedList?.items?.filter(i => i.purchased && i.price).length || 0}
-                                </span>
-                            </div>
-                            <div className="flex justify-between text-sm mt-1">
-                                <span className="text-slate-600">Total registrado</span>
-                                <span className="font-mono font-bold text-emerald-700">{selectedList?.total_actual?.toFixed(2) || '0.00'} €</span>
+                        <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+                            <div className="space-y-2 text-sm">
+                                <div className="flex items-center justify-between">
+                                    <span className="text-slate-600">Productos listos para enviar</span>
+                                    <span className="font-mono font-bold text-emerald-700">{readyToSubmitCount}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-slate-600">Comprados sin precio</span>
+                                    <span className="font-mono font-bold text-amber-700">{missingPriceCount}</span>
+                                </div>
+                                <div className="flex items-center justify-between">
+                                    <span className="text-slate-600">Total real registrado</span>
+                                    <span className="font-mono font-bold text-emerald-700">{formatCurrency(selectedList?.total_actual || 0)}</span>
+                                </div>
                             </div>
                         </div>
                         <div className="flex gap-2 pt-1">
-                            <Button variant="outline" className="flex-1" onClick={() => setConfirmSubmitOpen(false)}>Cancelar</Button>
-                            <Button
-                                className="flex-1 bg-emerald-600 hover:bg-emerald-700 text-white gap-2"
-                                onClick={handleSubmitPrices}
-                            >
-                                <CheckCircle2 className="w-4 h-4" />
-                                Sí, subir precios
+                            <Button variant="outline" className="flex-1" onClick={() => setConfirmSubmitOpen(false)}>
+                                Cancelar
+                            </Button>
+                            <Button className="flex-1 gap-2 bg-emerald-600 text-white hover:bg-emerald-700" onClick={handleSubmitPrices}>
+                                <CheckCircle2 className="h-4 w-4" />
+                                Subir y limpiar compra
                             </Button>
                         </div>
                     </div>
                 </DialogContent>
             </Dialog>
+
+            {tutorial.isOpen && tutorial.activeStep && (
+                <div className="fixed inset-0 z-[120]">
+                    <button
+                        type="button"
+                        aria-label="Cerrar tutorial"
+                        className="absolute inset-0 bg-slate-950/75"
+                        onClick={() => closeTutorial(true)}
+                    />
+
+                    {tutorial.highlightRect && tutorial.activeStep.element && (
+                        <div
+                            className="pointer-events-none absolute rounded-[28px] border border-emerald-300/80 bg-transparent shadow-[0_0_0_9999px_rgba(15,23,42,0.72)] transition-all duration-300"
+                            style={{
+                                top: tutorial.highlightRect.top - 8,
+                                left: tutorial.highlightRect.left - 8,
+                                width: tutorial.highlightRect.width + 16,
+                                height: tutorial.highlightRect.height + 16
+                            }}
+                        />
+                    )}
+
+                    <div
+                        className="absolute z-[121] rounded-[28px] border border-slate-200 bg-white p-5 shadow-[0_30px_80px_rgba(15,23,42,0.25)]"
+                        style={tutorialBubbleStyle}
+                    >
+                        <div className="mb-4 flex items-start justify-between gap-4">
+                            <div>
+                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-500">
+                                    Tutorial rapido
+                                </p>
+                                <h3 className="mt-2 text-lg font-semibold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                    {tutorial.activeStep.title || "Guia rapida"}
+                                </h3>
+                            </div>
+                            <button
+                                type="button"
+                                onClick={() => closeTutorial(true)}
+                                className="rounded-full px-2 py-1 text-sm font-medium text-slate-400 transition hover:bg-slate-100 hover:text-slate-700"
+                            >
+                                Cerrar
+                            </button>
+                        </div>
+
+                        <p className="text-sm leading-7 text-slate-600">{tutorial.activeStep.intro}</p>
+
+                        <div className="mt-5">
+                            <div className="flex items-center justify-between text-xs font-medium text-slate-400">
+                                <span>Paso {tutorial.currentStep + 1}</span>
+                                <span>{tutorial.steps.length} en total</span>
+                            </div>
+                            <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
+                                <div
+                                    className="h-full rounded-full bg-emerald-500 transition-all"
+                                    style={{ width: `${((tutorial.currentStep + 1) / tutorial.steps.length) * 100}%` }}
+                                />
+                            </div>
+                        </div>
+
+                        <div className="mt-5 flex items-center justify-between gap-3">
+                            <Button
+                                variant="outline"
+                                onClick={prevStep}
+                                disabled={tutorial.currentStep === 0}
+                                className="rounded-2xl border-slate-200"
+                            >
+                                Atras
+                            </Button>
+                            <Button
+                                onClick={nextStep}
+                                className="rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600"
+                            >
+                                {tutorial.currentStep === tutorial.steps.length - 1 ? "Empezar" : "Siguiente"}
+                            </Button>
+                        </div>
+                    </div>
+                </div>
+            )}
         </>
     );
 };

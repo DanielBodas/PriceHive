@@ -89,3 +89,49 @@
         display: contents !important;
     }
 }
+
+.shopping-list-tour-tooltip {
+    border-radius: 1.5rem !important;
+    border: 1px solid rgba(148, 163, 184, 0.24) !important;
+    box-shadow: 0 24px 60px rgba(15, 23, 42, 0.16) !important;
+    padding: 1.25rem !important;
+    max-width: 22rem !important;
+}
+
+.shopping-list-tour-tooltip .introjs-tooltip-title {
+    font-family: "Manrope", sans-serif;
+}
+
+.shopping-list-tour-tooltip .introjs-tooltiptext {
+    color: rgb(71 85 105) !important;
+    line-height: 1.7 !important;
+}
+
+.shopping-list-tour-tooltip .introjs-button {
+    border-radius: 9999px !important;
+    border: 1px solid rgb(203 213 225) !important;
+    background: white !important;
+    box-shadow: none !important;
+    color: rgb(15 23 42) !important;
+    text-shadow: none !important;
+}
+
+.shopping-list-tour-tooltip .introjs-button:hover {
+    background: rgb(248 250 252) !important;
+}
+
+.shopping-list-tour-tooltip .introjs-button.introjs-nextbutton,
+.shopping-list-tour-tooltip .introjs-button.introjs-donebutton {
+    background: rgb(16 185 129) !important;
+    border-color: rgb(16 185 129) !important;
+    color: white !important;
+}
+
+.shopping-list-tour-tooltip .introjs-progressbar {
+    background: rgb(16 185 129) !important;
+}
+
+.shopping-list-tour-highlight {
+    border-radius: 1.5rem !important;
+    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.18) !important;
+}
