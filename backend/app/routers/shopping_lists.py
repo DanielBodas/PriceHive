@@ -342,18 +342,39 @@ async def submit_prices_from_list(list_id: str, user: dict = Depends(get_current
     prices_created = 0
     for item in lst.get("items", []):
         if item.get("price") and item.get("purchased"):
-            sp_id, _ = _resolve_sellable_product(item, lst.get("supermarket_id"), sellable_map, sellable_lookup)
+            sp_id, sp = _resolve_sellable_product(item, lst.get("supermarket_id"), sellable_map, sellable_lookup)
             if not sp_id:
                 continue
 
             price_id = str(uuid.uuid4())
             quantity = item.get("quantity", 1) or 1
+            try:
+                quantity = float(quantity) if quantity not in (None, "") else 1.0
+            except (TypeError, ValueError):
+                quantity = 1.0
+            if quantity <= 0:
+                quantity = 1.0
+
+            try:
+                price_value = float(item["price"])
+            except (TypeError, ValueError):
+                continue
+            if price_value <= 0:
+                continue
+
             price_doc = {
                 "id": price_id,
                 "sellable_product_id": sp_id,
+                "product_id": sp.get("product_id") if sp else None,
+                "supermarket_id": sp.get("supermarket_id") if sp else lst.get("supermarket_id"),
+                "brand_id": sp.get("brand_id") if sp else None,
+                "unit_id": item.get("unit_id"),
                 "attribute_values": item.get("attribute_values"),
-                "price": item["price"],
+                "price": price_value,
                 "quantity": quantity,
+                "unit_price": price_value / quantity if quantity else None,
+                "source": "shopping_list",
+                "shopping_list_id": list_id,
                 "user_id": user["id"],
                 "created_at": datetime.now(timezone.utc).isoformat()
             }

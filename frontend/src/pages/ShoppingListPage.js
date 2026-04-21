@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import axios from "axios";
 import Layout from "../components/Layout";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
@@ -15,6 +15,7 @@ import { useShoppingListTutorial } from "../hooks/useShoppingListTutorial";
 import {
     ShoppingCart,
     Plus,
+    Minus,
     Trash2,
     Store,
     Package,
@@ -22,13 +23,20 @@ import {
     CheckCircle2,
     Sparkles,
     AlertTriangle,
-    PanelLeft,
     Copy,
     TrendingUp,
     TrendingDown,
     Loader,
     HelpCircle,
-    Clock
+    Clock,
+    Search,
+    X,
+    SlidersHorizontal,
+    Ban,
+    Edit3,
+    ArrowRight,
+    ArrowLeft,
+    Info
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -58,6 +66,37 @@ const formatCurrency = (value) => {
 
     return `${Number(value).toFixed(2)} EUR`;
 };
+
+const formatCurrencyShort = (value) => {
+    if (value === null || value === undefined || Number.isNaN(Number(value))) {
+        return "-";
+    }
+    return `${Number(value).toFixed(2)}€`;
+};
+
+const formatUnitPrice = (price, quantity, unitName) => {
+    const priceNum = Number(price);
+    const qtyNum = Number(quantity);
+    if (!priceNum || !qtyNum || qtyNum <= 0) {
+        return null;
+    }
+    const unitPrice = priceNum / qtyNum;
+    return `${unitPrice.toFixed(2)}€/${unitName || "ud"}`;
+};
+
+const SHOP_FILTER_OPTIONS = [
+    { value: "pending", label: "Pendientes" },
+    { value: "all", label: "Todos" },
+    { value: "purchased", label: "Comprados" },
+    { value: "no_price", label: "Falta precio" }
+];
+
+const SHOP_SORT_OPTIONS = [
+    { value: "default", label: "Orden original" },
+    { value: "name", label: "Nombre A-Z" },
+    { value: "status", label: "Por comprar primero" },
+    { value: "brand", label: "Por marca" }
+];
 
 const getPriceInsight = (item) => {
     if (!item?.estimated_price || !item?.price) {
@@ -163,6 +202,13 @@ const ShoppingListPage = () => {
     const [availableBrandsForProduct, setAvailableBrandsForProduct] = useState([]);
     const [availableUnits, setAvailableUnits] = useState([]);
 
+    // Shop mode UX
+    const [shopSearch, setShopSearch] = useState("");
+    const [shopFilter, setShopFilter] = useState("pending");
+    const [shopSort, setShopSort] = useState("default");
+    const [showToolsPanel, setShowToolsPanel] = useState(false);
+    const [expandedBrandSwitcher, setExpandedBrandSwitcher] = useState(null);
+
     const selectedItems = selectedList?.items || [];
     const totalItems = selectedItems.length;
     const purchasedCount = selectedItems.filter((item) => item.purchased).length;
@@ -172,7 +218,66 @@ const ShoppingListPage = () => {
     const estimatedCount = selectedItems.filter((item) => item.estimated_price).length;
     const remainingCount = totalItems - purchasedCount;
     const totalTrackedItems = lists.reduce((sum, list) => sum + (list.items?.length || 0), 0);
+    const totalActualLive = selectedItems.reduce((sum, item) => sum + (Number(item.price) || 0), 0);
+    const totalEstimatedLive = selectedItems.reduce((sum, item) => sum + (Number(item.estimated_price) || 0), 0);
+    const progressPct = totalItems ? Math.round((purchasedCount / totalItems) * 100) : 0;
     const tutorialBubbleStyle = getTutorialBubbleStyle(tutorial.activeStep, tutorial.highlightRect);
+
+    // Filtered + sorted items for Shop mode
+    const filteredShopItems = useMemo(() => {
+        const indexed = selectedItems.map((item, idx) => ({ item, idx }));
+        const query = shopSearch.trim().toLowerCase();
+
+        let list = indexed;
+
+        if (query) {
+            list = list.filter(({ item }) => {
+                const haystack = `${item.product_name || ""} ${item.brand_name || ""}`.toLowerCase();
+                return haystack.includes(query);
+            });
+        }
+
+        if (shopFilter === "pending") {
+            list = list.filter(({ item }) => !item.purchased);
+        } else if (shopFilter === "purchased") {
+            list = list.filter(({ item }) => item.purchased);
+        } else if (shopFilter === "no_price") {
+            list = list.filter(({ item }) => item.purchased && !item.price);
+        }
+
+        if (shopSort === "name") {
+            list = [...list].sort((a, b) => (a.item.product_name || "").localeCompare(b.item.product_name || ""));
+        } else if (shopSort === "brand") {
+            list = [...list].sort((a, b) => (a.item.brand_name || "").localeCompare(b.item.brand_name || ""));
+        } else if (shopSort === "status") {
+            list = [...list].sort((a, b) => {
+                if (a.item.purchased === b.item.purchased) {
+                    return 0;
+                }
+                return a.item.purchased ? 1 : -1;
+            });
+        }
+
+        return list;
+    }, [selectedItems, shopSearch, shopFilter, shopSort]);
+
+    // Helper: get alternative brands available for the same product+supermarket
+    const getAlternativeBrandsForItem = (item) => {
+        if (!item?.product_id || !selectedList?.supermarket_id) {
+            return [];
+        }
+        const candidates = sellableProducts.filter((sp) => (
+            sp.product_id === item.product_id &&
+            sp.supermarket_id === selectedList.supermarket_id &&
+            sp.id !== item.sellable_product_id
+        ));
+        return candidates
+            .map((sp) => {
+                const brand = brands.find((b) => b.id === sp.brand_id);
+                return brand ? { sellable_id: sp.id, brand_id: brand.id, brand_name: brand.name } : null;
+            })
+            .filter(Boolean);
+    };
 
     const syncListState = (updatedList) => {
         setSelectedList(updatedList);
@@ -488,6 +593,55 @@ const ShoppingListPage = () => {
         setSelectedList({ ...selectedList, items: newItems });
         setPendingChanges(true);
         return newItems;
+    };
+
+    const handleShopPriceChange = (index, rawValue) => {
+        let nextPrice = null;
+        if (rawValue !== "" && rawValue !== null && rawValue !== undefined) {
+            const parsed = parseFloat(String(rawValue).replace(",", "."));
+            if (Number.isFinite(parsed) && parsed >= 0) {
+                nextPrice = parsed;
+            }
+        }
+        const currentItem = selectedList?.items?.[index];
+        const updates = { price: nextPrice };
+        if (nextPrice && nextPrice > 0 && currentItem && !currentItem.purchased) {
+            updates.purchased = true;
+        }
+        updateLocalItem(index, updates);
+    };
+
+    const handleQuantityStep = (index, delta) => {
+        const current = Number(selectedList?.items?.[index]?.quantity) || 1;
+        const raw = current + delta;
+        const next = Math.max(0.1, Math.round(raw * 100) / 100);
+        updateLocalItem(index, { quantity: next });
+    };
+
+    const handleShopSwitchBrand = (index, alternative) => {
+        if (!alternative || !selectedList?.items?.[index]) {
+            return;
+        }
+        const sp = sellableProducts.find((candidate) => candidate.id === alternative.sellable_id);
+        if (!sp) {
+            toast.error("Esta alternativa no esta disponible");
+            return;
+        }
+        const brandObj = brands.find((b) => b.id === sp.brand_id);
+        updateLocalItem(index, {
+            sellable_product_id: sp.id,
+            brand_id: sp.brand_id,
+            brand_name: brandObj?.name || alternative.brand_name,
+            attribute_values: {},
+            price: null
+        });
+        setExpandedBrandSwitcher(null);
+        toast.success(`Marca cambiada a ${brandObj?.name || alternative.brand_name}`);
+    };
+
+    const handleSkipShopItem = (index) => {
+        updateLocalItem(index, { purchased: false, price: null });
+        toast("Producto marcado como no comprado", { description: "Lo hemos dejado pendiente" });
     };
 
     const handleDuplicateList = async (listToDuplicate) => {
@@ -980,295 +1134,634 @@ const ShoppingListPage = () => {
                                 </TabsContent>
 
                                 <TabsContent value="shop" className="mt-4 space-y-3">
-                                    <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between">
-                                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:gap-3">
-                                            <span className="text-sm font-semibold text-slate-900">Modo compra</span>
-                                            <div className="w-full sm:w-[280px]">
-                                                <Select
-                                                    value={selectedList?.id || "none"}
-                                                    onValueChange={(value) => {
-                                                        const nextList = lists.find((list) => list.id === value) || null;
-                                                        handleSelectList(nextList);
-                                                    }}
-                                                >
-                                                    <SelectTrigger data-tutorial="shop-list-selector">
-                                                        <SelectValue placeholder="Selecciona lista" />
-                                                    </SelectTrigger>
-                                                    <SelectContent>
-                                                        <SelectItem value="none">Selecciona lista...</SelectItem>
-                                                        {lists.map((list) => (
-                                                            <SelectItem key={list.id} value={list.id}>
-                                                                {list.name}
-                                                            </SelectItem>
-                                                        ))}
-                                                    </SelectContent>
-                                                </Select>
-                                            </div>
-                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                                                {purchasedCount} comprados
-                                            </span>
-                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-xs font-medium text-slate-600">
-                                                {missingPriceCount} sin precio
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => setActiveTab("prepare")}
-                                                className="gap-2 rounded-2xl border-slate-200"
-                                            >
-                                                Cambiar lista
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => setConfirmEstimateOpen(true)}
-                                                disabled={!totalItems}
-                                                className="gap-2 rounded-2xl border-indigo-200 text-indigo-700 hover:bg-indigo-50"
-                                            >
-                                                <Sparkles className="h-4 w-4" />
-                                                {showEstimated ? "Actualizar" : "Estimados"}
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => setActiveTab("finish")}
-                                                disabled={!purchasedCount}
-                                                className="gap-2 rounded-2xl border-slate-200"
-                                            >
-                                                Ir a cerrar ticket
-                                            </Button>
-                                        </div>
-                                    </div>
-
                                     {!selectedList ? (
                                         <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
                                             <ShoppingCart className="mx-auto h-12 w-12 text-slate-300" />
                                             <p className="mt-4 text-base font-semibold text-slate-700">Selecciona una lista para comprar</p>
+                                            <p className="mt-1 text-sm text-slate-500">Ve a la pestana Gestionar listas</p>
                                         </div>
                                     ) : totalItems === 0 ? (
                                         <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
                                             <ShoppingCart className="mx-auto h-12 w-12 text-slate-300" />
-                                            <p className="mt-4 text-base font-semibold text-slate-700">No hay productos</p>
+                                            <p className="mt-4 text-base font-semibold text-slate-700">La lista no tiene productos</p>
+                                            <Button
+                                                onClick={() => setAddItemDialogOpen(true)}
+                                                className="mt-4 gap-2 rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600"
+                                            >
+                                                <Plus className="h-4 w-4" />
+                                                Anadir producto
+                                            </Button>
                                         </div>
                                     ) : (
-                                        <div className="max-h-[64vh] space-y-3 overflow-y-auto pr-1" data-tutorial="shop-list">
-                                            {selectedItems.map((item, index) => {
-                                                const priceInsight = getPriceInsight(item);
-
-                                                return (
-                                                    <div
-                                                        key={index}
-                                                        className={`rounded-[28px] border p-4 shadow-sm transition-colors sm:p-5 ${
-                                                            item.purchased
-                                                                ? "border-emerald-300 bg-emerald-50"
-                                                                : "border-slate-200 bg-white"
-                                                        }`}
-                                                    >
-                                                        <div className="flex flex-col gap-4">
-                                                            <div className="flex items-start gap-4">
-                                                                <Checkbox
-                                                                    checked={item.purchased}
-                                                                    onCheckedChange={(checked) => updateLocalItem(index, { purchased: Boolean(checked) })}
-                                                                    className="mt-1 h-7 w-7 rounded-md data-[state=checked]:border-emerald-500 data-[state=checked]:bg-emerald-500"
-                                                                    data-testid={`item-checkbox-${index}`}
-                                                                />
+                                        <>
+                                            {/* Sticky header: progress + list selector + search */}
+                                            <div className="sticky top-0 z-20 -mx-4 bg-white/95 px-4 pb-3 pt-1 backdrop-blur sm:-mx-5 sm:px-5">
+                                                <div className="rounded-3xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4">
+                                                    {/* Row 1: list selector + progress/total */}
+                                                    <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                                        <div className="flex min-w-0 flex-1 items-center gap-2">
+                                                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                                                                <ShoppingCart className="h-5 w-5 shrink-0 text-emerald-600" />
                                                                 <div className="min-w-0 flex-1">
-                                                                    <div className="flex flex-wrap items-center gap-2">
-                                                                        <h3 className={`text-lg font-bold ${item.purchased ? "text-slate-500 line-through" : "text-slate-950"}`}>
-                                                                            {item.product_name}
-                                                                        </h3>
-                                                                        <span className="rounded-full bg-white px-2.5 py-1 text-xs font-medium text-slate-600 shadow-sm">
-                                                                            {item.quantity} {item.unit_name}
-                                                                        </span>
-                                                                    </div>
-                                                                    <p className="mt-1 text-sm text-slate-500">{item.brand_name || "Marca sin definir"}</p>
-                                                                    {item.attribute_values && Object.keys(item.attribute_values).length > 0 && (
-                                                                        <div className="mt-2 flex flex-wrap gap-2">
-                                                                            {Object.entries(item.attribute_values).map(([attrId, value]) => (
-                                                                                <span
-                                                                                    key={attrId}
-                                                                                    className="rounded-full border border-emerald-200 bg-white px-2.5 py-1 text-[11px] font-medium text-emerald-700"
-                                                                                >
-                                                                                    {value}
-                                                                                </span>
-                                                                            ))}
-                                                                        </div>
-                                                                    )}
-                                                                </div>
-                                                            </div>
-
-                                                            <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr),320px]">
-                                                                <div className="flex flex-wrap items-end gap-3">
-                                                                    <div className="min-w-[140px] rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-                                                                        <Label className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-400">Cantidad</Label>
-                                                                        <div className="mt-2 flex items-center rounded-2xl border border-slate-200 bg-slate-50 px-2 py-1">
-                                                                            <Input
-                                                                                type="number"
-                                                                                min="0.1"
-                                                                                step="0.1"
-                                                                                value={item.quantity}
-                                                                                onChange={(event) => updateLocalItem(index, {
-                                                                                    quantity: parseFloat(event.target.value) || 1
-                                                                                })}
-                                                                                className="h-9 border-0 bg-transparent px-1 text-center font-mono shadow-none focus-visible:ring-0"
-                                                                            />
-                                                                            <span className="pr-2 text-sm font-medium text-slate-500">{item.unit_name}</span>
-                                                                        </div>
-                                                                    </div>
-
-                                                                    <Button
-                                                                        variant="outline"
-                                                                        onClick={() => openEditDialog(item, index)}
-                                                                        className="rounded-2xl border-slate-200"
+                                                                    <Select
+                                                                        value={selectedList?.id || "none"}
+                                                                        onValueChange={(value) => {
+                                                                            const nextList = lists.find((list) => list.id === value) || null;
+                                                                            handleSelectList(nextList);
+                                                                        }}
                                                                     >
-                                                                        Cambiar marca o formato
-                                                                    </Button>
-                                                                </div>
-
-                                                                <div
-                                                                    className="grid gap-3 sm:grid-cols-2"
-                                                                    data-tutorial={index === 0 ? "price-input-example" : undefined}
-                                                                >
-                                                                    <div className={`rounded-2xl border p-3 ${showEstimated ? "border-indigo-200 bg-indigo-50" : "border-slate-200 bg-slate-50"}`}>
-                                                                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-indigo-500">Estimado</p>
-                                                                        <p className="mt-2 text-base font-bold text-indigo-700">
-                                                                            {item.estimated_price ? formatCurrency(item.estimated_price) : "Sin referencia"}
-                                                                        </p>
-                                                                    </div>
-
-                                                                    <div className={`rounded-2xl border p-3 ${item.price ? "border-emerald-300 bg-emerald-50" : "border-slate-200 bg-white"}`}>
-                                                                        <p className="text-[11px] font-semibold uppercase tracking-[0.18em] text-slate-500">Precio real</p>
-                                                                        <div className="mt-2 flex items-center gap-2">
-                                                                            <Input
-                                                                                type="number"
-                                                                                min="0"
-                                                                                step="0.01"
-                                                                                placeholder="0.00"
-                                                                                value={item.price ?? ""}
-                                                                                onChange={(event) => updateLocalItem(index, {
-                                                                                    price: parseFloat(event.target.value) || null
-                                                                                })}
-                                                                                className="h-10 border-0 bg-transparent px-0 text-right font-mono text-lg font-semibold shadow-none focus-visible:ring-0"
-                                                                            />
-                                                                            <span className="text-xs font-semibold text-slate-400">EUR</span>
-                                                                        </div>
-                                                                    </div>
+                                                                        <SelectTrigger data-tutorial="shop-list-selector" className="h-9 border-slate-200">
+                                                                            <SelectValue placeholder="Lista" />
+                                                                        </SelectTrigger>
+                                                                        <SelectContent>
+                                                                            {lists.map((list) => (
+                                                                                <SelectItem key={list.id} value={list.id}>
+                                                                                    {list.name} · {list.supermarket_name}
+                                                                                </SelectItem>
+                                                                            ))}
+                                                                        </SelectContent>
+                                                                    </Select>
                                                                 </div>
                                                             </div>
+                                                        </div>
 
-                                                            {priceInsight && (
-                                                                <div className={`flex items-center gap-2 rounded-2xl border px-3 py-2 text-sm font-medium ${
-                                                                    priceInsight.isHigher
-                                                                        ? "border-amber-200 bg-amber-50 text-amber-800"
-                                                                        : "border-emerald-200 bg-white text-emerald-800"
-                                                                }`}>
-                                                                    {priceInsight.isHigher ? (
-                                                                        <TrendingUp className="h-4 w-4" />
-                                                                    ) : (
-                                                                        <TrendingDown className="h-4 w-4" />
-                                                                    )}
-                                                                    <span>{priceInsight.label}</span>
-                                                                    <span className="ml-auto font-mono">
-                                                                        {formatCurrency(Math.abs(priceInsight.difference))}
-                                                                    </span>
+                                                        <div className="flex items-center justify-between gap-2 sm:justify-end">
+                                                            <div className="text-right">
+                                                                <p className="text-[11px] font-semibold uppercase tracking-wider text-slate-400">Total</p>
+                                                                <p className="text-xl font-bold text-slate-950 tabular-nums" data-testid="shop-total">
+                                                                    {formatCurrencyShort(totalActualLive)}
+                                                                </p>
+                                                            </div>
+                                                            {totalEstimatedLive > 0 && (
+                                                                <div className="text-right">
+                                                                    <p className="text-[11px] font-semibold uppercase tracking-wider text-indigo-400">Estimado</p>
+                                                                    <p className="text-sm font-semibold text-indigo-700 tabular-nums">
+                                                                        {formatCurrencyShort(totalEstimatedLive)}
+                                                                    </p>
                                                                 </div>
                                                             )}
                                                         </div>
                                                     </div>
-                                                );
-                                            })}
-                                        </div>
+
+                                                    {/* Progress bar */}
+                                                    <div className="mt-3">
+                                                        <div className="flex items-center justify-between text-[11px] font-medium text-slate-600">
+                                                            <span className="flex items-center gap-1.5">
+                                                                <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500" />
+                                                                <span className="font-semibold text-slate-900 tabular-nums">{purchasedCount}/{totalItems}</span>
+                                                                <span>comprados</span>
+                                                            </span>
+                                                            <span className="tabular-nums">{progressPct}%</span>
+                                                        </div>
+                                                        <div className="mt-1.5 h-2 overflow-hidden rounded-full bg-slate-100">
+                                                            <div
+                                                                className="h-full rounded-full bg-gradient-to-r from-emerald-400 to-emerald-600 transition-all duration-500"
+                                                                style={{ width: `${progressPct}%` }}
+                                                            />
+                                                        </div>
+                                                    </div>
+
+                                                    {/* Row 2: Search */}
+                                                    <div className="mt-3 flex items-center gap-2">
+                                                        <div className="relative flex-1">
+                                                            <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+                                                            <Input
+                                                                value={shopSearch}
+                                                                onChange={(event) => setShopSearch(event.target.value)}
+                                                                placeholder="Buscar producto o marca..."
+                                                                className="h-10 rounded-2xl border-slate-200 pl-9 pr-9"
+                                                                inputMode="search"
+                                                            />
+                                                            {shopSearch && (
+                                                                <button
+                                                                    type="button"
+                                                                    onClick={() => setShopSearch("")}
+                                                                    className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100 hover:text-slate-700"
+                                                                >
+                                                                    <X className="h-3.5 w-3.5" />
+                                                                </button>
+                                                            )}
+                                                        </div>
+                                                        <Button
+                                                            type="button"
+                                                            variant="outline"
+                                                            className={`h-10 gap-2 rounded-2xl border-slate-200 px-3 ${showToolsPanel ? "bg-slate-100" : ""}`}
+                                                            onClick={() => setShowToolsPanel((prev) => !prev)}
+                                                        >
+                                                            <SlidersHorizontal className="h-4 w-4" />
+                                                            <span className="hidden sm:inline">Ajustar</span>
+                                                        </Button>
+                                                    </div>
+
+                                                    {/* Filter chips */}
+                                                    <div className="mt-3 -mx-1 flex items-center gap-1.5 overflow-x-auto pb-1">
+                                                        {SHOP_FILTER_OPTIONS.map((option) => {
+                                                            const active = shopFilter === option.value;
+                                                            const badgeCount = option.value === "pending"
+                                                                ? remainingCount
+                                                                : option.value === "purchased"
+                                                                    ? purchasedCount
+                                                                    : option.value === "no_price"
+                                                                        ? missingPriceCount
+                                                                        : totalItems;
+                                                            return (
+                                                                <button
+                                                                    key={option.value}
+                                                                    type="button"
+                                                                    onClick={() => setShopFilter(option.value)}
+                                                                    className={`flex shrink-0 items-center gap-1.5 rounded-full border px-3 py-1.5 text-xs font-semibold transition ${
+                                                                        active
+                                                                            ? "border-emerald-500 bg-emerald-500 text-white shadow-sm"
+                                                                            : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700"
+                                                                    }`}
+                                                                >
+                                                                    {option.label}
+                                                                    <span className={`tabular-nums ${active ? "text-emerald-50" : "text-slate-400"}`}>
+                                                                        {badgeCount}
+                                                                    </span>
+                                                                </button>
+                                                            );
+                                                        })}
+                                                    </div>
+
+                                                    {showToolsPanel && (
+                                                        <div className="mt-3 grid gap-2 rounded-2xl border border-slate-100 bg-slate-50 p-3 sm:grid-cols-2">
+                                                            <div className="space-y-1">
+                                                                <Label className="text-[11px] font-semibold uppercase tracking-wider text-slate-500">Ordenar</Label>
+                                                                <Select value={shopSort} onValueChange={setShopSort}>
+                                                                    <SelectTrigger className="h-9 bg-white">
+                                                                        <SelectValue />
+                                                                    </SelectTrigger>
+                                                                    <SelectContent>
+                                                                        {SHOP_SORT_OPTIONS.map((option) => (
+                                                                            <SelectItem key={option.value} value={option.value}>
+                                                                                {option.label}
+                                                                            </SelectItem>
+                                                                        ))}
+                                                                    </SelectContent>
+                                                                </Select>
+                                                            </div>
+                                                            <div className="flex items-end gap-2">
+                                                                <Button
+                                                                    variant="outline"
+                                                                    onClick={() => setConfirmEstimateOpen(true)}
+                                                                    disabled={!totalItems}
+                                                                    className="h-9 flex-1 gap-2 rounded-2xl border-indigo-200 text-indigo-700 hover:bg-indigo-50"
+                                                                >
+                                                                    <Sparkles className="h-4 w-4" />
+                                                                    {showEstimated ? "Recalcular" : "Estimar"}
+                                                                </Button>
+                                                            </div>
+                                                        </div>
+                                                    )}
+                                                </div>
+                                            </div>
+
+                                            {/* Items list */}
+                                            {filteredShopItems.length === 0 ? (
+                                                <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                                                    <Info className="mx-auto h-10 w-10 text-slate-300" />
+                                                    <p className="mt-3 text-sm font-semibold text-slate-700">No hay productos que coincidan</p>
+                                                    <p className="mt-1 text-xs text-slate-500">Prueba a cambiar el filtro o limpiar la busqueda</p>
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={() => {
+                                                            setShopSearch("");
+                                                            setShopFilter("all");
+                                                        }}
+                                                        className="mt-4 gap-2 rounded-2xl border-slate-200"
+                                                    >
+                                                        <X className="h-3.5 w-3.5" />
+                                                        Limpiar filtros
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-3 pb-24" data-tutorial="shop-list">
+                                                    {filteredShopItems.map(({ item, idx }, visualIndex) => {
+                                                        const priceInsight = getPriceInsight(item);
+                                                        const alternatives = getAlternativeBrandsForItem(item);
+                                                        const unitPriceStr = formatUnitPrice(item.price, item.quantity, item.unit_name);
+                                                        const estimatedUnitStr = formatUnitPrice(item.estimated_price, item.quantity, item.unit_name);
+                                                        const brandSwitcherOpen = expandedBrandSwitcher === idx;
+
+                                                        return (
+                                                            <div
+                                                                key={`${item.sellable_product_id}-${idx}`}
+                                                                className={`rounded-[26px] border shadow-sm transition-all ${
+                                                                    item.purchased
+                                                                        ? item.price
+                                                                            ? "border-emerald-300 bg-emerald-50"
+                                                                            : "border-amber-300 bg-amber-50"
+                                                                        : "border-slate-200 bg-white"
+                                                                }`}
+                                                            >
+                                                                {/* Top row: check + product */}
+                                                                <div className="flex items-start gap-3 p-4 sm:p-5">
+                                                                    <button
+                                                                        type="button"
+                                                                        onClick={() => updateLocalItem(idx, { purchased: !item.purchased })}
+                                                                        className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl border-2 transition ${
+                                                                            item.purchased
+                                                                                ? "border-emerald-500 bg-emerald-500 text-white shadow-md"
+                                                                                : "border-slate-300 bg-white text-transparent hover:border-emerald-400 hover:text-emerald-200"
+                                                                        }`}
+                                                                        data-testid={`item-checkbox-${idx}`}
+                                                                        aria-label={item.purchased ? "Desmarcar como comprado" : "Marcar como comprado"}
+                                                                    >
+                                                                        <CheckCircle2 className="h-6 w-6" strokeWidth={2.5} />
+                                                                    </button>
+
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <div className="flex flex-wrap items-baseline gap-x-2">
+                                                                            <h3 className={`text-lg font-bold leading-tight ${
+                                                                                item.purchased ? "text-slate-500 line-through" : "text-slate-950"
+                                                                            }`} style={{ fontFamily: "Manrope, sans-serif" }}>
+                                                                                {item.product_name}
+                                                                            </h3>
+                                                                        </div>
+                                                                        <div className="mt-1 flex flex-wrap items-center gap-2 text-sm">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => alternatives.length > 0 && setExpandedBrandSwitcher(brandSwitcherOpen ? null : idx)}
+                                                                                className={`inline-flex items-center gap-1 rounded-full border px-2.5 py-1 text-xs font-medium transition ${
+                                                                                    alternatives.length > 0
+                                                                                        ? "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-700"
+                                                                                        : "border-slate-200 bg-slate-50 text-slate-500 cursor-default"
+                                                                                }`}
+                                                                                disabled={alternatives.length === 0}
+                                                                            >
+                                                                                {item.brand_name || "Sin marca"}
+                                                                                {alternatives.length > 0 && (
+                                                                                    <span className="text-[10px] text-slate-400">
+                                                                                        · {alternatives.length} alt.
+                                                                                    </span>
+                                                                                )}
+                                                                            </button>
+                                                                            {item.attribute_values && Object.keys(item.attribute_values).length > 0 && (
+                                                                                Object.entries(item.attribute_values).map(([attrId, value]) => (
+                                                                                    <span
+                                                                                        key={attrId}
+                                                                                        className="rounded-full bg-white/80 px-2 py-0.5 text-[11px] font-medium text-slate-600 ring-1 ring-slate-200"
+                                                                                    >
+                                                                                        {value}
+                                                                                    </span>
+                                                                                ))
+                                                                            )}
+                                                                            {estimatedUnitStr && !unitPriceStr && (
+                                                                                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[11px] font-medium text-indigo-700">
+                                                                                    ~{estimatedUnitStr}
+                                                                                </span>
+                                                                            )}
+                                                                        </div>
+
+                                                                        {/* Brand alternatives - inline expandable */}
+                                                                        {brandSwitcherOpen && alternatives.length > 0 && (
+                                                                            <div className="mt-2 rounded-2xl border border-slate-200 bg-white p-2">
+                                                                                <div className="flex items-center justify-between">
+                                                                                    <p className="px-1 text-[11px] font-semibold uppercase tracking-wider text-slate-500">Cambiar marca</p>
+                                                                                    <button
+                                                                                        type="button"
+                                                                                        onClick={() => setExpandedBrandSwitcher(null)}
+                                                                                        className="flex h-6 w-6 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"
+                                                                                    >
+                                                                                        <X className="h-3 w-3" />
+                                                                                    </button>
+                                                                                </div>
+                                                                                <div className="mt-1 flex flex-wrap gap-1">
+                                                                                    {alternatives.map((alt) => (
+                                                                                        <button
+                                                                                            key={alt.sellable_id}
+                                                                                            type="button"
+                                                                                            onClick={() => handleShopSwitchBrand(idx, alt)}
+                                                                                            className="rounded-full border border-emerald-200 bg-emerald-50 px-3 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
+                                                                                        >
+                                                                                            {alt.brand_name}
+                                                                                        </button>
+                                                                                    ))}
+                                                                                </div>
+                                                                                <p className="mt-2 px-1 text-[10px] text-slate-400">Al cambiar, se borrara el precio actual.</p>
+                                                                            </div>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Middle row: Quantity stepper + Price input */}
+                                                                <div className="grid gap-3 px-4 pb-3 sm:grid-cols-[auto,1fr] sm:px-5">
+                                                                    {/* Quantity stepper */}
+                                                                    <div className="flex flex-col gap-1">
+                                                                        <Label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">Cantidad</Label>
+                                                                        <div className="flex items-center gap-1 rounded-2xl border border-slate-200 bg-white p-1 shadow-sm">
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleQuantityStep(idx, -1)}
+                                                                                className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 active:bg-slate-200"
+                                                                                aria-label="Reducir cantidad"
+                                                                            >
+                                                                                <Minus className="h-4 w-4" />
+                                                                            </button>
+                                                                            <Input
+                                                                                type="number"
+                                                                                inputMode="decimal"
+                                                                                min="0.1"
+                                                                                step="0.1"
+                                                                                value={item.quantity}
+                                                                                onChange={(event) => updateLocalItem(idx, {
+                                                                                    quantity: parseFloat(event.target.value) || 0.1
+                                                                                })}
+                                                                                className="h-9 w-16 border-0 bg-transparent px-0 text-center text-base font-bold tabular-nums shadow-none focus-visible:ring-0"
+                                                                            />
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleQuantityStep(idx, 1)}
+                                                                                className="flex h-9 w-9 items-center justify-center rounded-xl text-slate-600 transition hover:bg-slate-100 active:bg-slate-200"
+                                                                                aria-label="Aumentar cantidad"
+                                                                            >
+                                                                                <Plus className="h-4 w-4" />
+                                                                            </button>
+                                                                            <span className="pr-2 text-xs font-semibold text-slate-500">{item.unit_name}</span>
+                                                                        </div>
+                                                                    </div>
+
+                                                                    {/* Price input - BIG */}
+                                                                    <div
+                                                                        className="flex flex-col gap-1"
+                                                                        data-tutorial={visualIndex === 0 ? "price-input-example" : undefined}
+                                                                    >
+                                                                        <div className="flex items-center justify-between">
+                                                                            <Label className="text-[10px] font-semibold uppercase tracking-wider text-slate-400">
+                                                                                Precio real
+                                                                            </Label>
+                                                                            {item.estimated_price ? (
+                                                                                <span className="text-[10px] font-semibold text-indigo-600">
+                                                                                    Estimado: {formatCurrencyShort(item.estimated_price)}
+                                                                                </span>
+                                                                            ) : null}
+                                                                        </div>
+                                                                        <div className={`flex items-center rounded-2xl border-2 bg-white shadow-sm transition ${
+                                                                            item.price
+                                                                                ? "border-emerald-400 bg-emerald-50"
+                                                                                : "border-slate-200 focus-within:border-emerald-400"
+                                                                        }`}>
+                                                                            <Input
+                                                                                type="number"
+                                                                                inputMode="decimal"
+                                                                                min="0"
+                                                                                step="0.01"
+                                                                                placeholder="0.00"
+                                                                                value={item.price ?? ""}
+                                                                                onChange={(event) => handleShopPriceChange(idx, event.target.value)}
+                                                                                className="h-12 border-0 bg-transparent px-3 text-right text-2xl font-black tabular-nums shadow-none focus-visible:ring-0 placeholder:text-slate-300"
+                                                                                data-testid={`item-price-${idx}`}
+                                                                            />
+                                                                            <span className="pr-4 text-lg font-bold text-slate-500">€</span>
+                                                                        </div>
+                                                                        {unitPriceStr && (
+                                                                            <p className="text-right text-xs font-medium text-slate-500 tabular-nums">
+                                                                                {unitPriceStr}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+
+                                                                {/* Price insight + actions */}
+                                                                <div className="flex flex-col gap-2 border-t border-slate-200/70 bg-white/40 px-4 py-3 sm:flex-row sm:items-center sm:justify-between sm:px-5">
+                                                                    {priceInsight ? (
+                                                                        <div className={`flex items-center gap-2 rounded-2xl px-3 py-1.5 text-xs font-semibold ${
+                                                                            priceInsight.isHigher
+                                                                                ? "bg-amber-100 text-amber-900"
+                                                                                : "bg-emerald-100 text-emerald-900"
+                                                                        }`}>
+                                                                            {priceInsight.isHigher ? (
+                                                                                <TrendingUp className="h-3.5 w-3.5" />
+                                                                            ) : (
+                                                                                <TrendingDown className="h-3.5 w-3.5" />
+                                                                            )}
+                                                                            <span>{priceInsight.label}</span>
+                                                                        </div>
+                                                                    ) : (
+                                                                        <span className="text-xs text-slate-400">
+                                                                            {item.purchased && !item.price ? "Anade el precio que has visto en tienda" : " "}
+                                                                        </span>
+                                                                    )}
+
+                                                                    <div className="flex items-center gap-1">
+                                                                        {item.purchased && (
+                                                                            <button
+                                                                                type="button"
+                                                                                onClick={() => handleSkipShopItem(idx)}
+                                                                                className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                                                                            >
+                                                                                <Ban className="h-3.5 w-3.5" />
+                                                                                <span className="hidden sm:inline">No comprado</span>
+                                                                            </button>
+                                                                        )}
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => openEditDialog(item, idx)}
+                                                                            className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-medium text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
+                                                                        >
+                                                                            <Edit3 className="h-3.5 w-3.5" />
+                                                                            <span className="hidden sm:inline">Editar</span>
+                                                                        </button>
+                                                                        <button
+                                                                            type="button"
+                                                                            onClick={() => handleRemoveItem(idx)}
+                                                                            className="flex items-center gap-1 rounded-xl px-2.5 py-1.5 text-xs font-medium text-rose-500 transition hover:bg-rose-50 hover:text-rose-700"
+                                                                        >
+                                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                                            <span className="hidden sm:inline">Quitar</span>
+                                                                        </button>
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                        );
+                                                    })}
+                                                </div>
+                                            )}
+
+                                            {/* Sticky bottom CTA */}
+                                            {readyToSubmitCount > 0 && (
+                                                <div className="sticky bottom-4 z-10 mx-auto max-w-md">
+                                                    <Button
+                                                        onClick={() => setActiveTab("finish")}
+                                                        className="w-full gap-2 rounded-3xl bg-emerald-600 py-6 text-base font-bold text-white shadow-xl hover:bg-emerald-700"
+                                                    >
+                                                        <CheckCircle2 className="h-5 w-5" />
+                                                        Ir a cerrar ticket ({readyToSubmitCount})
+                                                        <ArrowRight className="h-4 w-4" />
+                                                    </Button>
+                                                </div>
+                                            )}
+
+                                            {/* Floating add button */}
+                                            <button
+                                                type="button"
+                                                onClick={() => setAddItemDialogOpen(true)}
+                                                className="fixed bottom-20 right-5 z-30 flex h-14 w-14 items-center justify-center rounded-full bg-emerald-500 text-white shadow-2xl transition hover:scale-105 hover:bg-emerald-600 active:scale-95 sm:bottom-8 sm:right-8"
+                                                aria-label="Anadir producto a la lista"
+                                                title="Anadir producto"
+                                            >
+                                                <Plus className="h-6 w-6" strokeWidth={2.5} />
+                                            </button>
+                                        </>
                                     )}
                                 </TabsContent>
 
                                 <TabsContent value="finish" className="mt-4 space-y-3">
-                                    <div className="flex flex-col gap-3 rounded-3xl border border-slate-200 bg-white p-3 shadow-sm lg:flex-row lg:items-center lg:justify-between" data-tutorial="finish-summary">
-                                        <div className="flex flex-wrap gap-2 text-xs font-medium">
-                                            <span className="text-sm font-semibold text-slate-900">Cerrar ticket</span>
-                                            {selectedList && (
-                                                <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
-                                                    {selectedList.name}
-                                                </span>
-                                            )}
-                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
-                                                {readyToSubmitCount} listos
-                                            </span>
-                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
-                                                {missingPriceCount} sin precio
-                                            </span>
-                                            <span className="rounded-full bg-slate-100 px-3 py-1 text-slate-600">
-                                                Total {formatCurrency(selectedList?.total_actual || 0)}
-                                            </span>
-                                        </div>
-                                        <div className="flex flex-wrap gap-2">
-                                            <Button
-                                                variant="outline"
-                                                onClick={() => setActiveTab("shop")}
-                                                disabled={!selectedList}
-                                                className="gap-2 rounded-2xl border-slate-200"
-                                            >
-                                                Volver a compra
-                                            </Button>
-                                            <Button
-                                                onClick={() => setConfirmSubmitOpen(true)}
-                                                disabled={!readyToSubmitCount}
-                                                className="gap-2 rounded-2xl bg-slate-900 text-white hover:bg-slate-800"
-                                                data-testid="submit-prices-btn"
-                                            >
-                                                <CheckCircle2 className="h-4 w-4" />
-                                                Subir precios
-                                            </Button>
-                                            <Button
-                                                variant="outline"
-                                                onClick={handleResetList}
-                                                disabled={!purchasedCount && !pricedCount}
-                                                className="gap-2 rounded-2xl border-slate-200"
-                                            >
-                                                <RefreshCcw className="h-4 w-4" />
-                                                Limpiar compra
-                                            </Button>
-                                        </div>
-                                    </div>
-
                                     {!selectedList ? (
                                         <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
                                             <CheckCircle2 className="mx-auto h-12 w-12 text-slate-300" />
                                             <p className="mt-4 text-base font-semibold text-slate-700">Primero elige una lista en Gestionar listas</p>
                                         </div>
-                                    ) : selectedItems.filter((item) => item.purchased).length === 0 ? (
-                                        <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
-                                            <CheckCircle2 className="mx-auto h-12 w-12 text-slate-300" />
-                                            <p className="mt-4 text-base font-semibold text-slate-700">Aun no hay compra cerrada</p>
-                                        </div>
                                     ) : (
-                                        <div className="max-h-[58vh] space-y-3 overflow-y-auto pr-1">
-                                            {selectedItems.filter((item) => item.purchased).map((item, index) => (
-                                                <div
-                                                    key={`${item.sellable_product_id}-${index}`}
-                                                    className={`flex flex-col gap-2 rounded-3xl border p-3 shadow-sm sm:flex-row sm:items-center sm:justify-between ${
-                                                        item.price
-                                                            ? "border-emerald-200 bg-emerald-50"
-                                                            : "border-amber-200 bg-amber-50"
-                                                    }`}
-                                                >
+                                        <>
+                                            {/* Summary card */}
+                                            <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5" data-tutorial="finish-summary">
+                                                <div className="flex flex-wrap items-start justify-between gap-3">
                                                     <div>
-                                                        <p className="text-sm font-semibold text-slate-900">{item.product_name}</p>
+                                                        <h3 className="text-lg font-bold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                                            Revisa antes de subir
+                                                        </h3>
                                                         <p className="mt-1 text-sm text-slate-500">
-                                                            {item.brand_name || "Marca sin definir"} • {item.quantity} {item.unit_name}
+                                                            {selectedList.name} · {selectedList.supermarket_name}
                                                         </p>
                                                     </div>
-                                                    <div className="flex flex-wrap items-center gap-2 text-xs font-medium">
-                                                        <span className="rounded-full bg-white px-3 py-1 text-slate-600 shadow-sm">
-                                                            {item.price ? `Precio real ${formatCurrency(item.price)}` : "Falta precio"}
-                                                        </span>
-                                                        {item.estimated_price && (
-                                                            <span className="rounded-full bg-white px-3 py-1 text-slate-600 shadow-sm">
-                                                                Estimado {formatCurrency(item.estimated_price)}
-                                                            </span>
-                                                        )}
+                                                    <div className="flex items-center gap-2">
+                                                        <Button
+                                                            variant="outline"
+                                                            onClick={() => setActiveTab("shop")}
+                                                            className="gap-2 rounded-2xl border-slate-200"
+                                                        >
+                                                            <ArrowLeft className="h-4 w-4" />
+                                                            <span className="hidden sm:inline">Volver</span>
+                                                        </Button>
                                                     </div>
                                                 </div>
-                                            ))}
-                                        </div>
+
+                                                <div className="mt-4 grid grid-cols-3 gap-2">
+                                                    <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-center">
+                                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">Listos</p>
+                                                        <p className="mt-1 text-2xl font-bold text-emerald-700 tabular-nums">{readyToSubmitCount}</p>
+                                                    </div>
+                                                    <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-center">
+                                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600">Sin precio</p>
+                                                        <p className="mt-1 text-2xl font-bold text-amber-700 tabular-nums">{missingPriceCount}</p>
+                                                    </div>
+                                                    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3 text-center">
+                                                        <p className="text-[10px] font-semibold uppercase tracking-wider text-slate-500">Total</p>
+                                                        <p className="mt-1 text-2xl font-bold text-slate-950 tabular-nums">{formatCurrencyShort(totalActualLive)}</p>
+                                                    </div>
+                                                </div>
+
+                                                <div className="mt-4 flex flex-col gap-2 sm:flex-row">
+                                                    <Button
+                                                        onClick={() => setConfirmSubmitOpen(true)}
+                                                        disabled={!readyToSubmitCount}
+                                                        className="flex-1 gap-2 rounded-2xl bg-emerald-600 py-5 text-base font-bold text-white shadow-md hover:bg-emerald-700 disabled:opacity-50"
+                                                        data-testid="submit-prices-btn"
+                                                    >
+                                                        <CheckCircle2 className="h-5 w-5" />
+                                                        Subir {readyToSubmitCount} precios a la base de datos
+                                                    </Button>
+                                                    <Button
+                                                        variant="outline"
+                                                        onClick={handleResetList}
+                                                        disabled={!purchasedCount && !pricedCount}
+                                                        className="gap-2 rounded-2xl border-slate-200 py-5"
+                                                    >
+                                                        <RefreshCcw className="h-4 w-4" />
+                                                        <span className="hidden sm:inline">Limpiar</span>
+                                                    </Button>
+                                                </div>
+                                            </div>
+
+                                            {/* Missing prices warning */}
+                                            {missingPriceCount > 0 && (
+                                                <div className="rounded-3xl border border-amber-200 bg-amber-50 p-4">
+                                                    <div className="flex gap-3">
+                                                        <AlertTriangle className="mt-0.5 h-5 w-5 shrink-0 text-amber-600" />
+                                                        <div className="flex-1">
+                                                            <p className="text-sm font-semibold text-amber-900">
+                                                                {missingPriceCount} producto{missingPriceCount > 1 ? "s" : ""} comprado{missingPriceCount > 1 ? "s" : ""} sin precio
+                                                            </p>
+                                                            <p className="mt-1 text-xs text-amber-800">
+                                                                Solo subiremos los que tengan precio. Vuelve al Modo compra para completarlos.
+                                                            </p>
+                                                            <Button
+                                                                variant="outline"
+                                                                onClick={() => {
+                                                                    setActiveTab("shop");
+                                                                    setShopFilter("no_price");
+                                                                }}
+                                                                className="mt-3 gap-2 rounded-2xl border-amber-300 bg-white text-amber-800 hover:bg-amber-100"
+                                                            >
+                                                                <ArrowLeft className="h-4 w-4" />
+                                                                Anadir precios que faltan
+                                                            </Button>
+                                                        </div>
+                                                    </div>
+                                                </div>
+                                            )}
+
+                                            {/* Preview of data being uploaded */}
+                                            {selectedItems.filter((item) => item.purchased && item.price).length === 0 ? (
+                                                <div className="rounded-3xl border border-dashed border-slate-200 bg-slate-50 p-6 text-center">
+                                                    <CheckCircle2 className="mx-auto h-12 w-12 text-slate-300" />
+                                                    <p className="mt-4 text-base font-semibold text-slate-700">Aun no hay productos listos para subir</p>
+                                                    <p className="mt-1 text-sm text-slate-500">Marca los productos comprados y pon sus precios en el Modo compra</p>
+                                                </div>
+                                            ) : (
+                                                <div className="rounded-3xl border border-slate-200 bg-white p-4 shadow-sm sm:p-5">
+                                                    <div className="mb-3 flex items-center justify-between">
+                                                        <h4 className="text-sm font-semibold text-slate-900">Datos que subiremos</h4>
+                                                        <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-semibold text-emerald-700">
+                                                            {readyToSubmitCount} precios
+                                                        </span>
+                                                    </div>
+                                                    <div className="max-h-[52vh] space-y-2 overflow-y-auto">
+                                                        {selectedItems.filter((item) => item.purchased && item.price).map((item, itemIdx) => {
+                                                            const unitPriceStr = formatUnitPrice(item.price, item.quantity, item.unit_name);
+                                                            return (
+                                                                <div
+                                                                    key={`${item.sellable_product_id}-${itemIdx}`}
+                                                                    className="flex flex-col gap-2 rounded-2xl border border-emerald-200 bg-emerald-50/50 p-3 sm:flex-row sm:items-center sm:justify-between"
+                                                                >
+                                                                    <div className="min-w-0 flex-1">
+                                                                        <p className="truncate text-sm font-bold text-slate-950">{item.product_name}</p>
+                                                                        <div className="mt-1 flex flex-wrap items-center gap-1.5 text-[11px]">
+                                                                            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 font-medium text-slate-600">
+                                                                                {item.brand_name || "Sin marca"}
+                                                                            </span>
+                                                                            <span className="rounded-full border border-slate-200 bg-white px-2 py-0.5 font-medium text-slate-600 tabular-nums">
+                                                                                {item.quantity} {item.unit_name}
+                                                                            </span>
+                                                                            {item.attribute_values && Object.entries(item.attribute_values).map(([attrId, value]) => (
+                                                                                <span
+                                                                                    key={attrId}
+                                                                                    className="rounded-full border border-emerald-200 bg-white px-2 py-0.5 font-medium text-emerald-700"
+                                                                                >
+                                                                                    {value}
+                                                                                </span>
+                                                                            ))}
+                                                                        </div>
+                                                                    </div>
+                                                                    <div className="flex items-center gap-3 sm:flex-col sm:items-end sm:gap-0">
+                                                                        <p className="text-lg font-bold text-emerald-700 tabular-nums">
+                                                                            {formatCurrencyShort(item.price)}
+                                                                        </p>
+                                                                        {unitPriceStr && (
+                                                                            <p className="text-[11px] font-medium text-slate-500 tabular-nums">
+                                                                                {unitPriceStr}
+                                                                            </p>
+                                                                        )}
+                                                                    </div>
+                                                                </div>
+                                                            );
+                                                        })}
+                                                    </div>
+                                                </div>
+                                            )}
+                                        </>
                                     )}
                                 </TabsContent>
                             </Tabs>
