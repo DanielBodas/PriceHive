@@ -124,7 +124,7 @@ export const useShoppingListTutorial = (shouldStart = false) => {
         return;
       }
 
-      element.scrollIntoView({ behavior: "smooth", block: "center", inline: "center" });
+      element.scrollIntoView({ behavior: "smooth", block: "center", inline: "nearest" });
       const rect = element.getBoundingClientRect();
       setHighlightRect({
         top: rect.top,

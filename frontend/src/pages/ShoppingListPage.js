@@ -119,6 +119,8 @@ const SHOP_SORT_OPTIONS = [
     { value: "brand", label: "Por marca" }
 ];
 
+const BUBBLE_ESTIMATED_HEIGHT = 280;
+
 const getTutorialBubbleStyle = (step, rect) => {
     const viewportWidth = typeof window !== "undefined" ? window.innerWidth : 1280;
     const viewportHeight = typeof window !== "undefined" ? window.innerHeight : 720;
@@ -129,37 +131,54 @@ const getTutorialBubbleStyle = (step, rect) => {
         return { top: "50%", left: "50%", transform: "translate(-50%, -50%)", width: `${width}px` };
     }
 
+    // Horizontal: center on element but clamp within viewport
     const centerX = rect.left + (rect.width / 2);
-    const safeLeft = Math.min(Math.max(centerX - (width / 2), margin), viewportWidth - width - margin);
+    const safeLeft = Math.min(
+        Math.max(centerX - (width / 2), margin),
+        viewportWidth - width - margin
+    );
+
+    // Helper: given a raw top (top-left corner of bubble), clamp to viewport
+    const clampTop = (rawTop) =>
+        Math.min(Math.max(rawTop, margin), viewportHeight - BUBBLE_ESTIMATED_HEIGHT - margin);
 
     if (step.position === "top") {
+        // Prefer above the element; fall back to below if not enough room above
+        const aboveTop = rect.top - BUBBLE_ESTIMATED_HEIGHT - 12;
+        const belowTop = rect.bottom + 12;
+        const fitsAbove = aboveTop >= margin;
+        const fitsBelow = belowTop + BUBBLE_ESTIMATED_HEIGHT <= viewportHeight - margin;
+        const rawTop = fitsAbove ? aboveTop : (fitsBelow ? belowTop : aboveTop);
         return {
-            top: `${Math.max(rect.top - 18, margin + 12)}px`,
+            top: `${clampTop(rawTop)}px`,
             left: `${safeLeft}px`,
-            transform: "translateY(-100%)",
-            width: `${width}px`
+            transform: "none",
+            width: `${width}px`,
         };
     }
 
     if (step.position === "right") {
         const preferredLeft = rect.right + 18;
         const fitsRight = preferredLeft + width <= viewportWidth - margin;
-        const top = Math.min(Math.max(rect.top, margin), viewportHeight - 260);
+        const rawTop = rect.top + (rect.height / 2) - (BUBBLE_ESTIMATED_HEIGHT / 2);
         return {
-            top: `${top}px`,
+            top: `${clampTop(rawTop)}px`,
             left: fitsRight ? `${preferredLeft}px` : `${safeLeft}px`,
             transform: "none",
-            width: `${width}px`
+            width: `${width}px`,
         };
     }
 
-    const preferredTop = rect.bottom + 18;
-    const fitsBottom = preferredTop + 260 <= viewportHeight - margin;
+    // Default: below the element; fall back to above if not enough room below
+    const belowTop = rect.bottom + 12;
+    const aboveTop = rect.top - BUBBLE_ESTIMATED_HEIGHT - 12;
+    const fitsBelow = belowTop + BUBBLE_ESTIMATED_HEIGHT <= viewportHeight - margin;
+    const rawTop = fitsBelow ? belowTop : aboveTop;
     return {
-        top: fitsBottom ? `${preferredTop}px` : `${Math.max(rect.top - 18, margin + 12)}px`,
+        top: `${clampTop(rawTop)}px`,
         left: `${safeLeft}px`,
-        transform: fitsBottom ? "none" : "translateY(-100%)",
-        width: `${width}px`
+        transform: "none",
+        width: `${width}px`,
     };
 };
 
