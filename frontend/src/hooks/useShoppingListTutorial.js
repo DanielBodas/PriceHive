@@ -4,48 +4,42 @@ const STORAGE_KEY = "shopping-list-tutorial-seen";
 
 const buildTutorialSteps = () => ([
   {
-    intro: "Este tutorial es corto: crea o elige una lista, anade productos, compra siguiendo la lista y termina subiendo los precios reales.",
-    title: "Guia rapida",
+    intro: "Te ensenamos lo basico: crea una lista, anade productos, y durante la compra marca lo comprado anotando el precio real. Al final, un boton sube todo a la base de datos.",
+    title: "Asi funciona tu lista",
   },
   {
     element: "[data-tutorial='new-list-btn']",
-    title: "Crear la lista",
-    intro: "Crea una lista nueva si vas a comprar en otro supermercado o quieres separar una compra distinta.",
+    title: "Crear lista",
+    intro: "Crea una lista por supermercado. Asi separas las compras y podemos comparar precios entre tiendas.",
     position: "bottom",
   },
   {
-    element: "[data-tutorial='lists-sidebar']",
-    title: "Varias listas",
-    intro: "Desde aqui cambias de lista rapido y puedes duplicarla si haces compras parecidas cada semana.",
-    position: "right",
+    element: "[data-tutorial='lists-grid']",
+    title: "Tus listas",
+    intro: "Desde aqui eliges con cual compras hoy. Puedes duplicar una lista para repetirla cada semana.",
+    position: "top",
   },
   {
-    element: "[data-tutorial='prepare-tab']",
-    title: "Preparar",
-    intro: "Esta es la primera seccion del flujo. Aqui preparas la lista y dejas cerrados productos, marcas y cantidades.",
-    position: "bottom",
+    element: "[data-tutorial='price-input-example']",
+    title: "El precio es lo importante",
+    intro: "Cuando encuentres un producto, toca aqui y escribe el precio que veas en la etiqueta. Se marcara como comprado automaticamente.",
+    position: "top",
   },
   {
-    element: "[data-tutorial='shop-tab']",
-    title: "Comprar",
-    intro: "Esta seccion es para usarla en directo en el super: marcas lo comprado, ajustas cambios y registras el precio real.",
-    position: "bottom",
-  },
-  {
-    element: "[data-tutorial='finish-tab']",
-    title: "Finalizar",
-    intro: "En la ultima seccion revisas la compra terminada y subes los precios reales a la base de datos.",
+    element: "[data-tutorial='brand-switcher']",
+    title: "Cambiar marca en tienda",
+    intro: "Si tu marca no esta, toca el nombre de la marca para ver otras disponibles y cambiar al instante.",
     position: "bottom",
   },
   {
     element: "[data-tutorial='submit-prices-btn']",
-    title: "Subir precios",
-    intro: "Al subir, la lista no se borra: se limpia la compra actual y se mantiene como plantilla para reutilizarla.",
+    title: "Subir a la base de datos",
+    intro: "Cuando termines, este boton sube todos los precios. Se guardan producto, marca, cantidad y precio unitario. La lista queda limpia para la proxima.",
     position: "top",
   },
   {
-    title: "Flujo listo",
-    intro: "Ese es el flujo completo: preparar, comprar y cerrar compra sin perder la lista para la siguiente vez.",
+    title: "Listo para empezar",
+    intro: "Crea tu primera lista o abre una existente. Lo demas lo iras descubriendo mientras compras.",
   },
 ]);
 
