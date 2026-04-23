@@ -70,7 +70,7 @@ async def create_shopping_list(data: ShoppingListCreate, user: dict = Depends(ge
         # We need to find if there's a price for this specific variant combination.
         # For now, we'll look for prices with matching attributes or fallback to sellable_id.
 
-        price_query = {"sellable_product_id": item.sellable_product_id}
+        price_query = {"sellable_product_id": item.sellable_product_id, "status": {"$ne": "invalid"}}
         if item.attribute_values:
             price_query["attribute_values"] = item.attribute_values
 
@@ -80,13 +80,15 @@ async def create_shopping_list(data: ShoppingListCreate, user: dict = Depends(ge
             sort=[("created_at", -1)]
         )
 
+
         if not latest and item.attribute_values:
             # Fallback to any price for this sellable product
             latest = await db.prices.find_one(
-                {"sellable_product_id": item.sellable_product_id},
+                {"sellable_product_id": item.sellable_product_id, "status": {"$ne": "invalid"}},
                 {"_id": 0},
                 sort=[("created_at", -1)]
             )
+
         estimated = None
         if latest:
             latest_price = latest["price"]
@@ -412,7 +414,7 @@ async def estimate_list(list_id: str, user: dict = Depends(get_current_user)):
             
         estimated = None
         if sp_id:
-            price_query = {"sellable_product_id": sp_id}
+            price_query = {"sellable_product_id": sp_id, "status": {"$ne": "invalid"}}
             if item.get("attribute_values"):
                 price_query["attribute_values"] = item["attribute_values"]
 
@@ -424,10 +426,11 @@ async def estimate_list(list_id: str, user: dict = Depends(get_current_user)):
 
             if not latest and item.get("attribute_values"):
                 latest = await db.prices.find_one(
-                    {"sellable_product_id": sp_id},
+                    {"sellable_product_id": sp_id, "status": {"$ne": "invalid"}},
                     {"_id": 0},
                     sort=[("created_at", -1)]
                 )
+
 
             if latest:
                 latest_price = latest["price"]

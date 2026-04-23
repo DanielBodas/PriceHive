@@ -20,4 +20,19 @@ class PriceResponse(BaseModel):
     quantity: float
     user_id: str
     user_name: Optional[str] = None
+    status: str = "valid"
     created_at: str
+
+
+class PriceUpdate(BaseModel):
+    price: Optional[float] = None
+    quantity: Optional[float] = None
+
+class PaginatedPriceResponse(BaseModel):
+    items: list[PriceResponse]
+    total: int
+    page: int
+    page_size: int
+    total_pages: int
+
+

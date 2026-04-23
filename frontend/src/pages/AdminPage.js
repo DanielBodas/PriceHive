@@ -1,4 +1,5 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
+
 import axios from "axios";
 import Layout from "../components/Layout";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
@@ -29,10 +30,19 @@ import {
     ChevronDown,
     ChevronRight,
     RefreshCw,
+    Database,
+    ShieldAlert,
+    Activity,
+    BarChart3,
     Download,
     Upload,
-    Database
+    CheckCircle,
+    XCircle
 } from "lucide-react";
+
+
+
+
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
@@ -45,7 +55,11 @@ const AdminPage = () => {
     const [products, setProducts] = useState([]);
     const [sellableProducts, setSellableProducts] = useState([]);
     const [brandCatalog, setBrandCatalog] = useState([]);
+    const [pricesData, setPricesData] = useState({ items: [], total: 0, page: 1, total_pages: 1 });
+    const [loadingPrices, setLoadingPrices] = useState(false);
     const [loading, setLoading] = useState(true);
+
+
 
     // Dialog states
     const [categoryDialog, setCategoryDialog] = useState(false);
@@ -60,6 +74,8 @@ const AdminPage = () => {
     const [addSupermarketToCatalogDialog, setAddSupermarketToCatalogDialog] = useState(false);
     const [addBrandToCatalogDialog, setAddBrandToCatalogDialog] = useState(false);
     const [addBrandGlobalDialog, setAddBrandGlobalDialog] = useState(false);
+    const [priceDialog, setPriceDialog] = useState(false);
+
 
     // Edit states
     const [editingItem, setEditingItem] = useState(null);
@@ -77,6 +93,8 @@ const AdminPage = () => {
     });
     const [sellableForm, setSellableForm] = useState({ supermarket_id: "", brand_id: "", catalog_entry_ids: [] });
     const [catalogForm, setCatalogForm] = useState({ brand_id: "", product_ids: [], status: "active", attribute_combinations: [] });
+    const [priceForm, setPriceForm] = useState({ price: 0, quantity: 1 });
+
     const [attributeSelection, setAttributeSelection] = useState({}); // { attrId: [val1, val2] }
     const [productSearch, setProductSearch] = useState("");
     const [productTableSearch, setProductTableSearch] = useState("");
@@ -87,6 +105,8 @@ const AdminPage = () => {
     const [unitTableSearch, setUnitTableSearch] = useState("");
     const [sellableTableSearch, setSellableTableSearch] = useState("");
     const [catalogTableSearch, setCatalogTableSearch] = useState("");
+    const [priceTableSearch, setPriceTableSearch] = useState("");
+
     const [allProductUnits, setAllProductUnits] = useState([]);
     // Track which brand-product cards are expanded in the brand catalog
     const [expandedCatalogProducts, setExpandedCatalogProducts] = useState({});
@@ -118,12 +138,32 @@ const AdminPage = () => {
     const [exportFormat, setExportFormat] = useState("xlsx");
     const [includePrices, setIncludePrices] = useState(false);
     const [systemDialog, setSystemDialog] = useState(false);
+    const [moderationDialog, setModerationDialog] = useState(false);
+    const [invalidateDialog, setInvalidateDialog] = useState(false);
+    const [invalidateReason, setInvalidateReason] = useState("Información incorrecta o spam");
 
-    useEffect(() => {
-        fetchAllData();
+
+
+
+
+
+
+    const fetchPrices = useCallback(async (page = 1, searchQuery = "") => {
+        setLoadingPrices(true);
+        try {
+            const res = await axios.get(`${API}/admin/prices`, {
+                params: { page, page_size: 50, search: searchQuery }
+            });
+            setPricesData(res.data);
+        } catch (error) {
+            console.error("Error loading prices:", error);
+            toast.error("Error al cargar precios");
+        } finally {
+            setLoadingPrices(false);
+        }
     }, []);
 
-    const fetchAllData = async () => {
+    const fetchAllData = useCallback(async () => {
         try {
             const [catsRes, attrsRes, brandsRes, smsRes, unitsRes, prodsRes, sellableRes, catalogRes, productUnitsRes] = await Promise.all([
                 axios.get(`${API}/admin/categories`),
@@ -145,16 +185,26 @@ const AdminPage = () => {
             setSellableProducts(sellableRes.data);
             setBrandCatalog(catalogRes.data);
             setAllProductUnits(productUnitsRes.data || []);
+            
+            // Initial prices fetch
+            fetchPrices(1);
+
         } catch (error) {
             console.error("Error fetching data:", error);
             toast.error("Error al cargar datos");
         } finally {
             setLoading(false);
         }
-    };
+    }, [fetchPrices]);
+
+    useEffect(() => {
+        fetchAllData();
+    }, [fetchAllData]);
+
 
     const getFilteredProducts = (text) => {
         const q = (text || "").toLowerCase().trim();
+
         if (!q) return products;
         return products.filter((p) =>
             (p.name || "").toLowerCase().includes(q) ||
@@ -264,6 +314,9 @@ const AdminPage = () => {
             (bc.status || "").toLowerCase().includes(q)
         );
     });
+    // We use server-side search for prices now
+
+
 
     const brandCatalogStatusByBrandProduct = brandCatalog.reduce((acc, entry) => {
         const key = `${entry.brand_id || ""}::${entry.product_id || ""}`;
@@ -714,8 +767,20 @@ const AdminPage = () => {
             const res = await axios.post(`${API}/admin/system/import`, formData, {
                 headers: { 'Content-Type': 'multipart/form-data' }
             });
-            toast.success("Base de datos importada correctamente");
-            console.log("Import results:", res.data.results);
+
+            // Show statistics
+            const results = res.data.results || {};
+            const sheets = Object.keys(results);
+            if (sheets.length > 0) {
+                const summary = sheets.map(name => {
+                    const stats = results[name];
+                    return `${name}: ${stats.upserted} upserts, ${stats.deleted} deletes`;
+                }).join(' | ');
+                toast.success(`Sincronización completada: ${summary}`);
+            } else {
+                toast.success("Importación finalizada sin cambios detectados");
+            }
+
             await fetchAllData();
         } catch (error) {
             console.error("Import error:", error);
@@ -725,6 +790,64 @@ const AdminPage = () => {
             e.target.value = ''; // clear input
         }
     };
+
+    const handleDeletePrice = async (id) => {
+        if (!window.confirm("¿Seguro que quieres eliminar este reporte de precio?")) return;
+        try {
+            await axios.delete(`${API}/admin/prices/${id}`);
+            toast.success("Precio eliminado");
+            fetchPrices(pricesData.page, priceTableSearch);
+        } catch (e) {
+
+            toast.error("Error al eliminar el precio");
+        }
+    };
+
+    const handleSavePrice = async () => {
+        try {
+            if (editingItem) {
+                await axios.put(`${API}/admin/prices/${editingItem.id}`, priceForm);
+                toast.success("Precio actualizado");
+            }
+            setPriceDialog(false);
+            setEditingItem(null);
+            fetchPrices(pricesData.page, priceTableSearch);
+        } catch (e) {
+
+            toast.error("Error al guardar el precio");
+        }
+    };
+
+    const handleValidatePrice = async (id) => {
+        try {
+            await axios.post(`${API}/admin/prices/${id}/validate`);
+            toast.success("Precio marcado como válido");
+            fetchPrices(pricesData.page, priceTableSearch);
+        } catch (e) {
+            toast.error("Error al validar precio");
+        }
+    };
+
+    const handleInvalidatePrice = async (id) => {
+        setEditingItem({ id }); // Store the ID temporarily in editingItem or a new state
+        setInvalidateReason("Información incorrecta o spam");
+        setInvalidateDialog(true);
+    };
+
+    const submitInvalidatePrice = async () => {
+        if (!editingItem?.id) return;
+        try {
+            await axios.post(`${API}/admin/prices/${editingItem.id}/invalidate?reason=${encodeURIComponent(invalidateReason)}`);
+            toast.success("Precio invalidado y puntos restados");
+            setInvalidateDialog(false);
+            setEditingItem(null);
+            fetchPrices(pricesData.page, priceTableSearch);
+        } catch (e) {
+            toast.error("Error al invalidar precio");
+        }
+    };
+
+
 
     if (loading) return <Layout><div className="flex items-center justify-center min-h-[400px]">Cargando panel de administracion...</div></Layout>;
 
@@ -738,14 +861,30 @@ const AdminPage = () => {
                         </h1>
                         <p className="text-slate-500 mt-1">Gestión avanzada del sistema</p>
                     </div>
-                    <Button 
-                        variant="outline" 
-                        onClick={() => setSystemDialog(true)}
-                        className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 h-10 gap-2 font-semibold shadow-sm transition-all"
-                    >
-                        <Database className="w-4 h-4" /> 
-                        Base de Datos
-                    </Button>
+                    <div className="flex gap-2">
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setModerationDialog(true)}
+                            className="bg-rose-50 border-rose-100 text-rose-700 hover:bg-rose-100 h-10 gap-2 font-semibold shadow-sm relative"
+                        >
+                            <ShieldAlert className="w-4 h-4" /> 
+                            Moderación
+                            {pricesData.total > 0 && (
+                                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] px-1 rounded-full border-2 border-white">
+                                    {pricesData.total}
+                                </span>
+                            )}
+                        </Button>
+                        <Button 
+                            variant="outline" 
+                            onClick={() => setSystemDialog(true)}
+                            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 h-10 gap-2 font-semibold shadow-sm transition-all"
+                        >
+                            <Database className="w-4 h-4" /> 
+                            Base de Datos
+                        </Button>
+                    </div>
+
                 </div>
 
                 {systemLoading && (
@@ -772,10 +911,10 @@ const AdminPage = () => {
                             <Layers className="w-4 h-4" /> Vision General
                         </TabsTrigger>
                     </TabsList>
-
-                    {/* SECCIÓN COSAS UNITARIAS */}
+    
                     <TabsContent value="maestros" className="space-y-6">
                         <Tabs defaultValue="categories">
+
                             <TabsList className="bg-slate-50 border p-1 mb-4 flex-wrap h-auto">
                                 <TabsTrigger value="categories" className="gap-2" data-testid="tab-categories"><Layers className="w-4 h-4" /> Categorias</TabsTrigger>
                                 <TabsTrigger value="attributes" className="gap-2" data-testid="tab-attributes"><Tag className="w-4 h-4" /> Atributos</TabsTrigger>
@@ -1449,8 +1588,190 @@ const AdminPage = () => {
                         </Tabs>
                     </TabsContent>
 
-                    <TabsContent value="overview" className="space-y-6">
+            {/* Diálogo de Moderación (FUERA DE TABS) */}
+            <Dialog open={moderationDialog} onOpenChange={setModerationDialog}>
+                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
+                            <ShieldAlert className="w-6 h-6 text-rose-500" />
+                            Moderación de Precios Reportados
+                        </DialogTitle>
+                    </DialogHeader>
+
+                    <Card className="border-rose-100 mt-4">
+                        <CardHeader className="space-y-4 bg-rose-50/30">
+                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                                <div>
+                                    <p className="text-sm text-slate-500">
+                                        Gestiona {pricesData.total} reportes de la comunidad. {loadingPrices && <RefreshCw className="w-3 h-3 animate-spin inline ml-2" />}
+                                    </p>
+                                </div>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" size="sm" onClick={() => fetchPrices(pricesData.page)}>
+                                        <RefreshCw className={`w-4 h-4 mr-2 ${loadingPrices ? 'animate-spin' : ''}`} /> Actualizar
+                                    </Button>
+                                </div>
+                            </div>
+                            <div className="relative">
+                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                <Input 
+                                    placeholder="Buscar reportes..." 
+                                    className="pl-9 bg-white border-slate-200"
+                                    value={priceTableSearch}
+                                    onChange={(e) => {
+                                        setPriceTableSearch(e.target.value);
+                                    }}
+                                    onKeyDown={(e) => {
+                                        if (e.key === 'Enter') fetchPrices(1, priceTableSearch);
+                                    }}
+                                />
+                                <Button 
+                                    size="sm" 
+                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 bg-slate-900"
+                                    onClick={() => fetchPrices(1, priceTableSearch)}
+                                >
+                                    Buscar
+                                </Button>
+                            </div>
+                        </CardHeader>
+                        <CardContent className="pt-6">
+                            <div className="rounded-md border border-slate-100 overflow-hidden shadow-sm bg-white">
+                                <Table>
+                                    <TableHeader className="bg-slate-50/50">
+                                        <TableRow>
+                                            <TableHead>Fecha</TableHead>
+                                            <TableHead>Producto</TableHead>
+                                            <TableHead>Súper / Marca</TableHead>
+                                            <TableHead className="text-right">Precio</TableHead>
+                                            <TableHead className="text-right">Cant.</TableHead>
+                                            <TableHead>Usuario</TableHead>
+                                            <TableHead className="w-24 text-right">Acciones</TableHead>
+                                        </TableRow>
+                                    </TableHeader>
+                                    <TableBody>
+                                        {pricesData.items.map((p) => (
+                                            <TableRow key={p.id} className="hover:bg-slate-50/50 transition-colors">
+                                                <TableCell className="text-[11px] text-slate-500 font-mono">
+                                                    {new Date(p.created_at).toLocaleDateString()} {new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                                                </TableCell>
+                                                <TableCell className="font-semibold text-slate-900">{p.product_name || "Producto desconocido"}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col">
+                                                        <span className="text-sm font-medium text-slate-700">{p.supermarket_name || "Supermercado desconocido"}</span>
+                                                        <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">{p.brand_name || "Marca genérica"}</span>
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right font-bold text-slate-900">{p.price.toFixed(2)}€</TableCell>
+                                                <TableCell className="text-right text-slate-600">{p.quantity}</TableCell>
+                                                <TableCell>
+                                                    <div className="flex flex-col gap-1">
+                                                        <Badge variant="secondary" className="text-[10px] font-medium bg-slate-100 text-slate-600 border-none w-fit">
+                                                            {p.user_name || "User..."}
+                                                        </Badge>
+                                                        {p.status === "invalid" ? (
+                                                            <Badge className="text-[9px] bg-rose-50 text-rose-600 border-rose-100 border w-fit">INVALIDADO</Badge>
+                                                        ) : (
+                                                            <Badge className="text-[9px] bg-emerald-50 text-emerald-600 border-emerald-100 border w-fit">VÁLIDO</Badge>
+                                                        )}
+                                                    </div>
+                                                </TableCell>
+                                                <TableCell className="text-right">
+                                                    <div className="flex justify-end gap-1">
+                                                        {p.status === "invalid" ? (
+                                                            <Button 
+                                                                size="icon" 
+                                                                variant="ghost" 
+                                                                className="h-8 w-8 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50"
+                                                                title="Validar"
+                                                                onClick={() => handleValidatePrice(p.id)}
+                                                            >
+                                                                <CheckCircle className="h-4 w-4" />
+                                                            </Button>
+                                                        ) : (
+                                                            <Button 
+                                                                size="icon" 
+                                                                variant="ghost" 
+                                                                className="h-8 w-8 text-rose-400 hover:text-rose-600 hover:bg-rose-50"
+                                                                title="Invalidar"
+                                                                onClick={() => handleInvalidatePrice(p.id)}
+                                                            >
+                                                                <XCircle className="h-4 w-4" />
+                                                            </Button>
+                                                        )}
+
+                                                        <Button 
+                                                            size="icon" 
+                                                            variant="ghost" 
+                                                            className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
+                                                            onClick={() => {
+                                                                setEditingItem(p);
+                                                                setPriceForm({ price: p.price, quantity: p.quantity });
+                                                                setPriceDialog(true);
+                                                            }}
+                                                        >
+                                                            <Pencil className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                        <Button 
+                                                            size="icon" 
+                                                            variant="ghost" 
+                                                            className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
+                                                            onClick={() => handleDeletePrice(p.id)}
+                                                        >
+                                                            <Trash2 className="h-3.5 w-3.5" />
+                                                        </Button>
+                                                    </div>
+                                                </TableCell>
+                                            </TableRow>
+                                        ))}
+                                        {pricesData.items.length === 0 && (
+                                            <TableRow>
+                                                <TableCell colSpan={7} className="h-32 text-center text-slate-400 italic">
+                                                    No se han encontrado reportes de precios.
+                                                </TableCell>
+                                            </TableRow>
+                                        )}
+                                    </TableBody>
+                                </Table>
+                            </div>
+
+                            {/* Pagination */}
+                            <div className="flex items-center justify-between mt-6">
+                                <p className="text-xs text-slate-500">
+                                    Mostrando {pricesData.items.length} de {pricesData.total} reportes
+                                </p>
+                                <div className="flex items-center gap-2">
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        disabled={pricesData.page <= 1 || loadingPrices}
+                                        onClick={() => fetchPrices(pricesData.page - 1, priceTableSearch)}
+                                    >
+                                        Anterior
+                                    </Button>
+                                    <div className="text-xs font-medium text-slate-600 px-3 py-1 bg-slate-50 rounded border">
+                                        Página {pricesData.page} de {pricesData.total_pages}
+                                    </div>
+                                    <Button 
+                                        variant="outline" 
+                                        size="sm" 
+                                        disabled={pricesData.page >= pricesData.total_pages || loadingPrices}
+                                        onClick={() => fetchPrices(pricesData.page + 1, priceTableSearch)}
+                                    >
+                                        Siguiente
+                                    </Button>
+                                </div>
+                            </div>
+                        </CardContent>
+                    </Card>
+                </DialogContent>
+            </Dialog>
+
+                <TabsContent value="overview" className="space-y-6">
+                    <div className="space-y-6">
+
+
                         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+
                             <Card>
                                 <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-600">Cobertura unidades</CardTitle></CardHeader>
                                 <CardContent><p className="text-3xl font-bold text-slate-900">{unitCoveragePct}%</p><p className="text-xs text-slate-500 mt-1">{relationConfiguredProductsCount}/{products.length} productos con unidades</p></CardContent>
@@ -1493,9 +1814,13 @@ const AdminPage = () => {
                                 </CardContent>
                             </Card>
                         </div>
-                    </TabsContent>
-                </Tabs>
-            </div>
+                    </div>
+
+                </TabsContent>
+            </Tabs>
+
+        </div>
+
 
             {/* Diálogos */}
             <Dialog open={productDialog} onOpenChange={setProductDialog}>
@@ -2132,13 +2457,85 @@ const AdminPage = () => {
                         </h4>
                         <div className="space-y-1.5 text-xs text-slate-600 leading-relaxed">
                             <p>• El archivo debe contener una pestaña por colección (<code className="bg-white px-1 border rounded">categories</code>, <code className="bg-white px-1 border rounded">brands</code>, etc.).</p>
-                            <p>• Si incluyes <code className="bg-white px-1 border rounded font-mono">id</code>, el sistema hará <strong>UPSERT</strong> (actualizar si existe, crear si no).</p>
-                            <p>• Los campos JSON complejos (atributos, unidades permitidas) se parsean automáticamente desde texto.</p>
+                            <p>• <strong>Sincronización Total:</strong> Los elementos que NO estén en el Excel para una hoja activa serán **ELIMINADOS** de la base de datos.</p>
+                            <p>• <strong>Nuevos Registros:</strong> Si dejas la columna <code className="bg-white px-1 border rounded font-mono">id</code> vacía, se generará uno nuevo automáticamente.</p>
+                            <p>• <strong>Campos JSON:</strong> Los atributos y unidades se parsean automáticamente desde el texto.</p>
                         </div>
                     </div>
                 </DialogContent>
             </Dialog>
+            <Dialog open={priceDialog} onOpenChange={setPriceDialog}>
+
+                <DialogContent className="max-w-md">
+                    <DialogHeader>
+                        <DialogTitle>Modificar Reporte de Precio</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-4">
+                        <div className="rounded-lg border bg-slate-50 p-3 text-sm text-slate-600">
+                            <p><strong>Producto:</strong> {editingItem?.product_name || "-"}</p>
+                            <p><strong>Supermercado:</strong> {editingItem?.supermarket_name || "-"}</p>
+                            <p><strong>Usuario:</strong> {editingItem?.user_name || "-"}</p>
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Precio (€)</Label>
+                            <Input 
+                                type="number" 
+                                step="0.01" 
+                                value={priceForm.price} 
+                                onChange={e => setPriceForm({ ...priceForm, price: parseFloat(e.target.value) })} 
+                            />
+                        </div>
+                        <div className="space-y-2">
+                            <Label>Cantidad / Formato</Label>
+                            <Input 
+                                type="number" 
+                                step="1" 
+                                value={priceForm.quantity} 
+                                onChange={e => setPriceForm({ ...priceForm, quantity: parseFloat(e.target.value) })} 
+                            />
+                        </div>
+                        <Button onClick={handleSavePrice} className="w-full bg-emerald-500">
+                            Guardar Cambios
+                        </Button>
+                    </div>
+                </DialogContent>
+            </Dialog>
+            <Dialog open={invalidateDialog} onOpenChange={setInvalidateDialog}>
+                <DialogContent className="max-w-sm">
+                    <DialogHeader>
+                        <DialogTitle className="flex items-center gap-2 text-rose-600">
+                            <ShieldAlert className="w-5 h-5" />
+                            Motivo de Invalidación
+                        </DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4 pt-2">
+                        <p className="text-xs text-slate-500">
+                            Se le restarán 20 puntos al usuario. Indica por qué este reporte no es válido:
+                        </p>
+                        <div className="space-y-2">
+                            <Label>Descripción del motivo</Label>
+                            <Input 
+                                value={invalidateReason} 
+                                onChange={e => setInvalidateReason(e.target.value)} 
+                                placeholder="Ej: Precio incorrecto, foto borrosa..."
+                                autoFocus
+                            />
+                        </div>
+                        <div className="flex gap-2 pt-2">
+                            <Button variant="outline" className="flex-1" onClick={() => setInvalidateDialog(false)}>
+                                Cancelar
+                            </Button>
+                            <Button className="flex-1 bg-rose-600 hover:bg-rose-700" onClick={submitInvalidatePrice}>
+                                Confirmar Penalización
+                            </Button>
+                        </div>
+                    </div>
+                </DialogContent>
+            </Dialog>
+
         </Layout>
+
+
     );
 };
 

@@ -260,7 +260,7 @@ const ShoppingListPage = () => {
     const [showToolsPanel, setShowToolsPanel] = useState(false);
     const [expandedBrandSwitcher, setExpandedBrandSwitcher] = useState(null);
 
-    const selectedItems = selectedList?.items || [];
+    const selectedItems = useMemo(() => selectedList?.items || [], [selectedList]);
     const totalItems = selectedItems.length;
     const purchasedCount = selectedItems.filter((item) => item.purchased).length;
     const pricedCount = selectedItems.filter((item) => item.price !== null && item.price !== undefined).length;

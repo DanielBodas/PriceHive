@@ -30,7 +30,8 @@ async def get_product_analytics(product_id: str, supermarket_id: Optional[str] =
             price_history=[]
         )
 
-    prices = await db.prices.find({"sellable_product_id": {"$in": sp_ids}}, {"_id": 0}).sort("created_at", 1).to_list(1000)
+    prices = await db.prices.find({"sellable_product_id": {"$in": sp_ids}, "status": {"$ne": "invalid"}}, {"_id": 0}).sort("created_at", 1).to_list(1000)
+
 
     if not prices:
         return ProductAnalyticsResponse(
@@ -115,10 +116,11 @@ async def compare_product_prices(product_id: str, user: dict = Depends(get_curre
     for sp in sps:
         sp_id = sp.get("id") or str(sp.get("_id"))
         latest = await db.prices.find_one(
-            {"sellable_product_id": sp_id},
+            {"sellable_product_id": sp_id, "status": {"$ne": "invalid"}},
             {"_id": 0},
             sort=[("created_at", -1)]
         )
+
         if latest:
             brand_id = sp.get("brand_id")
             qty = latest.get("quantity", 1) or 1
@@ -158,7 +160,8 @@ async def export_product_analytics(product_id: str, format: str = "xlsx", user: 
     comparison_data = []
     for sp in sps:
         sp_id = sp.get("id") or str(sp.get("_id"))
-        latest = await db.prices.find_one({"sellable_product_id": sp_id}, sort=[("created_at", -1)])
+        latest = await db.prices.find_one({"sellable_product_id": sp_id, "status": {"$ne": "invalid"}}, sort=[("created_at", -1)])
+
         if latest:
             qty = latest.get("quantity", 1) or 1
             comparison_data.append({
@@ -171,7 +174,8 @@ async def export_product_analytics(product_id: str, format: str = "xlsx", user: 
             })
 
     # Get History
-    prices = await db.prices.find({"sellable_product_id": {"$in": sp_ids}}).sort("created_at", -1).to_list(5000)
+    prices = await db.prices.find({"sellable_product_id": {"$in": sp_ids}, "status": {"$ne": "invalid"}}).sort("created_at", -1).to_list(5000)
+
     history_data = []
     for p in prices:
         sp = next((s for s in sps if (s.get("id") or str(s.get("_id"))) == p["sellable_product_id"]), {})
@@ -212,9 +216,10 @@ async def get_general_stats(user: dict = Depends(get_current_user)):
     logger.info(f"Fetching stats for user: {user.get('email')}")
     try:
         total_products = await db.products.count_documents({})
-        total_prices = await db.prices.count_documents({})
+        total_prices = await db.prices.count_documents({"status": {"$ne": "invalid"}})
         total_users = await db.users.count_documents({})
         total_supermarkets = await db.supermarkets.count_documents({})
+
 
         # Mapping helpers for id
         def map_id(doc):
@@ -222,7 +227,8 @@ async def get_general_stats(user: dict = Depends(get_current_user)):
                 doc["id"] = str(doc["_id"])
             return doc
 
-        recent_prices = await db.prices.find({}).sort("created_at", -1).to_list(10)
+        recent_prices = await db.prices.find({"status": {"$ne": "invalid"}}).sort("created_at", -1).to_list(10)
+
         recent_prices = [map_id(p) for p in recent_prices]
 
         all_prods = await db.products.find({}).to_list(1000)

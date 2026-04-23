@@ -2,7 +2,7 @@ from fastapi import APIRouter, HTTPException, Depends, Request
 from typing import List, Optional
 import uuid
 from ..core.database import db
-from ..core.auth import get_admin_user, get_current_user
+from ..core.auth import get_admin_user, get_current_user, add_points, create_notification
 from ..models.product import (
     CategoryCreate, CategoryResponse, BrandCreate, BrandResponse,
     SupermarketCreate, SupermarketResponse, UnitCreate, UnitResponse,
@@ -12,8 +12,15 @@ from ..models.product import (
     BrandProductCatalogCreate, BrandProductCatalogBulkCreate, BrandProductCatalogResponse,
     AttributeCreate, AttributeResponse
 )
+
+from ..models.price import PriceResponse, PriceUpdate, PaginatedPriceResponse
+
+
 import pandas as pd
 import io
+import uuid
+import ast
+from pymongo import UpdateOne
 from fastapi.responses import StreamingResponse
 from fastapi import UploadFile, File
 
@@ -806,8 +813,6 @@ async def import_system_data(file: UploadFile = File(...), user: dict = Depends(
             clean_rec = {k: v for k, v in rec.items() if pd.notnull(v)}
             
             # Special handling for JSON fields if they come back as strings
-            # In Excel, dicts/lists often end up as strings like "{'a': 1}"
-            import ast
             for k, v in clean_rec.items():
                 if isinstance(v, str) and ((v.startswith('{') and v.endswith('}')) or (v.startswith('[') and v.endswith(']'))):
                     try:
@@ -815,25 +820,206 @@ async def import_system_data(file: UploadFile = File(...), user: dict = Depends(
                     except:
                         pass
             
+            # Ensure every record has a unique 'id' (UUID string)
+            if "id" not in clean_rec:
+                clean_rec["id"] = str(uuid.uuid4())
+            
             clean_records.append(clean_rec)
         
         if not clean_records:
             continue
             
-        # Bulk Upsert strategy: use 'id' as the key
-        # If 'id' is missing, we can't upsert reliably, so we just insert
+        # 1. Bulk Upsert everything in the Excel
         ops = []
+        excel_ids = []
         for rec in clean_records:
-            if "id" in rec:
-                from pymongo import UpdateOne
-                ops.append(UpdateOne({"id": rec["id"]}, {"$set": rec}, upsert=True))
+            excel_ids.append(rec["id"])
+            ops.append(UpdateOne({"id": rec["id"]}, {"$set": rec}, upsert=True))
         
         if ops:
             await db[sheet_name].bulk_write(ops)
-            results[sheet_name] = len(ops)
-        else:
-            # If no "id", just insert many (less safe, but fallback)
-            await db[sheet_name].insert_many(clean_records)
-            results[sheet_name] = len(clean_records)
             
-    return {"message": "Import completed successfully", "results": results}
+            # 2. Reconcile: Delete records in DB that are NOT in the Excel (for this sheet)
+            # This allows "Removing" items by just deleting them from the Excel
+            delete_result = await db[sheet_name].delete_many({"id": {"$nin": excel_ids}})
+            
+            results[sheet_name] = {
+                "upserted": len(ops),
+                "deleted": delete_result.deleted_count
+            }
+            
+    return {"message": "Import completed successfully (Full Sync)", "results": results}
+
+# --- PRICE MANAGEMENT ---
+@router.get("/prices", response_model=PaginatedPriceResponse)
+async def get_all_prices(
+    page: int = 1, 
+    page_size: int = 50, 
+    search: Optional[str] = None, 
+    user: dict = Depends(get_admin_user)
+):
+    skip = (page - 1) * page_size
+    query = {}
+    
+    if search:
+        # Search in product name, user name or supermarket name is tricky because they are in other collections
+        # For now, we search by user_id or sellable_product_id if they look like IDs, 
+        # but the main search will be handled by fetching needed data.
+        # In a real scalable system, we'd use an aggregation or denormalized data.
+        pass
+
+    total = await db.prices.count_documents(query)
+    prices = await db.prices.find(query).sort("created_at", -1).skip(skip).limit(page_size).to_list(page_size)
+    
+    supermarkets = {s.get("id") or str(s.get("_id")): s.get("name", "Desconocido") for s in await db.supermarkets.find({}).to_list(1000)}
+    products = {p.get("id") or str(p.get("_id")): p.get("name", "Desconocido") for p in await db.products.find({}).to_list(1000)}
+    brands = {b.get("id") or str(b.get("_id")): b.get("name", "Desconocido") for b in await db.brands.find({}).to_list(1000)}
+    users = {u.get("id") or str(u.get("_id")): u.get("name", "Usuario...") for u in await db.users.find({}, {"id": 1, "name": 1}).to_list(1000)}
+    sellable_products_data = await db.sellable_products.find({}).to_list(10000)
+    sellable_map = {sp.get("id") or str(sp.get("_id")): sp for sp in sellable_products_data}
+
+
+    result = []
+    for p in prices:
+        p = map_id(p)
+        p_name = None
+        s_name = None
+        b_name = None
+
+        if "sellable_product_id" in p and p["sellable_product_id"] in sellable_map:
+            sp = sellable_map[p["sellable_product_id"]]
+            p_name = products.get(sp["product_id"])
+            s_name = supermarkets.get(sp["supermarket_id"])
+            b_name = brands.get(sp["brand_id"])
+        elif "product_id" in p:
+            p_name = products.get(p["product_id"])
+            s_name = supermarkets.get(p.get("supermarket_id"))
+
+        # Create PriceResponse object to filter out '_id' and other garbage
+        price_obj = PriceResponse(
+            **p,
+            product_name=p_name,
+            supermarket_name=s_name,
+            brand_name=b_name,
+            user_name=users.get(p.get("user_id"))
+        )
+        result.append(price_obj)
+        
+    return PaginatedPriceResponse(
+        items=result,
+        total=total,
+        page=page,
+        page_size=page_size,
+        total_pages=(total + page_size - 1) // page_size
+    )
+
+
+
+@router.put("/prices/{price_id}", response_model=PriceResponse)
+async def update_price(price_id: str, data: PriceUpdate, user: dict = Depends(get_admin_user)):
+    update_data = {k: v for k, v in data.model_dump().items() if v is not None}
+    if not update_data:
+
+        raise HTTPException(status_code=400, detail="No data to update")
+        
+    result = await db.prices.update_one({"id": price_id}, {"$set": update_data})
+    if result.matched_count == 0:
+        try:
+            from bson import ObjectId
+            result = await db.prices.update_one({"_id": ObjectId(price_id)}, {"$set": update_data})
+        except: pass
+        
+    if result.matched_count == 0:
+        raise HTTPException(status_code=404, detail="Price not found")
+        
+    updated_price = await db.prices.find_one({"id": price_id})
+    if not updated_price:
+         try:
+            from bson import ObjectId
+            updated_price = await db.prices.find_one({"_id": ObjectId(price_id)})
+         except: pass
+    
+    # We don't re-fetch all names here for simplicity in the response, 
+    # but we should at least return enough to satisfy PriceResponse
+    updated_price = map_id(updated_price)
+    
+    # Fill in names for the response
+    sp = await db.sellable_products.find_one({"id": updated_price.get("sellable_product_id")}) if updated_price.get("sellable_product_id") else None
+    product = None
+    supermarket = None
+    brand = None
+    
+    if sp:
+        product = await db.products.find_one({"id": sp["product_id"]})
+        supermarket = await db.supermarkets.find_one({"id": sp["supermarket_id"]})
+        brand = await db.brands.find_one({"id": sp["brand_id"]})
+    elif updated_price.get("product_id"):
+        product = await db.products.find_one({"id": updated_price["product_id"]})
+        supermarket = await db.supermarkets.find_one({"id": updated_price.get("supermarket_id")})
+        
+    user_info = await db.users.find_one({"id": updated_price["user_id"]})
+    
+    return PriceResponse(
+        **updated_price,
+        product_name=product["name"] if product else None,
+        supermarket_name=supermarket["name"] if supermarket else None,
+        brand_name=brand["name"] if brand else None,
+        user_name=user_info["name"] if user_info else None
+    )
+
+@router.delete("/prices/{price_id}")
+async def delete_price(price_id: str, user: dict = Depends(get_admin_user)):
+    result = await db.prices.delete_one({"id": price_id})
+    if result.deleted_count == 0:
+        try:
+            from bson import ObjectId
+            result = await db.prices.delete_one({"_id": ObjectId(price_id)})
+        except: pass
+        
+    if result.deleted_count == 0:
+        raise HTTPException(status_code=404, detail="Price not found")
+        
+    return {"message": "Price deleted successfully"}
+    
+@router.post("/prices/{price_id}/validate", response_model=PriceResponse)
+async def validate_price(price_id: str, user: dict = Depends(get_admin_user)):
+    # Toggle to valid
+    await db.prices.update_one({"id": price_id}, {"$set": {"status": "valid"}})
+    
+    price = await db.prices.find_one({"id": price_id})
+    if not price:
+        raise HTTPException(status_code=404, detail="Price not found")
+        
+    # Build response (similar to update_price)
+    from .admin import map_id
+    price = map_id(price)
+    
+    # We could optionally give points back, but user said "de momeot CONFIGURAR para que no hace falta validarlo (validos por defecto)"
+    # and only "desvalidarlos" has penalty.
+    
+    return PriceResponse(**price)
+
+@router.post("/prices/{price_id}/invalidate", response_model=PriceResponse)
+async def invalidate_price(price_id: str, reason: str = "Información incorrecta o spam", user: dict = Depends(get_admin_user)):
+    # Toggle to invalid
+    await db.prices.update_one({"id": price_id}, {"$set": {"status": "invalid"}})
+    
+    price = await db.prices.find_one({"id": price_id})
+    if not price:
+        raise HTTPException(status_code=404, detail="Price not found")
+        
+    # Penalty: Subtract points
+    penalty = -20
+    await add_points(price["user_id"], penalty, f"Reporte de precio invalidado: {reason}")
+    
+    # Notify user
+    await create_notification(
+        price["user_id"],
+        "Precio Invalidado",
+        f"Tu reporte de precio para un producto ha sido invalidado por un moderador. Se han restado {abs(penalty)} puntos de fidelidad.",
+        "warning"
+    )
+    
+    from .admin import map_id
+    return PriceResponse(**map_id(price))
+
