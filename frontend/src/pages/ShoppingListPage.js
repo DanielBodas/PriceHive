@@ -194,7 +194,7 @@ const getTutorialBubbleStyle = (step, rect) => {
 // ProgressRing component
 // ------------------------------------------------------------------
 
-const ProgressRing = ({ percent = 0, size = 44, stroke = 4, trackColor = "#e2e8f0", color = "#10b981" }) => {
+const ProgressRing = ({ percent = 0, size = 44, stroke = 4, trackColor = "#f1f5f9", color = "#f59e0b" }) => {
     const radius = (size - stroke) / 2;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (percent / 100) * circumference;
@@ -207,7 +207,8 @@ const ProgressRing = ({ percent = 0, size = 44, stroke = 4, trackColor = "#e2e8f
                     cx={size / 2}
                     cy={size / 2}
                     r={radius}
-                    stroke={color}
+                    stroke="currentColor"
+                    className="text-primary"
                     strokeWidth={stroke}
                     fill="none"
                     strokeDasharray={circumference}
@@ -823,7 +824,7 @@ const ShoppingListPage = () => {
                         </Button>
                         <Button
                             onClick={() => setDialogOpen(true)}
-                            className="h-10 gap-2 rounded-xl bg-white px-4 font-black text-emerald-700 shadow-lg hover:bg-emerald-50"
+                            className="h-10 gap-2 rounded-xl bg-white px-4 font-black text-primary shadow-lg hover:bg-slate-50"
                             data-testid="new-list-btn"
                         >
                             <Plus className="h-4 w-4" strokeWidth={3} />
@@ -844,9 +845,9 @@ const ShoppingListPage = () => {
                     <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-50">
                         <ShoppingCart className="h-8 w-8 text-emerald-500" />
                     </div>
-                    <p className="mt-5 text-lg font-bold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>Aun no tienes listas</p>
+                    <p className="mt-5 text-lg font-bold text-slate-950 font-heading">Aun no tienes listas</p>
                     <p className="mt-1 text-sm text-slate-500">Crea una lista por supermercado para ir recopilando precios.</p>
-                    <Button onClick={() => setDialogOpen(true)} className="mt-6 gap-2 rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600">
+                    <Button onClick={() => setDialogOpen(true)} className="mt-6 gap-2 rounded-2xl">
                         <Plus className="h-4 w-4" />
                         Crear mi primera lista
                     </Button>
@@ -869,7 +870,7 @@ const ShoppingListPage = () => {
                                 <button type="button" onClick={() => handleSelectList(list)} className="flex flex-1 flex-col p-5 text-left">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0 flex-1">
-                                            <h3 className="truncate text-lg font-bold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                            <h3 className="truncate text-lg font-black text-slate-900 font-heading tracking-tight">
                                                 {list.name}
                                             </h3>
                                             <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
@@ -931,7 +932,7 @@ const ShoppingListPage = () => {
                                     <button
                                         type="button"
                                         onClick={() => handleSelectList(list)}
-                                        className="ml-1 flex h-8 items-center gap-1 rounded-xl bg-emerald-500 px-3 text-xs font-bold text-white transition hover:bg-emerald-600"
+                                        className="ml-1 flex h-8 items-center gap-1 rounded-xl bg-primary px-3 text-xs font-bold text-primary-foreground transition hover:bg-primary/90"
                                     >
                                         Abrir
                                         <ArrowRight className="h-3.5 w-3.5" />
@@ -974,7 +975,7 @@ const ShoppingListPage = () => {
                         <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-4">
                                 <div className="min-w-0 flex-1">
-                                    <h2 className="truncate text-xs font-black uppercase tracking-widest text-slate-400" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                    <h2 className="truncate text-xs font-black uppercase tracking-widest text-slate-400 font-heading">
                                         {selectedList.supermarket_name}
                                     </h2>
                                     <div className="mt-0.5 flex items-baseline gap-2">
@@ -1003,7 +1004,7 @@ const ShoppingListPage = () => {
                             </div>
                             <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-100">
                                 <div
-                                    className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out shadow-[0_0_8px_rgba(16,185,129,0.4)]"
+                                    className="h-full rounded-full bg-primary transition-all duration-500 ease-out shadow-[0_0_8px_rgba(245,158,11,0.4)]"
                                     style={{ width: `${progressPct}%` }}
                                 />
                             </div>
@@ -1027,7 +1028,7 @@ const ShoppingListPage = () => {
                         </button>
                         <div className="h-4 w-[1px] bg-slate-200" />
                         <div className="min-w-0">
-                            <h2 className="truncate text-sm font-black text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
+                            <h2 className="truncate text-sm font-black text-slate-950 font-heading tracking-tight">
                                 {selectedList.name}
                             </h2>
                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
@@ -1052,7 +1053,7 @@ const ShoppingListPage = () => {
                             type="button"
                             onClick={() => handleSetListMode("shop")}
                             disabled={!totalItems}
-                            className="group flex h-9 items-center gap-2 rounded-xl bg-emerald-50 px-3 text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-30 disabled:hover:bg-emerald-50"
+                            className="group flex h-9 items-center gap-2 rounded-xl bg-primary/10 px-3 text-primary transition hover:bg-primary/20 disabled:opacity-30 disabled:hover:bg-primary/10"
                             aria-label="Ir al modo compra"
                         >
                             <span className="text-xs font-black uppercase tracking-wider">Comprar</span>
@@ -1159,8 +1160,8 @@ const ShoppingListPage = () => {
                                         listMode === "shop" ? "px-2.5 py-1" : "px-3 py-1.5"
                                     } ${
                                         active
-                                            ? "border-emerald-500 bg-emerald-500 text-white shadow-sm"
-                                            : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700"
+                                            ? "border-primary bg-primary text-primary-foreground shadow-sm"
+                                            : "border-slate-200 bg-white text-slate-600 hover:border-primary/30 hover:text-primary"
                                     }`}
                                     data-testid={`filter-${option.value}`}
                                 >
@@ -1196,13 +1197,13 @@ const ShoppingListPage = () => {
                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white shadow-sm">
                             <Package className="h-8 w-8 text-slate-400" />
                         </div>
-                        <p className="mt-5 text-lg font-bold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
-                            Lista vacia
+                        <p className="mt-5 text-lg font-bold text-slate-950 font-heading">
+                            Lista vacía
                         </p>
-                        <p className="mt-1 text-sm text-slate-500">Anade productos que vas a comprar en {selectedList.supermarket_name}</p>
+                        <p className="mt-1 text-sm text-slate-500">Añade productos que vas a comprar en {selectedList.supermarket_name}</p>
                         <Button
                             onClick={() => setAddItemDialogOpen(true)}
-                            className="mt-5 gap-2 rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600"
+                            className="mt-5 gap-2 rounded-2xl"
                         >
                             <Plus className="h-4 w-4" />
                             Anadir primer producto
@@ -1245,7 +1246,7 @@ const ShoppingListPage = () => {
                                             <Package className="h-5 w-5" />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <h3 className="truncate text-sm font-black text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                            <h3 className="truncate text-sm font-black text-slate-950 font-heading tracking-tight">
                                                 {item.product_name}
                                             </h3>
                                             <div className="mt-0.5 flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-tight">
@@ -1317,9 +1318,9 @@ const ShoppingListPage = () => {
                                     <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                                         {/* Product & Tags */}
                                         <div className="min-w-0 flex-1">
-                                            <h3 className={`truncate text-sm font-black transition-all ${
+                                            <h3 className={`truncate text-sm font-black transition-all font-heading tracking-tight ${
                                                 isPurchased ? "text-slate-400" : "text-slate-950"
-                                            }`} style={{ fontFamily: "Manrope, sans-serif" }}>
+                                            }`}>
                                                 {item.product_name}
                                             </h3>
                                             
@@ -1489,7 +1490,7 @@ const ShoppingListPage = () => {
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                 <DialogContent>
                     <DialogHeader>
-                        <DialogTitle style={{ fontFamily: "Manrope, sans-serif" }}>Crear nueva lista</DialogTitle>
+                        <DialogTitle className="font-heading">Crear nueva lista</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
                         <div className="space-y-2">
@@ -1514,7 +1515,7 @@ const ShoppingListPage = () => {
                         </div>
                         <Button
                             onClick={handleCreateList}
-                            className="w-full rounded-2xl bg-emerald-500 py-5 font-semibold text-white hover:bg-emerald-600"
+                            className="w-full rounded-2xl py-6 font-bold"
                             data-testid="create-list-btn"
                         >
                             Crear lista
@@ -1533,8 +1534,8 @@ const ShoppingListPage = () => {
             >
                 <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle style={{ fontFamily: "Manrope, sans-serif" }}>
-                            {editingItemIndex !== null ? "Editar producto" : "Anadir producto"}
+                        <DialogTitle className="font-heading">
+                            {editingItemIndex !== null ? "Editar producto" : "Añadir producto"}
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
@@ -1698,7 +1699,7 @@ const ShoppingListPage = () => {
                         <Button
                             onClick={handleAddItem}
                             disabled={!newItemUnit}
-                            className="w-full rounded-2xl bg-emerald-500 py-5 font-semibold text-white hover:bg-emerald-600"
+                            className="w-full rounded-2xl py-6 font-bold"
                         >
                             {editingItemIndex !== null ? "Guardar cambios" : "Anadir a la lista"}
                         </Button>
@@ -1710,7 +1711,7 @@ const ShoppingListPage = () => {
             <Dialog open={confirmEstimateOpen} onOpenChange={setConfirmEstimateOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-indigo-700" style={{ fontFamily: "Manrope, sans-serif" }}>
+                        <DialogTitle className="flex items-center gap-2 text-indigo-700 font-heading">
                             <Sparkles className="h-5 w-5" />
                             Calcular precios estimados
                         </DialogTitle>
@@ -1739,8 +1740,8 @@ const ShoppingListPage = () => {
             <Dialog open={finishSheetOpen} onOpenChange={setFinishSheetOpen}>
                 <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2" style={{ fontFamily: "Manrope, sans-serif" }}>
-                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                        <DialogTitle className="flex items-center gap-2 font-heading">
+                            <CheckCircle2 className="h-5 w-5 text-primary" />
                             Cerrar compra
                         </DialogTitle>
                     </DialogHeader>
@@ -1843,7 +1844,7 @@ const ShoppingListPage = () => {
             <Dialog open={confirmSubmitOpen} onOpenChange={setConfirmSubmitOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-emerald-700" style={{ fontFamily: "Manrope, sans-serif" }}>
+                        <DialogTitle className="flex items-center gap-2 text-primary font-heading">
                             <CheckCircle2 className="h-5 w-5" />
                             Confirmar subida
                         </DialogTitle>
@@ -1868,7 +1869,7 @@ const ShoppingListPage = () => {
             <Dialog open={productInsightOpen} onOpenChange={setProductInsightOpen}>
                 <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2" style={{ fontFamily: "Manrope, sans-serif" }}>
+                        <DialogTitle className="flex items-center gap-2 font-heading">
                             <Info className="h-5 w-5 text-sky-600" />
                             {productInsightItem?.product_name || "Producto"}
                         </DialogTitle>
@@ -1953,7 +1954,7 @@ const ShoppingListPage = () => {
             <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
                 <DialogContent className="max-w-sm">
                     <DialogHeader>
-                        <DialogTitle style={{ fontFamily: "Manrope, sans-serif" }}>Opciones de la lista</DialogTitle>
+                        <DialogTitle className="font-heading">Opciones de la lista</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-1.5 pt-2">
                         <button
@@ -2061,8 +2062,8 @@ const ShoppingListPage = () => {
                     >
                         <div className="mb-4 flex items-start justify-between gap-4">
                             <div>
-                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-500">Tutorial rapido</p>
-                                <h3 className="mt-2 text-lg font-semibold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Tutorial rapido</p>
+                                <h3 className="mt-2 text-lg font-semibold text-slate-950 font-heading">
                                     {tutorial.activeStep.title || "Guia rapida"}
                                 </h3>
                             </div>
@@ -2084,7 +2085,7 @@ const ShoppingListPage = () => {
                             </div>
                             <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                                 <div
-                                    className="h-full rounded-full bg-emerald-500 transition-all"
+                                    className="h-full rounded-full bg-primary transition-all"
                                     style={{ width: `${((tutorial.currentStep + 1) / tutorial.steps.length) * 100}%` }}
                                 />
                             </div>
@@ -2101,7 +2102,7 @@ const ShoppingListPage = () => {
                             </Button>
                             <Button
                                 onClick={nextStep}
-                                className="rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600"
+                                className="rounded-2xl"
                             >
                                 {tutorial.currentStep === tutorial.steps.length - 1 ? "Empezar" : "Siguiente"}
                             </Button>

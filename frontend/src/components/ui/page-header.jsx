@@ -2,7 +2,7 @@ import React from "react";
 
 /**
  * PageHeader - A reusable header component for the PriceHive app.
- * Inspired by the premium "Big Tech" aesthetic with emerald gradients.
+ * Inspired by the premium "Honey Tech" aesthetic with Amber gradients.
  */
 const PageHeader = ({ 
   title, 
@@ -12,23 +12,23 @@ const PageHeader = ({
   className = "" 
 }) => {
   return (
-    <div className={`relative overflow-hidden rounded-[24px] bg-gradient-to-br from-emerald-500 via-emerald-500 to-teal-600 p-5 text-white shadow-md sm:p-6 ${className}`}>
+    <div className={`relative overflow-hidden rounded-[2rem] bg-slate-900 p-6 text-white shadow-xl sm:p-8 ${className}`}>
         {/* Decorative elements */}
-        <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10" />
-        <div className="absolute -bottom-20 -left-12 h-56 w-56 rounded-full bg-white/5" />
+        <div className="absolute -right-16 -top-16 h-64 w-64 rounded-full bg-primary/20 blur-3xl" />
+        <div className="absolute -bottom-20 -left-12 h-64 w-64 rounded-full bg-primary/10 blur-3xl" />
 
-        <div className="relative flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div className="min-w-0">
                 {tag && (
-                    <p className="text-[9px] font-black uppercase tracking-[0.2em] text-emerald-100/90">
+                    <p className="text-[10px] font-black uppercase tracking-[0.2em] text-primary/80">
                         {tag}
                     </p>
                 )}
-                <h1 className="mt-0.5 text-2xl font-black leading-tight sm:text-3xl" style={{ fontFamily: "Manrope, sans-serif" }}>
+                <h1 className="mt-1 text-3xl font-black leading-tight sm:text-4xl font-heading tracking-tight">
                     {title}
                 </h1>
                 {subtitle && (
-                    <p className="mt-1 max-w-md text-xs font-semibold text-emerald-50/80">
+                    <p className="mt-2 max-w-lg text-sm font-medium text-slate-400 leading-relaxed">
                         {subtitle}
                     </p>
                 )}

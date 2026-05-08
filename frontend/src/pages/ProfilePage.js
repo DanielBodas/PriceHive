@@ -171,8 +171,8 @@ const ProfilePage = () => {
                     <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-5">
                         {/* avatar */}
                         <div className="relative shrink-0">
-                            <Avatar className="w-20 h-20 border-4 border-white/20 shadow-xl ring-4 ring-emerald-500/20">
-                                <AvatarFallback className="bg-emerald-600 text-white text-2xl font-black" style={{ fontFamily: "Manrope, sans-serif" }}>
+                            <Avatar className="w-20 h-20 border-4 border-white/20 shadow-xl ring-4 ring-primary/20">
+                                <AvatarFallback className="bg-primary text-primary-foreground text-2xl font-black font-heading">
                                     {user?.name?.charAt(0)?.toUpperCase() ?? "?"}
                                 </AvatarFallback>
                                 <AvatarImage src={user?.picture} />
@@ -187,11 +187,11 @@ const ProfilePage = () => {
                         {/* name */}
                         <div className="flex-1 text-center sm:text-left min-w-0">
                             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-0.5">
-                                <h1 className="text-xl sm:text-2xl font-black text-white truncate" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                <h1 className="text-xl sm:text-2xl font-black text-white truncate font-heading">
                                     {user?.name ?? "Usuario"}
                                 </h1>
                                 {user?.role === "admin" && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold uppercase tracking-widest">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold uppercase tracking-widest">
                                         <Shield className="w-3 h-3" /> Admin
                                     </span>
                                 )}
@@ -207,7 +207,7 @@ const ProfilePage = () => {
                         {/* stat pills */}
                         <div className="shrink-0 flex divide-x divide-white/10 rounded-2xl bg-white/5 border border-white/10">
                             {[
-                                { icon: Sparkles, label: "Puntos",      val: loading ? "—" : points.toLocaleString("es-ES"), color: "text-emerald-400" },
+                                { icon: Sparkles, label: "Puntos",      val: loading ? "—" : points.toLocaleString("es-ES"), color: "text-primary" },
                                 { icon: Trophy,   label: "Ranking",     val: loading ? "—" : rank ? `#${rank}` : "—",        color: "text-amber-400"  },
                                 { icon: Activity, label: "Movimientos", val: loading ? "—" : history.length,                 color: "text-slate-300"  },
                             ].map(({ icon: Icon, label, val, color }) => (
@@ -215,7 +215,7 @@ const ProfilePage = () => {
                                     <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1">
                                         <Icon className={`w-3 h-3 ${color}`} />{label}
                                     </span>
-                                    <span className={`text-lg sm:text-xl font-black ${color}`} style={{ fontFamily: "Manrope, sans-serif" }}>
+                                    <span className={`text-lg sm:text-xl font-black ${color} font-heading`}>
                                         {val}
                                     </span>
                                 </div>
@@ -237,15 +237,15 @@ const ProfilePage = () => {
                                     key={tab.id}
                                     data-testid={`tab-${tab.id}`}
                                     onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-colors whitespace-nowrap
+                                    className={`flex items-center gap-2 px-5 py-3.5 text-sm font-bold transition-colors whitespace-nowrap
                                         ${activeTab === tab.id
-                                            ? "text-emerald-700 border-b-2 border-emerald-500 bg-white -mb-px"
+                                            ? "text-slate-900 border-b-2 border-primary bg-white -mb-px"
                                             : "text-slate-500 hover:text-slate-700"
                                         }`}
                                 >
                                     {tab.label}
                                     {tab.badge && (
-                                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-bold">
+                                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-primary-foreground text-[10px] font-black">
                                             {tab.badge}
                                         </span>
                                     )}
@@ -459,19 +459,19 @@ const ProfilePage = () => {
                             <Sparkles className="h-4 w-4 text-emerald-500" />
                             <h3 className="text-sm font-bold text-slate-800">Niveles de reputacion</h3>
                         </div>
-                        <div className="mt-4 rounded-2xl bg-emerald-50 p-4">
+                        <div className="mt-4 rounded-2xl bg-primary/10 p-4 border border-primary/10">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-widest text-emerald-600">Tu nivel</p>
-                                    <p className="text-xl font-black text-emerald-800">{levelMeta.current.label}</p>
+                                    <p className="text-[10px] font-black uppercase tracking-widest text-primary/70">Tu nivel</p>
+                                    <p className="text-xl font-black text-primary font-heading leading-tight">{levelMeta.current.label}</p>
                                 </div>
-                                <p className="text-sm font-bold text-emerald-700 tabular-nums">{points.toLocaleString("es-ES")} pts</p>
+                                <p className="text-sm font-black text-primary tabular-nums">{points.toLocaleString("es-ES")} pts</p>
                             </div>
                             <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-                                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${levelMeta.progress}%` }} />
+                                <div className="h-full rounded-full bg-primary" style={{ width: `${levelMeta.progress}%` }} />
                             </div>
-                            <p className="mt-2 text-xs text-emerald-800">
-                                {levelMeta.next ? `${levelMeta.next.min - points} puntos para ${levelMeta.next.label}` : "Nivel maximo alcanzado."}
+                            <p className="mt-2 text-[10px] font-bold text-primary/80 uppercase tracking-wide">
+                                {levelMeta.next ? `${levelMeta.next.min - points} puntos para ${levelMeta.next.label}` : "Nivel máximo alcanzado."}
                             </p>
                         </div>
                         <div className="mt-3 space-y-2">

@@ -339,7 +339,7 @@ const AnalyticsPage = () => {
             return (
                 <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
                     <p className="text-sm text-slate-500 mb-1">{formatDateTime(label)}</p>
-                    <p className="font-mono font-semibold text-emerald-600">
+                    <p className="font-mono font-semibold text-primary">
                         {formatUnitPrice(data.unit_price, productAnalytics?.unit_name)}
                     </p>
                     {data.quantity && data.quantity !== 1 && (
@@ -362,8 +362,8 @@ const AnalyticsPage = () => {
         return productUnits.filter(pu => pu.product_id === selectedProduct);
     }, [selectedProduct, productUnits]);
 
-    // Color palette for bar chart
-    const BAR_COLORS = ["#10b981", "#34d399", "#6ee7b7", "#a7f3d0", "#059669", "#047857"];
+    // Color palette for bar chart - Aligned with brand (Amber/Slate)
+    const BAR_COLORS = ["#f59e0b", "#d97706", "#475569", "#64748b", "#fbbf24", "#334155"];
 
     return (
         <Layout>
@@ -482,7 +482,7 @@ const AnalyticsPage = () => {
                                 <Button 
                                     onClick={runAnalysis}
                                     disabled={analyticsLoading || !selectedProduct}
-                                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 gap-2"
+                                    className="flex-1 gap-2"
                                     data-testid="analyze-btn"
                                 >
                                     <TrendingUp className="w-4 h-4" />
@@ -627,9 +627,9 @@ const AnalyticsPage = () => {
                     {productAnalytics && (
                         <Card className="border-slate-200" data-testid="evolution-card">
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                                    <TrendingUp className="w-5 h-5 text-emerald-500" />
-                                    Evolucion de Precio
+                                <CardTitle className="flex items-center gap-2 font-heading">
+                                    <TrendingUp className="w-5 h-5 text-primary" />
+                                    Evolución de Precio
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -695,10 +695,10 @@ const AnalyticsPage = () => {
                                                     <Line 
                                                         type="monotone" 
                                                         dataKey="unit_price"
-                                                        stroke="#10b981" 
+                                                        stroke="#f59e0b"
                                                         strokeWidth={2}
-                                                        dot={{ fill: '#10b981', strokeWidth: 2 }}
-                                                        activeDot={{ r: 6, fill: '#10b981' }}
+                                                        dot={{ fill: '#f59e0b', strokeWidth: 2 }}
+                                                        activeDot={{ r: 6, fill: '#f59e0b' }}
                                                     />
                                                 </LineChart>
                                             </ResponsiveContainer>
@@ -721,9 +721,9 @@ const AnalyticsPage = () => {
                     {comparison && (
                         <Card className="border-slate-200" data-testid="comparison-card">
                             <CardHeader>
-                                <CardTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                                    <BarChart3 className="w-5 h-5 text-emerald-500" />
-                                    Comparacion por Supermercado
+                                <CardTitle className="flex items-center gap-2 font-heading">
+                                    <BarChart3 className="w-5 h-5 text-primary" />
+                                    Comparación por Supermercado
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -811,7 +811,7 @@ const AnalyticsPage = () => {
                                                         {comparisonSorted.map((entry, index) => (
                                                             <Cell 
                                                                 key={`cell-${index}`} 
-                                                                fill={index === 0 ? "#10b981" : BAR_COLORS[index % BAR_COLORS.length]}
+                                                                fill={index === 0 ? "#f59e0b" : BAR_COLORS[index % BAR_COLORS.length]}
                                                                 opacity={index === 0 ? 1 : 0.8}
                                                             />
                                                         ))}
@@ -879,7 +879,7 @@ const AnalyticsPage = () => {
                 {(productAnalytics || comparison) && (recommendations.length > 0 || (selectedVsBest && selectedSupermarketRow)) && (
                     <Card className="border-slate-200">
                         <CardHeader>
-                            <CardTitle className="text-lg" style={{ fontFamily: 'Manrope, sans-serif' }}>Recomendaciones y Hallazgos</CardTitle>
+                            <CardTitle className="text-lg font-heading">Recomendaciones y Hallazgos</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
                             {selectedVsBest && selectedSupermarketRow && (

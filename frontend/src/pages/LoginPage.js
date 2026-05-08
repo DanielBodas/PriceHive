@@ -48,21 +48,21 @@ const LoginPage = () => {
     return (
         <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6 py-12">
             <div className="w-full max-w-md">
-                <Link to="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 mb-8 transition-colors">
+                <Link to="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-primary mb-8 transition-colors font-bold text-sm uppercase tracking-wider">
                     <ArrowLeft className="w-4 h-4" />
                     Volver al inicio
                 </Link>
 
-                <Card className="border-slate-200 shadow-xl">
-                    <CardHeader className="text-center pb-2">
-                        <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center mx-auto mb-4">
-                            <Tag className="w-8 h-8 text-white" />
+                <Card className="border-slate-200 shadow-2xl rounded-[2rem] overflow-hidden">
+                    <CardHeader className="text-center pb-2 pt-10">
+                        <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-6 shadow-lg shadow-primary/20">
+                            <Tag className="w-8 h-8 text-primary-foreground" />
                         </div>
-                        <CardTitle className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                            Iniciar Sesión
+                        <CardTitle className="text-3xl font-black text-slate-900 font-heading tracking-tight">
+                            ¡Bienvenido!
                         </CardTitle>
-                        <CardDescription className="text-slate-500">
-                            Accede a tu cuenta de PriceHive
+                        <CardDescription className="text-slate-500 font-medium mt-2">
+                            Accede a la colmena de PriceHive
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="pt-6">
@@ -120,17 +120,17 @@ const LoginPage = () => {
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold btn-lift"
+                                className="w-full h-12 rounded-xl font-bold"
                                 data-testid="login-submit-btn"
                             >
                                 {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
                             </Button>
                         </form>
-                        <div className="mt-6 text-center">
-                            <p className="text-slate-600">
+                        <div className="mt-8 text-center pb-6">
+                            <p className="text-slate-500 text-sm font-medium">
                                 ¿No tienes cuenta?{" "}
-                                <Link to="/register" className="text-emerald-600 hover:text-emerald-700 font-medium">
-                                    Regístrate
+                                <Link to="/register" className="text-primary hover:underline font-bold">
+                                    Crea una ahora
                                 </Link>
                             </p>
                         </div>
