@@ -46,6 +46,22 @@ const getRankMeta = (rank) =>
 
 const PAGE_SIZE = 5;
 
+const LEVELS = [
+    { min: 0, label: "Nivel 1", perk: "Base: puedes subir precios y ganar creditos." },
+    { min: 100, label: "Nivel 2", perk: "Tus aportes pesan mas en la comunidad." },
+    { min: 300, label: "Nivel 3", perk: "Acceso visible a insignia de contribuidor fiable." },
+    { min: 700, label: "Nivel 4", perk: "Prioridad futura para revisar precios dudosos." },
+    { min: 1500, label: "Nivel Elite", perk: "Feature especial futura: acceso anticipado a herramientas pro." },
+];
+
+const getLevelMeta = (points) => {
+    const current = [...LEVELS].reverse().find((level) => points >= level.min) || LEVELS[0];
+    const currentIndex = LEVELS.findIndex((level) => level.label === current.label);
+    const next = LEVELS[currentIndex + 1] || null;
+    const progress = next ? Math.min(100, Math.round(((points - current.min) / (next.min - current.min)) * 100)) : 100;
+    return { current, next, progress };
+};
+
 // ─── small components ─────────────────────────────────────────────────────────
 
 const Skeleton = ({ className = "" }) => (
@@ -131,6 +147,7 @@ const ProfilePage = () => {
     const points      = pointsData?.points ?? user?.points ?? 0;
     const rank        = pointsData?.rank ?? null;
     const rankMeta    = rank ? getRankMeta(rank) : null;
+    const levelMeta   = getLevelMeta(points);
     const unreadCount = notifications.filter((n) => !n.read).length;
     const history     = pointsData?.history ?? [];
 
@@ -371,7 +388,8 @@ const ProfilePage = () => {
                     </div>
 
                     {/* ── Right: leaderboard (1/3) ─────────────────────────── */}
-                    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden order-1 lg:order-2">
+                    <div className="space-y-5 order-1 lg:order-2">
+                    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
                         <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
                             <Trophy className="w-4 h-4 text-amber-500" />
                             <h3 className="text-sm font-bold text-slate-800">Top Contribuidores</h3>
@@ -434,6 +452,43 @@ const ProfilePage = () => {
                                 </div>
                             );
                         })()}
+                    </div>
+
+                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
+                        <div className="flex items-center gap-2">
+                            <Sparkles className="h-4 w-4 text-emerald-500" />
+                            <h3 className="text-sm font-bold text-slate-800">Niveles de reputacion</h3>
+                        </div>
+                        <div className="mt-4 rounded-2xl bg-emerald-50 p-4">
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-xs font-bold uppercase tracking-widest text-emerald-600">Tu nivel</p>
+                                    <p className="text-xl font-black text-emerald-800">{levelMeta.current.label}</p>
+                                </div>
+                                <p className="text-sm font-bold text-emerald-700 tabular-nums">{points.toLocaleString("es-ES")} pts</p>
+                            </div>
+                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
+                                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${levelMeta.progress}%` }} />
+                            </div>
+                            <p className="mt-2 text-xs text-emerald-800">
+                                {levelMeta.next ? `${levelMeta.next.min - points} puntos para ${levelMeta.next.label}` : "Nivel maximo alcanzado."}
+                            </p>
+                        </div>
+                        <div className="mt-3 space-y-2">
+                            {LEVELS.map((level) => (
+                                <div key={level.label} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                                    <div className="flex items-center justify-between gap-2">
+                                        <p className="text-sm font-bold text-slate-800">{level.label}</p>
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{level.min}+ pts</span>
+                                    </div>
+                                    <p className="mt-0.5 text-xs text-slate-500">{level.perk}</p>
+                                </div>
+                            ))}
+                        </div>
+                        <p className="mt-3 text-[11px] text-slate-400">
+                            Creditos y reputacion son distintos: los creditos se gastan para consultar/estimar precios; la reputacion mide confianza y progreso.
+                        </p>
+                    </div>
                     </div>
                 </div>
             </div>

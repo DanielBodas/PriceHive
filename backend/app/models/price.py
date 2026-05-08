@@ -21,6 +21,8 @@ class PriceResponse(BaseModel):
     user_id: str
     user_name: Optional[str] = None
     status: str = "valid"
+    anomaly_score: Optional[float] = None
+    anomaly_reason: Optional[str] = None
     created_at: str
 
 

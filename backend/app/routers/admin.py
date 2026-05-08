@@ -856,10 +856,13 @@ async def get_all_prices(
     page: int = 1, 
     page_size: int = 50, 
     search: Optional[str] = None, 
+    status: Optional[str] = None,
     user: dict = Depends(get_admin_user)
 ):
     skip = (page - 1) * page_size
     query = {}
+    if status:
+        query["status"] = status
     
     if search:
         # Search in product name, user name or supermarket name is tricky because they are in other collections

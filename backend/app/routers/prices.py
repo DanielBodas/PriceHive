@@ -6,6 +6,7 @@ from datetime import datetime, timezone
 from ..core.database import db
 from ..core.auth import get_current_user, add_points, add_credits, create_notification
 from ..models.price import PriceCreate, PriceResponse
+from ..utils.price_check import analyze_price_anomaly
 
 router = APIRouter(prefix="/prices", tags=["prices"])
 
@@ -23,6 +24,15 @@ async def create_price(data: PriceCreate, user: dict = Depends(get_current_user)
         {"_id": 0},
         sort=[("created_at", -1)]
     )
+    
+    recent_prices_cursor = db.prices.find(query, {"_id": 0, "price": 1}).sort("created_at", -1).limit(5)
+    recent_prices = [p["price"] for p in await recent_prices_cursor.to_list(5)]
+    
+    user_doc = await db.users.find_one({"id": user["id"]})
+    user_points = user_doc.get("points", 0) if user_doc else 0
+    
+    anomaly = analyze_price_anomaly(data.price, recent_prices, user_points)
+    initial_status = "suspicious" if anomaly["is_suspicious"] else "active"
 
     price_id = str(uuid.uuid4())
     created_at = datetime.now(timezone.utc).isoformat()
@@ -32,7 +42,9 @@ async def create_price(data: PriceCreate, user: dict = Depends(get_current_user)
         "quantity": data.quantity,
         "user_id": user["id"],
         "created_at": created_at,
-        "status": "active"
+        "status": initial_status,
+        "anomaly_score": anomaly["confidence_score"],
+        "anomaly_reason": anomaly["reason"]
     }
 
     if data.sellable_product_id:

@@ -189,7 +189,10 @@ async def get_pulse(user: dict = Depends(get_current_user)):
         prices_24h = await db.prices.count_documents({"status": {"$ne": "invalid"}, "created_at": {"$gte": since_24h}})
         prices_7d = await db.prices.count_documents({"status": {"$ne": "invalid"}, "created_at": {"$gte": since_7d}})
         posts_7d = await db.posts.count_documents({"created_at": {"$gte": since_7d}})
-        active_users_7d = len(await db.prices.distinct("user_id", {"created_at": {"$gte": since_7d}}))
+        price_users = await db.prices.distinct("user_id", {"created_at": {"$gte": since_7d}})
+        post_users = await db.posts.distinct("user_id", {"created_at": {"$gte": since_7d}})
+        comment_users = await db.comments.distinct("user_id", {"created_at": {"$gte": since_7d}})
+        active_users_7d = len({uid for uid in [*price_users, *post_users, *comment_users] if uid})
 
         return {
             "prices_24h": prices_24h,

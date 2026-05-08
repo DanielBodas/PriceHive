@@ -10,14 +10,10 @@ import { Input } from "../components/ui/input";
 import { toast } from "sonner";
 import {
     Trophy,
-    ShoppingCart,
     MessageCircle,
-    BarChart3,
     Heart,
     Send,
-    TrendingUp,
     TrendingDown,
-    ChevronRight,
     Crown,
     Bell,
     Sparkles,
@@ -26,7 +22,6 @@ import {
     AlertTriangle,
     Lightbulb,
     Megaphone,
-    Zap,
     Activity,
     ThumbsUp,
     Users,
@@ -52,6 +47,11 @@ const timeAgo = (iso) => {
     if (diff < 86400) return `hace ${Math.floor(diff / 3600)}h`;
     if (diff < 604800) return `hace ${Math.floor(diff / 86400)}d`;
     return d.toLocaleDateString("es-ES", { day: "numeric", month: "short" });
+};
+
+const formatPrice = (value) => {
+    if (value === null || value === undefined) return "-";
+    return `${Number(value).toFixed(2)}€`;
 };
 
 const getInitials = (name) => {
@@ -394,38 +394,34 @@ const Composer = ({ onPosted }) => {
    Main Dashboard
    ────────────────────────────────────────────── */
 
-const Dashboard = () => {
-    const { user } = useAuth();
+const DashboardLegacy = () => {
     const navigate = useNavigate();
-
-    const [userData, setUserData] = useState(null);
+    const { user } = useAuth();
+    const [userData] = useState(null);
+    const leaderboard = [];
+    const notifications = [];
     const [posts, setPosts] = useState([]);
-    const [leaderboard, setLeaderboard] = useState([]);
     const [trending, setTrending] = useState([]);
     const [bestDeals, setBestDeals] = useState([]);
     const [pulse, setPulse] = useState(null);
-    const [notifications, setNotifications] = useState([]);
+    const [generalStats, setGeneralStats] = useState(null);
     const [filter, setFilter] = useState("all"); // all | update | price_alert | tip
     const [loading, setLoading] = useState(true);
 
     const fetchAll = async () => {
         try {
-            const [userRes, postsRes, lbRes, trRes, bdRes, pulseRes, notifRes] = await Promise.all([
-                axios.get(`${API}/my-points`),
+            const [postsRes, trRes, bdRes, pulseRes, statsRes] = await Promise.all([
                 axios.get(`${API}/posts`),
-                axios.get(`${API}/leaderboard?limit=5`),
                 axios.get(`${API}/community/trending?limit=5`).catch(() => ({ data: [] })),
                 axios.get(`${API}/community/best-deals?limit=5`).catch(() => ({ data: [] })),
                 axios.get(`${API}/community/pulse`).catch(() => ({ data: null })),
-                axios.get(`${API}/notifications`).catch(() => ({ data: [] })),
+                axios.get(`${API}/analytics/stats`).catch(() => ({ data: null })),
             ]);
-            setUserData(userRes.data);
             setPosts(postsRes.data);
-            setLeaderboard(lbRes.data);
             setTrending(trRes.data);
             setBestDeals(bdRes.data);
             setPulse(pulseRes.data);
-            setNotifications((notifRes.data || []).slice(0, 4));
+            setGeneralStats(statsRes.data);
         } catch (e) {
             console.error(e);
         } finally {
@@ -472,38 +468,61 @@ const Dashboard = () => {
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
 
                     {/* ── HEADER WELCOME ── */}
-                    <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-6">
+                    <div className="flex flex-col gap-2 mb-5">
                         <div>
                             <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-                                Hola, <span className="text-emerald-500">{user?.name?.split(" ")[0]}</span> 👋
+                                Dashboard
                             </h1>
-                            <p className="text-slate-500 text-sm mt-1">Descubre qué está pasando en la comunidad</p>
+                            <p className="text-slate-500 text-sm mt-1">Pulso de precios y conversación de la comunidad en un vistazo.</p>
                         </div>
                         {pulse && (
-                            <div className="flex items-center gap-2 flex-wrap">
+                            <div className="hidden">
                                 <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm">
                                     <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-xs font-bold text-slate-500">EN VIVO</span>
+                                    <span className="text-xs font-bold text-slate-500">DATOS REALES</span>
                                 </div>
                                 <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm">
                                     <Tag className="w-4 h-4 text-emerald-500" />
                                     <span className="text-xs font-bold text-slate-900">{pulse.prices_24h}</span>
-                                    <span className="text-xs text-slate-500">precios hoy</span>
+                                    <span className="text-xs text-slate-500">precios 24h</span>
                                 </div>
                                 <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm">
                                     <Users className="w-4 h-4 text-sky-500" />
                                     <span className="text-xs font-bold text-slate-900">{pulse.active_users_7d}</span>
-                                    <span className="text-xs text-slate-500">activos</span>
+                                    <span className="text-xs text-slate-500">usuarios 7d</span>
+                                </div>
+                                <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm">
+                                    <MessageCircle className="w-4 h-4 text-amber-500" />
+                                    <span className="text-xs font-bold text-slate-900">{pulse.posts_7d}</span>
+                                    <span className="text-xs text-slate-500">posts 7d</span>
                                 </div>
                             </div>
                         )}
                     </div>
 
                     {/* ── 3-COLUMN LAYOUT ── */}
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
+                        {[
+                            { label: "Precios 24h", value: pulse?.prices_24h || 0, icon: Tag, color: "text-emerald-600", bg: "bg-emerald-50" },
+                            { label: "Usuarios 7d", value: pulse?.active_users_7d || 0, icon: Users, color: "text-sky-600", bg: "bg-sky-50" },
+                            { label: "Posts 7d", value: pulse?.posts_7d || 0, icon: MessageCircle, color: "text-amber-600", bg: "bg-amber-50" },
+                            { label: "Productos", value: generalStats?.total_products || 0, icon: Store, color: "text-indigo-600", bg: "bg-indigo-50" },
+                        ].map((item) => (
+                            <Card key={item.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                                <div className={`w-9 h-9 rounded-xl ${item.bg} flex items-center justify-center mb-3`}>
+                                    <item.icon className={`w-4 h-4 ${item.color}`} />
+                                </div>
+                                <p className="text-2xl font-extrabold text-slate-900 tabular-nums">{item.value}</p>
+                                <p className="text-xs font-semibold text-slate-500 mt-0.5">{item.label}</p>
+                            </Card>
+                        ))}
+                    </div>
+
                     <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
 
                         {/* LEFT SIDEBAR */}
-                        <aside className="lg:col-span-3 space-y-4 order-2 lg:order-1">
+                        {false && (
+                        <aside className="hidden">
                             {/* Profile card */}
                             <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 border-none rounded-2xl p-5 text-white shadow-lg">
                                 <div className="flex items-center gap-3">
@@ -535,43 +554,34 @@ const Dashboard = () => {
                                         />
                                     </div>
                                 </div>
-                                <Button
-                                    onClick={() => navigate("/profile")}
-                                    className="w-full mt-4 bg-white/20 hover:bg-white/30 backdrop-blur-sm text-white border-none rounded-full text-xs font-bold h-9"
-                                >
-                                    Ver mi perfil
-                                    <ChevronRight className="w-3.5 h-3.5 ml-1" />
-                                </Button>
                             </Card>
 
-                            {/* Quick nav */}
-                            <Card className="bg-white border border-slate-100 rounded-2xl p-3 shadow-sm">
-                                <SectionTitle icon={Zap} title="Acceso rápido" />
-                                <div className="space-y-1">
-                                    {[
-                                        { icon: ShoppingCart, label: "Mi Lista", color: "text-emerald-600", bg: "bg-emerald-50", to: "/shopping-list" },
-                                        { icon: BarChart3, label: "Análisis", color: "text-indigo-600", bg: "bg-indigo-50", to: "/analytics" },
-                                        { icon: Bell, label: "Alertas", color: "text-rose-600", bg: "bg-rose-50", to: "/alerts" },
-                                        { icon: Trophy, label: "Mi Perfil", color: "text-amber-600", bg: "bg-amber-50", to: "/profile" },
-                                    ].map((item) => (
-                                        <button
-                                            key={item.to}
-                                            onClick={() => navigate(item.to)}
-                                            className="w-full flex items-center gap-3 px-2 py-2 rounded-xl hover:bg-slate-50 transition-colors group text-left"
-                                        >
-                                            <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${item.bg}`}>
-                                                <item.icon className={`w-4 h-4 ${item.color}`} />
+                            {/* Points history */}
+                            <Card className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                                <SectionTitle icon={Trophy} title="Tus últimos puntos" accent="text-amber-500" />
+                                {!userData?.history?.length ? (
+                                    <p className="text-xs text-slate-400 px-1 py-2">Aún no hay movimientos de puntos.</p>
+                                ) : (
+                                    <div className="space-y-3">
+                                        {userData.history.slice(0, 4).map((entry, idx) => (
+                                            <div key={`${entry.created_at}-${idx}`} className="flex items-start gap-3">
+                                                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
+                                                    +{entry.points}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-semibold text-slate-700 leading-snug">{entry.reason}</p>
+                                                    <p className="text-[10px] text-slate-400 mt-0.5">{timeAgo(entry.created_at)}</p>
+                                                </div>
                                             </div>
-                                            <span className="text-sm font-semibold text-slate-700 flex-1">{item.label}</span>
-                                            <ChevronRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 group-hover:translate-x-0.5 transition-all" />
-                                        </button>
-                                    ))}
-                                </div>
+                                        ))}
+                                    </div>
+                                )}
                             </Card>
                         </aside>
+                        )}
 
                         {/* CENTER FEED */}
-                        <div className="lg:col-span-6 space-y-4 order-1 lg:order-2">
+                        <div className="lg:col-span-8 space-y-4">
                             <Composer onPosted={refreshPosts} />
 
                             {/* Filter tabs */}
@@ -617,7 +627,48 @@ const Dashboard = () => {
                         </div>
 
                         {/* RIGHT SIDEBAR */}
-                        <aside className="lg:col-span-3 space-y-4 order-3">
+                        <aside className="lg:col-span-4 space-y-4">
+                            {/* Real data summary */}
+                            {generalStats && (
+                                <Card className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                                    <SectionTitle icon={Tag} title="Datos registrados" accent="text-emerald-500" />
+                                    <div className="grid grid-cols-2 gap-2">
+                                        {[
+                                            { label: "Productos", value: generalStats.total_products },
+                                            { label: "Precios", value: generalStats.total_prices },
+                                            { label: "Tiendas", value: generalStats.total_supermarkets },
+                                            { label: "Usuarios", value: generalStats.total_users },
+                                        ].map((item) => (
+                                            <div key={item.label} className="rounded-xl bg-slate-50 px-3 py-2">
+                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{item.label}</p>
+                                                <p className="text-lg font-extrabold text-slate-900 tabular-nums">{item.value || 0}</p>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Card>
+                            )}
+
+                            {/* Recent prices */}
+                            {generalStats?.recent_activity?.length > 0 && (
+                                <Card className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                                    <SectionTitle icon={Clock} title="Últimos precios" accent="text-sky-500" />
+                                    <div className="space-y-2.5">
+                                        {generalStats.recent_activity.slice(0, 4).map((item, idx) => (
+                                            <div key={`${item.created_at}-${idx}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
+                                                <div className="w-9 h-9 rounded-xl bg-sky-50 flex items-center justify-center flex-shrink-0">
+                                                    <Tag className="w-4 h-4 text-sky-500" />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-sm font-bold text-slate-900 truncate">{item.product_name}</p>
+                                                    <p className="text-[11px] text-slate-500 truncate">{item.supermarket_name} · {timeAgo(item.created_at)}</p>
+                                                </div>
+                                                <span className="text-sm font-extrabold text-slate-900 tabular-nums">{formatPrice(item.price)}</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                </Card>
+                            )}
+
                             {/* Trending */}
                             <Card className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
                                 <SectionTitle
@@ -693,7 +744,7 @@ const Dashboard = () => {
                             </Card>
 
                             {/* Leaderboard */}
-                            <Card className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
+                            <Card className="hidden">
                                 <SectionTitle
                                     icon={Crown}
                                     title="Top contribuidores"
@@ -774,4 +825,304 @@ const Dashboard = () => {
     );
 };
 
+const Dashboard = () => {
+    const { user } = useAuth();
+    const navigate = useNavigate();
+    const [posts, setPosts] = useState([]);
+    const [trending, setTrending] = useState([]);
+    const [bestDeals, setBestDeals] = useState([]);
+    const [pulse, setPulse] = useState(null);
+    const [generalStats, setGeneralStats] = useState(null);
+    const [filter, setFilter] = useState("all");
+    const [loading, setLoading] = useState(true);
+
+    const fetchAll = async () => {
+        try {
+            const [postsRes, trRes, bdRes, pulseRes, statsRes] = await Promise.all([
+                axios.get(`${API}/posts`),
+                axios.get(`${API}/community/trending?limit=5`).catch(() => ({ data: [] })),
+                axios.get(`${API}/community/best-deals?limit=5`).catch(() => ({ data: [] })),
+                axios.get(`${API}/community/pulse`).catch(() => ({ data: null })),
+                axios.get(`${API}/analytics/stats`).catch(() => ({ data: null })),
+            ]);
+            setPosts(postsRes.data);
+            setTrending(trRes.data);
+            setBestDeals(bdRes.data);
+            setPulse(pulseRes.data);
+            setGeneralStats(statsRes.data);
+        } catch (e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+
+    useEffect(() => {
+        fetchAll();
+    }, []);
+
+    const handleReact = async (postId, reactionType) => {
+        try {
+            const res = await axios.post(`${API}/posts/${postId}/react`, { reaction_type: reactionType });
+            setPosts((ps) => ps.map((p) => (p.id === postId ? { ...p, reactions: res.data.reactions } : p)));
+        } catch {
+            toast.error("Error al reaccionar");
+        }
+    };
+
+    const refreshPosts = async () => {
+        try {
+            const res = await axios.get(`${API}/posts`);
+            setPosts(res.data);
+        } catch { /* ignore */ }
+    };
+
+    const filteredPosts = filter === "all" ? posts : posts.filter((p) => p.post_type === filter);
+
+    const filterTabs = [
+        { key: "all", label: "Todo", icon: Sparkles },
+        { key: "update", label: "General", icon: Megaphone },
+        { key: "price_alert", label: "Alertas", icon: AlertTriangle },
+        { key: "tip", label: "Consejos", icon: Lightbulb },
+    ];
+
+    const quickNavItems = [
+        { path: "/dashboard", label: "Inicio", icon: Activity },
+        { path: "/shopping-list", label: "Lista de Compra", icon: Tag },
+        { path: "/analytics", label: "Análisis", icon: TrendingDown },
+        { path: "/alerts", label: "Notificaciones", icon: Bell },
+        { path: "/profile", label: "Mi Perfil", icon: Crown },
+    ];
+
+    return (
+        <Layout>
+            <div style={{ margin: "-2rem -1rem 0", minHeight: "100vh", background: "#f8fafc" }}>
+                <div style={{ maxWidth: 1200, margin: "0 auto", padding: "1.5rem 1rem" }}>
+                    
+                    {/* Slim Brand Banner */}
+                    <div style={{ 
+                        background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", 
+                        borderRadius: 24, 
+                        padding: "1rem 2rem", 
+                        color: "white", 
+                        marginBottom: "1.5rem", 
+                        position: "relative", 
+                        overflow: "hidden", 
+                        boxShadow: "0 10px 15px -3px rgba(16, 185, 129, 0.15)",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "space-between"
+                    }}>
+                        <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
+                        <div style={{ position: "relative", zIndex: 1 }}>
+                            <p style={{ margin: 0, fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.8 }}>Comunidad</p>
+                            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, fontFamily: "Manrope, sans-serif" }}>Dashboard</h1>
+                        </div>
+                        <div style={{ position: "relative", zIndex: 1, textAlign: "right" }}>
+                            <p style={{ margin: 0, fontSize: 13, fontWeight: 500, opacity: 0.9 }}>Pulso de precios y conversación real de PriceHive.</p>
+                        </div>
+                    </div>
+
+                    <div style={{ display: "grid", gridTemplateColumns: "240px 1fr 280px", gap: "1.5rem", alignItems: "start" }}>
+
+                        {/* ── LEFT SIDEBAR ── */}
+                        <aside style={{ position: "sticky", top: "3.5rem" }}>
+                            {/* User card */}
+                            <div style={{ background: "white", borderRadius: 20, padding: "1rem", border: "1px solid #e2e8f0", marginBottom: "0.75rem" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
+                                    <Avatar name={user?.name} picture={user?.picture} size="md" />
+                                    <div style={{ minWidth: 0 }}>
+                                        <p style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.name}</p>
+                                        <p style={{ fontSize: 11, color: "#94a3b8", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email}</p>
+                                    </div>
+                                </div>
+                                <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem", background: "#f0fdf4", borderRadius: 12, padding: "0.5rem 0.75rem" }}>
+                                    <Trophy style={{ width: 14, height: 14, color: "#f59e0b", flexShrink: 0 }} />
+                                    <span style={{ fontSize: 13, fontWeight: 700, color: "#065f46", fontVariantNumeric: "tabular-nums" }}>{user?.points || 0}</span>
+                                    <span style={{ fontSize: 11, color: "#6ee7b7" }}>puntos</span>
+                                </div>
+                            </div>
+
+                            {/* Quick nav */}
+                            <div style={{ background: "white", borderRadius: 20, padding: "0.5rem", border: "1px solid #e2e8f0", marginBottom: "0.75rem" }}>
+                                {quickNavItems.map((item) => (
+                                    <button
+                                        key={item.path}
+                                        onClick={() => navigate(item.path)}
+                                        style={{ display: "flex", alignItems: "center", gap: "0.75rem", width: "100%", padding: "0.625rem 0.75rem", borderRadius: 14, border: "none", background: "transparent", cursor: "pointer", color: "#475569", fontSize: 13, fontWeight: 600, transition: "all 0.15s" }}
+                                        onMouseEnter={e => { e.currentTarget.style.background = "#f0fdf4"; e.currentTarget.style.color = "#059669"; }}
+                                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#475569"; }}
+                                    >
+                                        <item.icon style={{ width: 16, height: 16, flexShrink: 0 }} />
+                                        <span>{item.label}</span>
+                                    </button>
+                                ))}
+                            </div>
+
+                            {/* Community pulse */}
+                            {pulse && (
+                                <div style={{ background: "white", borderRadius: 20, padding: "0.875rem", border: "1px solid #e2e8f0" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
+                                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", display: "inline-block", boxShadow: "0 0 0 3px #d1fae5", animation: "pulse 2s infinite" }} />
+                                        <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>Pulso en vivo</span>
+                                    </div>
+                                    {[
+                                        { label: "Precios hoy", value: pulse.prices_24h || 0, color: "#059669" },
+                                        { label: "Usuarios activos (7d)", value: pulse.active_users_7d || 0, color: "#0284c7" },
+                                        { label: "Posts esta semana", value: pulse.posts_7d || 0, color: "#d97706" },
+                                    ].map((s) => (
+                                        <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.375rem 0", borderBottom: "1px solid #f1f5f9" }}>
+                                            <span style={{ fontSize: 12, color: "#64748b" }}>{s.label}</span>
+                                            <span style={{ fontSize: 14, fontWeight: 800, color: s.color, fontVariantNumeric: "tabular-nums" }}>{s.value}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </aside>
+
+                        {/* ── CENTER FEED ── */}
+                        <main>
+                            {/* Feed header */}
+                            <div style={{ position: "sticky", top: "3rem", zIndex: 10, background: "rgba(248,250,252,0.92)", backdropFilter: "blur(12px)", paddingBottom: "0.75rem", marginBottom: "0.5rem" }}>
+                                <h1 style={{ fontSize: 18, fontWeight: 900, color: "#0f172a", margin: "0 0 0.75rem", fontFamily: "Manrope, sans-serif" }}>Actividad reciente</h1>
+                                <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", paddingBottom: "2px" }}>
+                                    {filterTabs.map((t) => {
+                                        const active = filter === t.key;
+                                        return (
+                                            <button
+                                                key={t.key}
+                                                onClick={() => setFilter(t.key)}
+                                                style={{
+                                                    display: "inline-flex", alignItems: "center", gap: "0.375rem",
+                                                    padding: "0.375rem 0.875rem", borderRadius: 999, border: "none",
+                                                    fontWeight: 700, fontSize: 12, whiteSpace: "nowrap", cursor: "pointer", transition: "all 0.15s",
+                                                    background: active ? "#0f172a" : "white",
+                                                    color: active ? "white" : "#475569",
+                                                    boxShadow: active ? "0 2px 8px rgba(15,23,42,0.18)" : "0 0 0 1px #e2e8f0",
+                                                }}
+                                            >
+                                                <t.icon style={{ width: 13, height: 13 }} />
+                                                {t.label}
+                                            </button>
+                                        );
+                                    })}
+                                </div>
+                            </div>
+
+                            {/* Composer */}
+                            <div style={{ marginBottom: "1rem" }}>
+                                <Composer onPosted={refreshPosts} />
+                            </div>
+
+                            {/* Posts */}
+                            {loading ? (
+                                <div style={{ padding: "5rem 0", textAlign: "center" }}>
+                                    <Sparkles style={{ width: 32, height: 32, color: "#6ee7b7", margin: "0 auto 0.75rem" }} />
+                                    <p style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>Cargando publicaciones…</p>
+                                </div>
+                            ) : filteredPosts.length === 0 ? (
+                                <div style={{ background: "white", borderRadius: 20, border: "2px dashed #e2e8f0", padding: "3rem", textAlign: "center" }}>
+                                    <MessageCircle style={{ width: 40, height: 40, color: "#cbd5e1", margin: "0 auto 0.75rem" }} />
+                                    <p style={{ fontWeight: 700, color: "#475569", margin: "0 0 0.25rem" }}>Nada por aquí todavía</p>
+                                    <p style={{ fontSize: 13, color: "#94a3b8", margin: 0 }}>Sé el primero en compartir un hallazgo</p>
+                                </div>
+                            ) : (
+                                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                    {filteredPosts.map((post) => (
+                                        <PostCard key={post.id} post={post} onReact={handleReact} />
+                                    ))}
+                                </div>
+                            )}
+                        </main>
+
+                        {/* ── RIGHT SIDEBAR ── */}
+                        <aside style={{ position: "sticky", top: "3.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+
+                            {/* Trending */}
+                            <div style={{ background: "white", borderRadius: 20, padding: "1rem", border: "1px solid #e2e8f0" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
+                                    <Flame style={{ width: 15, height: 15, color: "#f97316" }} />
+                                    <h2 style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", margin: 0 }}>Tendencias</h2>
+                                </div>
+                                {trending.length === 0 ? (
+                                    <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>Sin tendencias aún</p>
+                                ) : trending.map((t, idx) => (
+                                    <div key={idx} style={{ display: "flex", gap: "0.625rem", alignItems: "flex-start", padding: "0.5rem 0", borderBottom: idx < trending.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                                        <span style={{ minWidth: 20, height: 20, borderRadius: 8, background: "#fff7ed", color: "#f97316", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{idx + 1}</span>
+                                        <div style={{ minWidth: 0 }}>
+                                            <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", margin: "0 0 0.125rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.product_name}</p>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", flexWrap: "wrap" }}>
+                                                <span style={{ fontSize: 11, color: "#64748b" }}>{t.supermarket_name}</span>
+                                                <span style={{ fontSize: 11, fontWeight: 700, color: "#0f172a" }}>{t.last_price?.toFixed(2)}€</span>
+                                                {t.delta_pct !== 0 && (
+                                                    <span style={{ fontSize: 10, fontWeight: 700, color: t.delta_pct < 0 ? "#059669" : "#e11d48" }}>
+                                                        {t.delta_pct > 0 ? "+" : ""}{t.delta_pct}%
+                                                    </span>
+                                                )}
+                                            </div>
+                                            <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", marginTop: "0.125rem" }}>
+                                                <Activity style={{ width: 10, height: 10, color: "#f97316" }} />
+                                                <span style={{ fontSize: 10, fontWeight: 700, color: "#f97316" }}>{t.count} registros</span>
+                                            </div>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Best deals */}
+                            <div style={{ background: "white", borderRadius: 20, padding: "1rem", border: "1px solid #e2e8f0" }}>
+                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
+                                    <TrendingDown style={{ width: 15, height: 15, color: "#10b981" }} />
+                                    <h2 style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", margin: 0, flex: 1 }}>Mejores ofertas</h2>
+                                    <span style={{ fontSize: 10, fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.08em" }}>Hoy</span>
+                                </div>
+                                {bestDeals.length === 0 ? (
+                                    <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>Sin ofertas detectadas</p>
+                                ) : bestDeals.map((d, idx) => (
+                                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.5rem 0", borderBottom: idx < bestDeals.length - 1 ? "1px solid #f1f5f9" : "none" }}>
+                                        <div style={{ width: 32, height: 32, borderRadius: 10, background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                            <ArrowDown style={{ width: 14, height: 14, color: "#10b981" }} />
+                                        </div>
+                                        <div style={{ minWidth: 0, flex: 1 }}>
+                                            <p style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.product_name}</p>
+                                            <p style={{ fontSize: 11, color: "#64748b", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.supermarket_name}</p>
+                                        </div>
+                                        <div style={{ textAlign: "right", flexShrink: 0 }}>
+                                            <p style={{ fontSize: 13, fontWeight: 800, color: "#059669", margin: 0, fontVariantNumeric: "tabular-nums" }}>{d.current_price?.toFixed(2)}€</p>
+                                            <p style={{ fontSize: 10, fontWeight: 700, color: "#10b981", margin: 0 }}>{d.delta_pct}%</p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+
+                            {/* Recent prices */}
+                            {generalStats?.recent_activity?.length > 0 && (
+                                <div style={{ background: "white", borderRadius: 20, padding: "1rem", border: "1px solid #e2e8f0" }}>
+                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
+                                        <Clock style={{ width: 15, height: 15, color: "#0284c7" }} />
+                                        <h2 style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", margin: 0 }}>Últimos precios</h2>
+                                    </div>
+                                    {generalStats.recent_activity.slice(0, 5).map((item, idx) => (
+                                        <div key={`${item.created_at}-${idx}`} style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.5rem 0", borderBottom: idx < 4 ? "1px solid #f1f5f9" : "none" }}>
+                                            <div style={{ width: 32, height: 32, borderRadius: 10, background: "#f0f9ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
+                                                <Tag style={{ width: 14, height: 14, color: "#0284c7" }} />
+                                            </div>
+                                            <div style={{ minWidth: 0, flex: 1 }}>
+                                                <p style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.product_name}</p>
+                                                <p style={{ fontSize: 11, color: "#64748b", margin: 0 }}>{item.supermarket_name} · {timeAgo(item.created_at)}</p>
+                                            </div>
+                                            <span style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{formatPrice(item.price)}</span>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
+                        </aside>
+                    </div>
+                </div>
+            </div>
+        </Layout>
+    );
+};
+
 export default Dashboard;
+

@@ -37,7 +37,8 @@ import {
     Download,
     Upload,
     CheckCircle,
-    XCircle
+    XCircle,
+    ArrowRight
 } from "lucide-react";
 
 
@@ -56,8 +57,17 @@ const AdminPage = () => {
     const [sellableProducts, setSellableProducts] = useState([]);
     const [brandCatalog, setBrandCatalog] = useState([]);
     const [pricesData, setPricesData] = useState({ items: [], total: 0, page: 1, total_pages: 1 });
+    const [priceStatusFilter, setPriceStatusFilter] = useState("suspicious");
     const [loadingPrices, setLoadingPrices] = useState(false);
     const [loading, setLoading] = useState(true);
+
+    // Navigation state
+    const [activeMainTab, setActiveMainTab] = useState("overview");
+    const [activeMaestrosTab, setActiveMaestrosTab] = useState("products");
+    const [activeCatalogosTab, setActiveCatalogosTab] = useState("sellable");
+
+    // Audit fix filters
+    const [showOnlyProductsWithoutImage, setShowOnlyProductsWithoutImage] = useState(false);
 
 
 
@@ -148,11 +158,11 @@ const AdminPage = () => {
 
 
 
-    const fetchPrices = useCallback(async (page = 1, searchQuery = "") => {
+    const fetchPrices = useCallback(async (page = 1, searchQuery = "", status = "suspicious") => {
         setLoadingPrices(true);
         try {
             const res = await axios.get(`${API}/admin/prices`, {
-                params: { page, page_size: 50, search: searchQuery }
+                params: { page, page_size: 50, search: searchQuery, status: status === "all" ? null : status }
             });
             setPricesData(res.data);
         } catch (error) {
@@ -185,9 +195,9 @@ const AdminPage = () => {
             setSellableProducts(sellableRes.data);
             setBrandCatalog(catalogRes.data);
             setAllProductUnits(productUnitsRes.data || []);
-            
+
             // Initial prices fetch
-            fetchPrices(1);
+            fetchPrices(1, "", priceStatusFilter);
 
         } catch (error) {
             console.error("Error fetching data:", error);
@@ -195,7 +205,7 @@ const AdminPage = () => {
         } finally {
             setLoading(false);
         }
-    }, [fetchPrices]);
+    }, [fetchPrices, priceStatusFilter]);
 
     useEffect(() => {
         fetchAllData();
@@ -204,7 +214,6 @@ const AdminPage = () => {
 
     const getFilteredProducts = (text) => {
         const q = (text || "").toLowerCase().trim();
-
         if (!q) return products;
         return products.filter((p) =>
             (p.name || "").toLowerCase().includes(q) ||
@@ -212,6 +221,13 @@ const AdminPage = () => {
             (p.category_name || "").toLowerCase().includes(q)
         );
     };
+
+    const filteredProductsTable = products.filter(p => {
+        const matchesSearch = (p.name || "").toLowerCase().includes(productTableSearch.toLowerCase()) ||
+            (p.category_name || "").toLowerCase().includes(productTableSearch.toLowerCase());
+        const matchesGapFilter = showOnlyProductsWithoutImage ? (!p.image_url || p.image_url.trim() === "") : true;
+        return matchesSearch && matchesGapFilter;
+    });
 
     const filteredCategoriesTable = categories.filter((c) => {
         const q = (categoryTableSearch || "").toLowerCase().trim();
@@ -229,7 +245,7 @@ const AdminPage = () => {
             (a.description || "").toLowerCase().includes(q)
         );
     });
-    const filteredProductsTable = getFilteredProducts(productTableSearch);
+
     const filteredBrandsTable = brands.filter((b) => {
         const q = (brandTableSearch || "").toLowerCase().trim();
         if (!q) return true;
@@ -433,6 +449,15 @@ const AdminPage = () => {
             return acc;
         }, {})
     ).sort((a, b) => b.count - a.count || a.name.localeCompare(b.name));
+
+    const gaps = {
+        productsWithoutImage: products.filter(p => !p.image_url || p.image_url.trim() === "").length,
+        productsWithoutCategory: products.filter(p => !p.category_id).length,
+        brandsWithoutLogo: brands.filter(b => !b.logo_url || b.logo_url.trim() === "").length,
+        supermarketsWithoutLogo: supermarkets.filter(s => !s.logo_url || s.logo_url.trim() === "").length,
+        missingUnits: products.length - relationConfiguredProductsCount,
+        unmappedSellables: sellableWithoutBrandCatalogCount
+    };
 
     const getCatalogStatusMeta = (status) => {
         if (status === "active") return { label: "Activo", className: "bg-emerald-100 text-emerald-700 border border-emerald-200" };
@@ -861,30 +886,6 @@ const AdminPage = () => {
                         </h1>
                         <p className="text-slate-500 mt-1">Gestión avanzada del sistema</p>
                     </div>
-                    <div className="flex gap-2">
-                        <Button 
-                            variant="outline" 
-                            onClick={() => setModerationDialog(true)}
-                            className="bg-rose-50 border-rose-100 text-rose-700 hover:bg-rose-100 h-10 gap-2 font-semibold shadow-sm relative"
-                        >
-                            <ShieldAlert className="w-4 h-4" /> 
-                            Moderación
-                            {pricesData.total > 0 && (
-                                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] px-1 rounded-full border-2 border-white">
-                                    {pricesData.total}
-                                </span>
-                            )}
-                        </Button>
-                        <Button 
-                            variant="outline" 
-                            onClick={() => setSystemDialog(true)}
-                            className="bg-white border-slate-200 text-slate-700 hover:bg-slate-50 hover:text-emerald-700 hover:border-emerald-200 h-10 gap-2 font-semibold shadow-sm transition-all"
-                        >
-                            <Database className="w-4 h-4" /> 
-                            Base de Datos
-                        </Button>
-                    </div>
-
                 </div>
 
                 {systemLoading && (
@@ -899,8 +900,19 @@ const AdminPage = () => {
                     </div>
                 )}
 
-                <Tabs defaultValue="catalogos" className="space-y-6">
+                <Tabs value={activeMainTab} onValueChange={setActiveMainTab} className="space-y-6">
                     <TabsList className="bg-slate-100 p-1 flex-wrap h-auto">
+                        <TabsTrigger value="moderacion" className="gap-2 data-[state=active]:bg-white relative">
+                            <ShieldAlert className="w-4 h-4 text-rose-500" /> Moderación
+                            {pricesData.total > 0 && priceStatusFilter === "suspicious" && (
+                                <span className="absolute -top-1 -right-1 bg-rose-500 text-white text-[10px] px-1.5 py-0.5 rounded-full border-2 border-white font-bold leading-none animate-pulse">
+                                    {pricesData.total}
+                                </span>
+                            )}
+                        </TabsTrigger>
+                        <TabsTrigger value="sistema" className="gap-2 data-[state=active]:bg-white">
+                            <Database className="w-4 h-4 text-emerald-600" /> Sincronización
+                        </TabsTrigger>
                         <TabsTrigger value="maestros" className="gap-2 data-[state=active]:bg-white">
                             <Package className="w-4 h-4" /> Datos Base
                         </TabsTrigger>
@@ -911,9 +923,9 @@ const AdminPage = () => {
                             <Layers className="w-4 h-4" /> Vision General
                         </TabsTrigger>
                     </TabsList>
-    
+
                     <TabsContent value="maestros" className="space-y-6">
-                        <Tabs defaultValue="categories">
+                        <Tabs value={activeMaestrosTab} onValueChange={setActiveMaestrosTab}>
 
                             <TabsList className="bg-slate-50 border p-1 mb-4 flex-wrap h-auto">
                                 <TabsTrigger value="categories" className="gap-2" data-testid="tab-categories"><Layers className="w-4 h-4" /> Categorias</TabsTrigger>
@@ -935,14 +947,30 @@ const AdminPage = () => {
                                             </div>
                                             <Button onClick={() => { setEditingItem(null); setProductForm({ name: "", brand_id: "", category_id: "", unit_id: "", barcode: "", image_url: "" }); setProductDialog(true); }} className="bg-emerald-500" data-testid="new-product-btn"><Plus className="w-4 h-4 mr-2" /> Nuevo Producto</Button>
                                         </div>
-                                        <div className="relative">
-                                            <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                            <Input value={productTableSearch} onChange={(e) => setProductTableSearch(e.target.value)} placeholder="Buscar por producto, marca o categoria" className="pl-9" />
+                                        <div className="flex flex-col gap-3">
+                                            <div className="relative flex-1">
+                                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                                                <Input value={productTableSearch} onChange={(e) => setProductTableSearch(e.target.value)} placeholder="Buscar por producto, marca o categoria" className="pl-9" />
+                                            </div>
+                                            <div className="flex items-center gap-2">
+                                                <Checkbox
+                                                    id="prod-gap-img"
+                                                    checked={showOnlyProductsWithoutImage}
+                                                    onCheckedChange={setShowOnlyProductsWithoutImage}
+                                                />
+                                                <Label htmlFor="prod-gap-img" className="text-xs text-slate-500 cursor-pointer">Mostrar solo productos sin imagen</Label>
+                                            </div>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-0">
+                                    <CardContent className="px-6 pb-6 pt-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Concepto de Producto</TableHead><TableHead>Categoria</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="pl-0">Concepto de Producto</TableHead>
+                                                    <TableHead>Categoria</TableHead>
+                                                    <TableHead className="w-24 text-right pr-0">Acciones</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
                                             <TableBody>
                                                 {filteredProductsTable.map(p => (
                                                     <TableRow key={p.id}>
@@ -958,7 +986,7 @@ const AdminPage = () => {
                                                             )}
                                                         </TableCell>
                                                         <TableCell>{p.category_name}</TableCell>
-                                                        <TableCell className="flex justify-end gap-1 pr-4">
+                                                        <TableCell className="text-right pr-0 flex justify-end gap-1">
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingItem(p); setProductForm({ ...p, attribute_values: p.attribute_values || {} }); setProductDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteProduct(p.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
@@ -985,9 +1013,16 @@ const AdminPage = () => {
                                             <Input value={attributeTableSearch} onChange={(e) => setAttributeTableSearch(e.target.value)} placeholder="Buscar atributo" className="pl-9" />
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-0">
+                                    <CardContent className="px-6 pb-6 pt-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Descripción</TableHead><TableHead>Valores</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="pl-0">Nombre</TableHead>
+                                                    <TableHead>Descripción</TableHead>
+                                                    <TableHead>Valores</TableHead>
+                                                    <TableHead className="w-24 text-right pr-0">Acciones</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
                                             <TableBody>
                                                 {filteredAttributesTable.map(a => (
                                                     <TableRow key={a.id}>
@@ -998,7 +1033,7 @@ const AdminPage = () => {
                                                                 {a.values?.map((v, i) => <Badge key={i} variant="secondary" className="text-[10px]">{v}</Badge>)}
                                                             </div>
                                                         </TableCell>
-                                                        <TableCell className="flex justify-end gap-1 pr-4">
+                                                        <TableCell className="text-right pr-0 flex justify-end gap-1">
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingItem(a); setAttributeForm({ ...a, values: a.values || [] }); setAttributeDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteAttribute(a.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
@@ -1025,14 +1060,19 @@ const AdminPage = () => {
                                             <Input value={brandTableSearch} onChange={(e) => setBrandTableSearch(e.target.value)} placeholder="Buscar marca" className="pl-9" />
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-0">
+                                    <CardContent className="px-6 pb-6 pt-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="pl-0">Nombre</TableHead>
+                                                    <TableHead className="w-24 text-right pr-0">Acciones</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
                                             <TableBody>
                                                 {filteredBrandsTable.map(b => (
                                                     <TableRow key={b.id}>
                                                         <TableCell className="font-medium">{b.name}</TableCell>
-                                                        <TableCell className="flex justify-end gap-1 pr-4">
+                                                        <TableCell className="text-right pr-0 flex justify-end gap-1">
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingItem(b); setBrandForm(b); setBrandDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteBrand(b.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
@@ -1059,14 +1099,19 @@ const AdminPage = () => {
                                             <Input value={supermarketTableSearch} onChange={(e) => setSupermarketTableSearch(e.target.value)} placeholder="Buscar supermercado" className="pl-9" />
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-0">
+                                    <CardContent className="px-6 pb-6 pt-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="pl-0">Nombre</TableHead>
+                                                    <TableHead className="w-24 text-right pr-0">Acciones</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
                                             <TableBody>
                                                 {filteredSupermarketsTable.map(s => (
                                                     <TableRow key={s.id}>
                                                         <TableCell className="font-medium">{s.name}</TableCell>
-                                                        <TableCell className="flex justify-end gap-1 pr-4">
+                                                        <TableCell className="text-right pr-0 flex justify-end gap-1">
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingItem(s); setSupermarketForm(s); setSupermarketDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteSupermarket(s.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
@@ -1093,15 +1138,21 @@ const AdminPage = () => {
                                             <Input value={unitTableSearch} onChange={(e) => setUnitTableSearch(e.target.value)} placeholder="Buscar unidad o abreviatura" className="pl-9" />
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="p-0">
+                                    <CardContent className="px-6 pb-6 pt-0">
                                         <Table>
-                                            <TableHeader><TableRow><TableHead>Nombre</TableHead><TableHead>Abreviatura</TableHead><TableHead className="w-24 text-right pr-4">Acciones</TableHead></TableRow></TableHeader>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="pl-0">Nombre</TableHead>
+                                                    <TableHead>Abreviatura</TableHead>
+                                                    <TableHead className="w-24 text-right pr-0">Acciones</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
                                             <TableBody>
                                                 {filteredUnitsTable.map(u => (
                                                     <TableRow key={u.id}>
                                                         <TableCell className="font-medium">{u.name}</TableCell>
                                                         <TableCell className="font-mono">{u.abbreviation}</TableCell>
-                                                        <TableCell className="flex justify-end gap-1 pr-4">
+                                                        <TableCell className="text-right pr-0 flex justify-end gap-1">
                                                             <Button variant="ghost" size="icon" onClick={() => { setEditingItem(u); setUnitForm(u); setUnitDialog(true); }}><Pencil className="w-4 h-4" /></Button>
                                                             <Button variant="ghost" size="icon" onClick={() => handleDeleteUnit(u.id)} className="text-rose-600"><Trash2 className="w-4 h-4" /></Button>
                                                         </TableCell>
@@ -1151,7 +1202,7 @@ const AdminPage = () => {
 
                     {/* SECCIÓN CATÁLOGOS */}
                     <TabsContent value="catalogos" className="space-y-6">
-                        <Tabs defaultValue="sellable" className="space-y-4">
+                        <Tabs value={activeCatalogosTab} onValueChange={setActiveCatalogosTab} className="space-y-4">
                             <TabsList className="bg-slate-50 border p-1 mb-4 h-auto flex-wrap">
                                 <TabsTrigger value="sellable" className="gap-2" data-testid="tab-sellable"><Store className="w-4 h-4" /> Catalogo Supermercado</TabsTrigger>
                                 <TabsTrigger value="brand-cat" className="gap-2" data-testid="tab-brand-catalog"><Tag className="w-4 h-4" /> Catalogo Marca</TabsTrigger>
@@ -1208,7 +1259,7 @@ const AdminPage = () => {
                                                                                 <p className="text-[10px] text-slate-400 font-medium uppercase tracking-wider">{brand.products_count} productos operativos</p>
                                                                             </div>
                                                                         </div>
-                                                                         <div className="flex flex-col gap-1 items-end">
+                                                                        <div className="flex flex-col gap-1 items-end">
                                                                             <Button
                                                                                 variant="ghost"
                                                                                 size="icon"
@@ -1286,7 +1337,7 @@ const AdminPage = () => {
                                                                 <span className="font-semibold text-slate-800">{brand.name}</span>
                                                                 <Badge variant="secondary" className="bg-slate-100 text-slate-600">{brand.products_count} productos</Badge>
                                                             </div>
-                                                             <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
+                                                            <div className="flex items-center gap-2" onClick={(e) => e.stopPropagation()}>
                                                                 <Button
                                                                     size="sm"
                                                                     variant="outline"
@@ -1379,11 +1430,10 @@ const AdminPage = () => {
                                                                                                             {attr.values?.map(val => (
                                                                                                                 <div
                                                                                                                     key={val}
-                                                                                                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs cursor-pointer transition-all ${
-                                                                                                                        product.allowed_attributes?.[attrId]?.includes(val)
-                                                                                                                        ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
-                                                                                                                        : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
-                                                                                                                    }`}
+                                                                                                                    className={`flex items-center gap-1.5 px-2 py-1 rounded-md border text-xs cursor-pointer transition-all ${product.allowed_attributes?.[attrId]?.includes(val)
+                                                                                                                            ? 'bg-emerald-50 border-emerald-200 text-emerald-700 shadow-sm'
+                                                                                                                            : 'bg-white border-slate-200 text-slate-400 hover:border-slate-300'
+                                                                                                                        }`}
                                                                                                                     onClick={async (e) => {
                                                                                                                         e.stopPropagation();
                                                                                                                         const current = product.allowed_attributes?.[attrId] || [];
@@ -1434,11 +1484,10 @@ const AdminPage = () => {
                                                                                                             fetchAllData();
                                                                                                         } catch (e) { toast.error("Error"); }
                                                                                                     }}
-                                                                                                    className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold transition-colors ${
-                                                                                                        product.status === st
-                                                                                                        ? 'bg-slate-800 text-white'
-                                                                                                        : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
-                                                                                                    }`}
+                                                                                                    className={`px-2 py-0.5 rounded text-[9px] uppercase font-bold transition-colors ${product.status === st
+                                                                                                            ? 'bg-slate-800 text-white'
+                                                                                                            : 'bg-slate-100 text-slate-400 hover:bg-slate-200'
+                                                                                                        }`}
                                                                                                 >
                                                                                                     {st === 'active' ? 'Activo' : st === 'planned' ? 'Planeado' : 'Desc.'}
                                                                                                 </button>
@@ -1551,275 +1600,384 @@ const AdminPage = () => {
                                             </label>
                                         </div>
                                     </CardHeader>
-                                    <CardContent className="space-y-3">
-                                        {filteredRelationProducts.length === 0 && (
-                                            <div className="text-sm text-slate-500 border rounded-lg p-6 bg-slate-50">No hay productos para este filtro.</div>
-                                        )}
-                                        {filteredRelationProducts.map((p) => (
-                                            <div key={p.id} className="rounded-lg border px-4 py-3 flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                                                <div className="space-y-2">
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        <span className="font-medium text-slate-800">{p.name}</span>
-                                                        <Badge variant="outline">{p.category_name || "Sin categoria"}</Badge>
-                                                        {p.linked_brands?.length > 0 && (
-                                                            <div className="flex items-center gap-1">
-                                                                <span className="text-[10px] text-slate-400 ml-2">Marcas:</span>
-                                                                {p.linked_brands.map(b => <Badge key={b} variant="ghost" className="text-[9px] h-4 px-1 border-slate-100">{b}</Badge>)}
+                                    <CardContent className="px-6 pb-6 pt-0">
+                                        <Table>
+                                            <TableHeader>
+                                                <TableRow>
+                                                    <TableHead className="pl-0">Producto</TableHead>
+                                                    <TableHead>Categoría</TableHead>
+                                                    <TableHead>Unidades Vinculadas</TableHead>
+                                                    <TableHead className="text-right pr-0">Acciones</TableHead>
+                                                </TableRow>
+                                            </TableHeader>
+                                            <TableBody>
+                                                {filteredRelationProducts.map((p) => (
+                                                    <TableRow key={p.id}>
+                                                        <TableCell>
+                                                            <div className="flex flex-col">
+                                                                <span className="font-bold text-slate-800">{p.name}</span>
+                                                                {p.linked_brands?.length > 0 && (
+                                                                    <div className="flex items-center gap-1 mt-1">
+                                                                        <span className="text-[10px] text-slate-400">Marcas:</span>
+                                                                        {p.linked_brands.slice(0, 3).map(b => <Badge key={b} variant="ghost" className="text-[9px] h-4 px-1 border-slate-100">{b}</Badge>)}
+                                                                        {p.linked_brands.length > 3 && <span className="text-[9px] text-slate-400">+{p.linked_brands.length - 3}</span>}
+                                                                    </div>
+                                                                )}
                                                             </div>
-                                                        )}
-                                                    </div>
-                                                    <div className="flex items-center gap-2 flex-wrap">
-                                                        {(unitNamesByProduct[p.id] || []).map((u) => (
-                                                            <Badge key={`${p.id}-${u.unit_id}`} variant="secondary" className="text-xs">{u.unit_name}</Badge>
-                                                        ))}
-                                                        {(unitNamesByProduct[p.id] || []).length === 0 && (
-                                                            <span className="text-xs text-slate-500">Sin unidades configuradas</span>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                                <Button variant="outline" size="sm" onClick={() => openProductUnitDialog(p.id)}>
-                                                    <Pencil className="w-4 h-4 mr-2" /> Editar unidades
-                                                </Button>
-                                            </div>
-                                        ))}
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <Badge variant="secondary" className="bg-slate-50 text-slate-500 border-slate-200">{p.category_name || "Sin categoría"}</Badge>
+                                                        </TableCell>
+                                                        <TableCell>
+                                                            <div className="flex flex-wrap gap-1">
+                                                                {(unitNamesByProduct[p.id] || []).map((u) => (
+                                                                    <Badge key={`${p.id}-${u.unit_id}`} variant="outline" className="text-[10px] bg-blue-50/50 text-blue-600 border-blue-100">{u.unit_name}</Badge>
+                                                                ))}
+                                                                {(unitNamesByProduct[p.id] || []).length === 0 && (
+                                                                    <span className="text-xs text-rose-400 italic font-medium flex items-center gap-1"><ShieldAlert className="w-3 h-3" /> Sin configurar</span>
+                                                                )}
+                                                            </div>
+                                                        </TableCell>
+                                                        <TableCell className="text-right pr-0">
+                                                            <Button variant="ghost" size="sm" className="h-8 text-emerald-600 hover:text-emerald-700 hover:bg-emerald-50" onClick={() => openProductUnitDialog(p.id)}>
+                                                                <Pencil className="w-3.5 h-3.5 mr-1.5" /> Editar
+                                                            </Button>
+                                                        </TableCell>
+                                                    </TableRow>
+                                                ))}
+                                                {filteredRelationProducts.length === 0 && (
+                                                    <TableRow>
+                                                        <TableCell colSpan={4} className="h-24 text-center text-slate-400 italic">No hay productos que coincidan con el filtro.</TableCell>
+                                                    </TableRow>
+                                                )}
+                                            </TableBody>
+                                        </Table>
                                     </CardContent>
                                 </Card>
                             </TabsContent>
                         </Tabs>
                     </TabsContent>
 
-            {/* Diálogo de Moderación (FUERA DE TABS) */}
-            <Dialog open={moderationDialog} onOpenChange={setModerationDialog}>
-                <DialogContent className="max-w-6xl max-h-[90vh] overflow-y-auto">
-                    <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-2xl font-bold">
-                            <ShieldAlert className="w-6 h-6 text-rose-500" />
-                            Moderación de Precios Reportados
-                        </DialogTitle>
-                    </DialogHeader>
-
-                    <Card className="border-rose-100 mt-4">
-                        <CardHeader className="space-y-4 bg-rose-50/30">
-                            <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+                    <TabsContent value="moderacion" className="space-y-6">
+                        <Card className="flex flex-col bg-slate-50 border-slate-200 overflow-hidden shadow-sm min-h-[600px]">
+                            <div className="p-6 pb-4 border-b bg-white flex flex-col md:flex-row md:items-center justify-between gap-4 sticky top-0 z-10">
                                 <div>
-                                    <p className="text-sm text-slate-500">
-                                        Gestiona {pricesData.total} reportes de la comunidad. {loadingPrices && <RefreshCw className="w-3 h-3 animate-spin inline ml-2" />}
-                                    </p>
-                                </div>
-                                <div className="flex gap-2">
-                                    <Button variant="outline" size="sm" onClick={() => fetchPrices(pricesData.page)}>
-                                        <RefreshCw className={`w-4 h-4 mr-2 ${loadingPrices ? 'animate-spin' : ''}`} /> Actualizar
-                                    </Button>
-                                </div>
-                            </div>
-                            <div className="relative">
-                                <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                                <Input 
-                                    placeholder="Buscar reportes..." 
-                                    className="pl-9 bg-white border-slate-200"
-                                    value={priceTableSearch}
-                                    onChange={(e) => {
-                                        setPriceTableSearch(e.target.value);
-                                    }}
-                                    onKeyDown={(e) => {
-                                        if (e.key === 'Enter') fetchPrices(1, priceTableSearch);
-                                    }}
-                                />
-                                <Button 
-                                    size="sm" 
-                                    className="absolute right-1 top-1/2 -translate-y-1/2 h-8 bg-slate-900"
-                                    onClick={() => fetchPrices(1, priceTableSearch)}
-                                >
-                                    Buscar
-                                </Button>
-                            </div>
-                        </CardHeader>
-                        <CardContent className="pt-6">
-                            <div className="rounded-md border border-slate-100 overflow-hidden shadow-sm bg-white">
-                                <Table>
-                                    <TableHeader className="bg-slate-50/50">
-                                        <TableRow>
-                                            <TableHead>Fecha</TableHead>
-                                            <TableHead>Producto</TableHead>
-                                            <TableHead>Súper / Marca</TableHead>
-                                            <TableHead className="text-right">Precio</TableHead>
-                                            <TableHead className="text-right">Cant.</TableHead>
-                                            <TableHead>Usuario</TableHead>
-                                            <TableHead className="w-24 text-right">Acciones</TableHead>
-                                        </TableRow>
-                                    </TableHeader>
-                                    <TableBody>
-                                        {pricesData.items.map((p) => (
-                                            <TableRow key={p.id} className="hover:bg-slate-50/50 transition-colors">
-                                                <TableCell className="text-[11px] text-slate-500 font-mono">
-                                                    {new Date(p.created_at).toLocaleDateString()} {new Date(p.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                                                </TableCell>
-                                                <TableCell className="font-semibold text-slate-900">{p.product_name || "Producto desconocido"}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col">
-                                                        <span className="text-sm font-medium text-slate-700">{p.supermarket_name || "Supermercado desconocido"}</span>
-                                                        <span className="text-[10px] text-emerald-600 font-bold uppercase tracking-widest">{p.brand_name || "Marca genérica"}</span>
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-right font-bold text-slate-900">{p.price.toFixed(2)}€</TableCell>
-                                                <TableCell className="text-right text-slate-600">{p.quantity}</TableCell>
-                                                <TableCell>
-                                                    <div className="flex flex-col gap-1">
-                                                        <Badge variant="secondary" className="text-[10px] font-medium bg-slate-100 text-slate-600 border-none w-fit">
-                                                            {p.user_name || "User..."}
-                                                        </Badge>
-                                                        {p.status === "invalid" ? (
-                                                            <Badge className="text-[9px] bg-rose-50 text-rose-600 border-rose-100 border w-fit">INVALIDADO</Badge>
-                                                        ) : (
-                                                            <Badge className="text-[9px] bg-emerald-50 text-emerald-600 border-emerald-100 border w-fit">VÁLIDO</Badge>
-                                                        )}
-                                                    </div>
-                                                </TableCell>
-                                                <TableCell className="text-right">
-                                                    <div className="flex justify-end gap-1">
-                                                        {p.status === "invalid" ? (
-                                                            <Button 
-                                                                size="icon" 
-                                                                variant="ghost" 
-                                                                className="h-8 w-8 text-emerald-500 hover:text-emerald-700 hover:bg-emerald-50"
-                                                                title="Validar"
-                                                                onClick={() => handleValidatePrice(p.id)}
-                                                            >
-                                                                <CheckCircle className="h-4 w-4" />
-                                                            </Button>
-                                                        ) : (
-                                                            <Button 
-                                                                size="icon" 
-                                                                variant="ghost" 
-                                                                className="h-8 w-8 text-rose-400 hover:text-rose-600 hover:bg-rose-50"
-                                                                title="Invalidar"
-                                                                onClick={() => handleInvalidatePrice(p.id)}
-                                                            >
-                                                                <XCircle className="h-4 w-4" />
-                                                            </Button>
-                                                        )}
-
-                                                        <Button 
-                                                            size="icon" 
-                                                            variant="ghost" 
-                                                            className="h-8 w-8 text-slate-400 hover:text-blue-600 hover:bg-blue-50"
-                                                            onClick={() => {
-                                                                setEditingItem(p);
-                                                                setPriceForm({ price: p.price, quantity: p.quantity });
-                                                                setPriceDialog(true);
-                                                            }}
-                                                        >
-                                                            <Pencil className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                        <Button 
-                                                            size="icon" 
-                                                            variant="ghost" 
-                                                            className="h-8 w-8 text-slate-400 hover:text-rose-600 hover:bg-rose-50"
-                                                            onClick={() => handleDeletePrice(p.id)}
-                                                        >
-                                                            <Trash2 className="h-3.5 w-3.5" />
-                                                        </Button>
-                                                    </div>
-                                                </TableCell>
-                                            </TableRow>
-                                        ))}
-                                        {pricesData.items.length === 0 && (
-                                            <TableRow>
-                                                <TableCell colSpan={7} className="h-32 text-center text-slate-400 italic">
-                                                    No se han encontrado reportes de precios.
-                                                </TableCell>
-                                            </TableRow>
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </div>
-
-                            {/* Pagination */}
-                            <div className="flex items-center justify-between mt-6">
-                                <p className="text-xs text-slate-500">
-                                    Mostrando {pricesData.items.length} de {pricesData.total} reportes
-                                </p>
-                                <div className="flex items-center gap-2">
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        disabled={pricesData.page <= 1 || loadingPrices}
-                                        onClick={() => fetchPrices(pricesData.page - 1, priceTableSearch)}
-                                    >
-                                        Anterior
-                                    </Button>
-                                    <div className="text-xs font-medium text-slate-600 px-3 py-1 bg-slate-50 rounded border">
-                                        Página {pricesData.page} de {pricesData.total_pages}
+                                    <h2 className="flex items-center gap-3 text-2xl font-bold text-slate-800">
+                                        <div className="p-2 bg-rose-100 text-rose-600 rounded-xl border border-rose-200 shadow-sm">
+                                            <ShieldAlert className="w-6 h-6" />
+                                        </div>
+                                        Centro de Moderación
+                                    </h2>
+                                    <div className="flex items-center gap-2 mt-2">
+                                        <p className="text-sm text-slate-500">Mostrando {pricesData.total} reportes</p>
+                                        <div className="flex p-0.5 bg-slate-100 rounded-lg border border-slate-200 ml-4">
+                                            {[
+                                                { id: "suspicious", label: "Pendientes", color: "text-amber-600" },
+                                                { id: "valid", label: "Válidos", color: "text-emerald-600" },
+                                                { id: "invalid", label: "Invalidados", color: "text-rose-600" },
+                                                { id: "all", label: "Todos", color: "text-slate-600" }
+                                            ].map(f => (
+                                                <button
+                                                    key={f.id}
+                                                    onClick={() => { setPriceStatusFilter(f.id); fetchPrices(1, priceTableSearch, f.id); }}
+                                                    className={`px-3 py-1 text-xs font-bold rounded-md transition-all ${priceStatusFilter === f.id ? 'bg-white shadow-sm ' + f.color : 'text-slate-400 hover:text-slate-600'}`}
+                                                >
+                                                    {f.label}
+                                                </button>
+                                            ))}
+                                        </div>
                                     </div>
-                                    <Button 
-                                        variant="outline" 
-                                        size="sm" 
-                                        disabled={pricesData.page >= pricesData.total_pages || loadingPrices}
-                                        onClick={() => fetchPrices(pricesData.page + 1, priceTableSearch)}
-                                    >
-                                        Siguiente
+                                </div>
+                                <div className="flex items-center gap-3">
+                                    <div className="relative group">
+                                        <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 group-focus-within:text-emerald-500 transition-colors" />
+                                        <Input
+                                            placeholder="Buscar producto, tienda..."
+                                            className="w-64 pl-9 h-11 bg-slate-50 border-slate-200 focus-visible:ring-emerald-500 transition-all rounded-xl shadow-inner"
+                                            value={priceTableSearch}
+                                            onChange={(e) => setPriceTableSearch(e.target.value)}
+                                            onKeyDown={(e) => { if (e.key === 'Enter') fetchPrices(1, priceTableSearch, priceStatusFilter); }}
+                                        />
+                                    </div>
+                                    <Button size="icon" variant="outline" className="h-11 w-11 rounded-xl border-slate-200 hover:bg-slate-100 shadow-sm" onClick={() => fetchPrices(pricesData.page, priceTableSearch, priceStatusFilter)}>
+                                        <RefreshCw className={`w-4 h-4 ${loadingPrices ? 'animate-spin text-emerald-500' : 'text-slate-600'}`} />
                                     </Button>
                                 </div>
                             </div>
-                        </CardContent>
-                    </Card>
-                </DialogContent>
-            </Dialog>
 
-                <TabsContent value="overview" className="space-y-6">
-                    <div className="space-y-6">
+                            <div className="flex-1 p-6 space-y-4">
+                                {pricesData.items.length === 0 ? (
+                                    <div className="flex flex-col items-center justify-center h-64 text-slate-400 space-y-4">
+                                        <div className="p-4 bg-slate-100 rounded-full">
+                                            <CheckCircle className="w-8 h-8 text-emerald-500/50" />
+                                        </div>
+                                        <p className="text-lg font-medium text-slate-500">No hay reportes pendientes</p>
+                                    </div>
+                                ) : (
+                                    <div className="grid grid-cols-1 xl:grid-cols-2 gap-4">
+                                        {pricesData.items.map((p) => (
+                                            <div key={p.id} className="bg-white border border-slate-200 rounded-2xl p-5 shadow-sm hover:shadow-md transition-shadow flex flex-col sm:flex-row gap-5 relative overflow-hidden">
+                                                <div className={`absolute top-0 left-0 w-1.5 h-full ${p.status === 'invalid' ? 'bg-rose-400' : 'bg-emerald-400'}`} />
+                                                
+                                                <div className="flex sm:flex-col items-center justify-between sm:justify-start gap-3 sm:w-28 sm:border-r border-slate-100 sm:pr-5 shrink-0 pl-2">
+                                                    <div className="flex items-center gap-2 sm:flex-col sm:text-center">
+                                                        <div className="w-10 h-10 rounded-full bg-gradient-to-br from-slate-100 to-slate-200 border border-slate-200 flex items-center justify-center shadow-inner">
+                                                            <span className="font-bold text-slate-600 text-sm">{p.user_name?.substring(0, 2).toUpperCase() || "US"}</span>
+                                                        </div>
+                                                        <div className="sm:mt-2">
+                                                            <p className="text-xs font-bold text-slate-700 truncate w-24" title={p.user_name}>{p.user_name || "Usuario"}</p>
+                                                            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{new Date(p.created_at).toLocaleDateString()}</p>
+                                                        </div>
+                                                    </div>
+                                                    {p.status === "invalid" ? (
+                                                        <Badge className="bg-rose-50 text-rose-700 border-rose-200 hover:bg-rose-100 text-[10px] shadow-sm">INVALIDADO</Badge>
+                                                    ) : (
+                                                        <Badge className="bg-emerald-50 text-emerald-700 border-emerald-200 hover:bg-emerald-100 text-[10px] shadow-sm">VÁLIDO</Badge>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex-1 space-y-3">
+                                                    <div>
+                                                        <h4 className="font-bold text-slate-900 text-base leading-tight mb-1.5">{p.product_name || "Producto desconocido"}</h4>
+                                                        <div className="flex flex-wrap items-center gap-2 text-sm">
+                                                            <span className="flex items-center gap-1 text-slate-600 bg-slate-50 px-2 py-0.5 rounded-md border border-slate-100 shadow-sm"><Store className="w-3.5 h-3.5 text-slate-400" /> {p.supermarket_name || "Súper"}</span>
+                                                            <span className="text-emerald-700 font-bold text-[11px] uppercase tracking-wider bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-100 shadow-sm">{p.brand_name || "Marca"}</span>
+                                                        </div>
+                                                    </div>
+                                                    <div className="flex items-baseline gap-2 bg-slate-50/50 w-fit px-3 py-1.5 rounded-lg border border-slate-100">
+                                                        <span className="text-2xl font-black text-slate-900 tracking-tight">{p.price.toFixed(2)}€</span>
+                                                        <span className="text-sm font-medium text-slate-500">/ cant: {p.quantity}</span>
+                                                    </div>
+                                                    {p.anomaly_reason && (
+                                                        <div className="flex items-start gap-2 p-2.5 bg-amber-50 rounded-xl border border-amber-100">
+                                                            <ShieldAlert className="w-3.5 h-3.5 text-amber-500 mt-0.5 shrink-0" />
+                                                            <p className="text-[11px] text-amber-700 leading-normal">
+                                                                <span className="font-bold">Alerta:</span> {p.anomaly_reason}
+                                                            </p>
+                                                        </div>
+                                                    )}
+                                                </div>
+
+                                                <div className="flex sm:flex-col gap-2 justify-end sm:justify-center shrink-0 pt-4 sm:pt-0 border-t sm:border-t-0 border-slate-100">
+                                                    {p.status === "invalid" ? (
+                                                        <Button size="sm" variant="outline" className="w-full sm:w-28 h-9 bg-emerald-50 border-emerald-200 text-emerald-700 hover:bg-emerald-100 hover:text-emerald-800 shadow-sm" onClick={() => handleValidatePrice(p.id)}>
+                                                            <CheckCircle className="w-4 h-4 mr-1.5" /> Validar
+                                                        </Button>
+                                                    ) : (
+                                                        <Button size="sm" variant="outline" className="w-full sm:w-28 h-9 bg-rose-50 border-rose-200 text-rose-700 hover:bg-rose-100 hover:text-rose-800 shadow-sm" onClick={() => handleInvalidatePrice(p.id)}>
+                                                            <XCircle className="w-4 h-4 mr-1.5" /> Invalidar
+                                                        </Button>
+                                                    )}
+                                                    <div className="flex gap-2 w-full sm:w-28">
+                                                        <Button size="icon" variant="outline" className="flex-1 h-9 border-slate-200 text-slate-500 hover:bg-blue-50 hover:text-blue-600 hover:border-blue-200 shadow-sm" onClick={() => { setEditingItem(p); setPriceForm({ price: p.price, quantity: p.quantity }); setPriceDialog(true); }}>
+                                                            <Pencil className="w-4 h-4" />
+                                                        </Button>
+                                                        <Button size="icon" variant="outline" className="flex-1 h-9 border-slate-200 text-slate-500 hover:bg-rose-50 hover:text-rose-600 hover:border-rose-200 shadow-sm" onClick={() => handleDeletePrice(p.id)}>
+                                                            <Trash2 className="w-4 h-4" />
+                                                        </Button>
+                                                    </div>
+                                                </div>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
+                            </div>
+
+                            <div className="p-4 border-t border-slate-200 bg-slate-100/50 flex items-center justify-between sticky bottom-0 z-10">
+                                <p className="text-sm font-semibold text-slate-600">Página {pricesData.page} de {pricesData.total_pages || 1}</p>
+                                <div className="flex gap-2">
+                                    <Button variant="outline" className="bg-white shadow-sm hover:bg-slate-50" disabled={pricesData.page <= 1 || loadingPrices} onClick={() => fetchPrices(pricesData.page - 1, priceTableSearch, priceStatusFilter)}>Anterior</Button>
+                                    <Button variant="outline" className="bg-white shadow-sm hover:bg-slate-50" disabled={pricesData.page >= pricesData.total_pages || loadingPrices} onClick={() => fetchPrices(pricesData.page + 1, priceTableSearch, priceStatusFilter)}>Siguiente</Button>
+                                </div>
+                            </div>
+                        </Card>
+                    </TabsContent>
+
+                    <TabsContent value="overview" className="space-y-6">
+                        <div className="space-y-6">
 
 
-                        <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+                            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
 
-                            <Card>
-                                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-600">Cobertura unidades</CardTitle></CardHeader>
-                                <CardContent><p className="text-3xl font-bold text-slate-900">{unitCoveragePct}%</p><p className="text-xs text-slate-500 mt-1">{relationConfiguredProductsCount}/{products.length} productos con unidades</p></CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-600">Cobertura catalogo marca</CardTitle></CardHeader>
-                                <CardContent><p className="text-3xl font-bold text-slate-900">{sellableCatalogCoveragePct}%</p><p className="text-xs text-slate-500 mt-1">{sellableCount - sellableWithoutBrandCatalogCount}/{sellableCount} vinculos con estado</p></CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-600">Catalogo supermercado</CardTitle></CardHeader>
-                                <CardContent><p className="text-3xl font-bold text-slate-900">{sellableCount}</p><p className="text-xs text-slate-500 mt-1">{sellableSupermarketCount} supermercados activos</p></CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-600">Catalogo marca</CardTitle></CardHeader>
-                                <CardContent><p className="text-3xl font-bold text-slate-900">{brandCatalogCount}</p><p className="text-xs text-slate-500 mt-1">{brandCatalogActiveCount} activos, {brandCatalogPlannedCount} planeados</p></CardContent>
-                            </Card>
+                                <Card>
+                                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-600">Cobertura unidades</CardTitle></CardHeader>
+                                    <CardContent><p className="text-3xl font-bold text-slate-900">{unitCoveragePct}%</p><p className="text-xs text-slate-500 mt-1">{relationConfiguredProductsCount}/{products.length} productos con unidades</p></CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-600">Cobertura catalogo marca</CardTitle></CardHeader>
+                                    <CardContent><p className="text-3xl font-bold text-slate-900">{sellableCatalogCoveragePct}%</p><p className="text-xs text-slate-500 mt-1">{sellableCount - sellableWithoutBrandCatalogCount}/{sellableCount} vinculos con estado</p></CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-600">Catalogo supermercado</CardTitle></CardHeader>
+                                    <CardContent><p className="text-3xl font-bold text-slate-900">{sellableCount}</p><p className="text-xs text-slate-500 mt-1">{sellableSupermarketCount} supermercados activos</p></CardContent>
+                                </Card>
+                                <Card>
+                                    <CardHeader className="pb-2"><CardTitle className="text-sm font-medium text-slate-600">Catalogo marca</CardTitle></CardHeader>
+                                    <CardContent><p className="text-3xl font-bold text-slate-900">{brandCatalogCount}</p><p className="text-xs text-slate-500 mt-1">{brandCatalogActiveCount} activos, {brandCatalogPlannedCount} planeados</p></CardContent>
+                                </Card>
+                            </div>
+
+                            <div className="grid gap-4 lg:grid-cols-2">
+                                <Card>
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                        <CardTitle className="text-base">Distribucion por supermercado</CardTitle>
+                                        <Store className="w-4 h-4 text-slate-400" />
+                                    </CardHeader>
+                                    <CardContent className="space-y-3">
+                                        {sellablesBySupermarket.slice(0, 8).map((item) => (
+                                            <div key={item.id} className="flex items-center justify-between text-sm py-1 border-b border-slate-50 last:border-0">
+                                                <span className="text-slate-700">{item.name}</span>
+                                                <Badge variant="secondary" className="font-mono">{item.count}</Badge>
+                                            </div>
+                                        ))}
+                                    </CardContent>
+                                </Card>
+
+                                <Card className="border-amber-100 bg-amber-50/20">
+                                    <CardHeader className="flex flex-row items-center justify-between pb-2">
+                                        <CardTitle className="text-base text-amber-900 flex items-center gap-2">
+                                            <ShieldAlert className="w-4 h-4 text-amber-600" /> Auditoría de Integridad
+                                        </CardTitle>
+                                        <Badge variant="outline" className="bg-amber-100 text-amber-700 border-amber-200">Acción requerida</Badge>
+                                    </CardHeader>
+                                    <CardContent className="grid sm:grid-cols-2 gap-4">
+                                        {[
+                                            { label: "Productos sin imagen", count: gaps.productsWithoutImage, tab: "maestros", subtab: "products" },
+                                            { label: "Productos sin unidad", count: gaps.missingUnits, tab: "catalogos", subtab: "units-catalog" },
+                                            { label: "Marcas sin logo", count: gaps.brandsWithoutLogo, tab: "maestros", subtab: "brands" },
+                                            { label: "Súpers sin logo", count: gaps.supermarketsWithoutLogo, tab: "maestros", subtab: "supermarkets" },
+                                            { label: "Sin estado catálogo", count: gaps.unmappedSellables, tab: "catalogos", subtab: "sellable" },
+                                            { label: "Reportes sospechosos", count: pricesData.total, tab: "moderacion" }
+                                        ].map((gap, i) => (
+                                            <button
+                                                key={i}
+                                                onClick={() => {
+                                                    setActiveMainTab(gap.tab);
+                                                    if (gap.tab === "maestros") setActiveMaestrosTab(gap.subtab);
+                                                    if (gap.tab === "catalogos") setActiveCatalogosTab(gap.subtab);
+                                                    if (gap.label === "Productos sin imagen") setShowOnlyProductsWithoutImage(true);
+                                                    if (gap.label === "Productos sin unidad") setRelationOnlyMissingUnits(true);
+                                                }}
+                                                className="flex items-center justify-between p-3 bg-white rounded-xl border border-amber-100 shadow-sm hover:border-amber-300 hover:shadow-md transition-all text-left group"
+                                            >
+                                                <div className="space-y-0.5">
+                                                    <p className="text-[11px] font-bold text-amber-900 uppercase tracking-tight opacity-60 group-hover:opacity-100 transition-opacity">{gap.label}</p>
+                                                    <p className="text-xl font-black text-amber-600">{gap.count}</p>
+                                                </div>
+                                                <div className={`p-2 rounded-lg transition-colors ${gap.count > 0 ? 'bg-amber-100 text-amber-600 group-hover:bg-amber-200' : 'bg-slate-50 text-slate-300'}`}>
+                                                    <ArrowRight className="w-4 h-4" />
+                                                </div>
+                                            </button>
+                                        ))}
+                                    </CardContent>
+                                </Card>
+                            </div>
                         </div>
 
-                        <div className="grid gap-4 lg:grid-cols-2">
-                            <Card>
-                                <CardHeader><CardTitle className="text-base">Distribucion por supermercado</CardTitle></CardHeader>
-                                <CardContent className="space-y-3">
-                                    {sellablesBySupermarket.slice(0, 8).map((item) => (
-                                        <div key={item.id} className="flex items-center justify-between text-sm">
-                                            <span className="text-slate-700">{item.name}</span>
-                                            <Badge variant="secondary">{item.count}</Badge>
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                            <Card>
-                                <CardHeader><CardTitle className="text-base">Distribucion por marca</CardTitle></CardHeader>
-                                <CardContent className="space-y-3">
-                                    {sellablesByBrand.slice(0, 8).map((item) => (
-                                        <div key={item.id} className="flex items-center justify-between text-sm">
-                                            <span className="text-slate-700">{item.name}</span>
-                                            <Badge variant="secondary">{item.count}</Badge>
-                                        </div>
-                                    ))}
-                                </CardContent>
-                            </Card>
-                        </div>
-                    </div>
+                    </TabsContent>
 
-                </TabsContent>
-            </Tabs>
+                    <TabsContent value="sistema" className="space-y-6">
+                        <Card className="bg-slate-50 border-slate-200 p-6 shadow-md">
+                            <div className="mb-6">
+                                <h2 className="flex items-center gap-3 text-2xl font-bold text-slate-800 tracking-tight">
+                                    <div className="p-2.5 bg-white rounded-xl shadow-sm border border-slate-200">
+                                        <Database className="w-6 h-6 text-emerald-600" />
+                                    </div>
+                                    Sincronización del Sistema
+                                </h2>
+                                <p className="text-slate-500 mt-2">Importa o exporta la base de datos maestra de catálogos y referencias usando plantillas de Excel.</p>
+                            </div>
 
-        </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-2">
+                                {/* Export Card */}
+                                <Card className="group relative overflow-hidden border-emerald-100 bg-white hover:shadow-xl hover:shadow-emerald-500/10 transition-all duration-500">
+                                    <div className="absolute inset-0 bg-gradient-to-br from-emerald-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                    <CardContent className="p-8 relative h-full flex flex-col">
+                                        <div className="flex flex-col items-center text-center space-y-6 flex-1">
+                                            <div className="w-16 h-16 bg-emerald-50 rounded-2xl flex items-center justify-center text-emerald-600 shadow-sm border border-emerald-100 group-hover:scale-110 transition-transform duration-500">
+                                                <Download className="w-8 h-8" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h3 className="text-xl font-bold text-slate-800">Exportar Plantilla</h3>
+                                                <p className="text-sm text-slate-500 max-w-[250px] mx-auto">Descarga el estado actual de la base de datos para editarlo localmente.</p>
+                                            </div>
+                                            <div className="w-full mt-auto pt-8 space-y-4">
+                                                <div className="flex items-center justify-between p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                    <span className="text-sm font-semibold text-slate-700">Formato</span>
+                                                    <div className="flex p-1 bg-slate-200/50 rounded-lg">
+                                                        <button onClick={() => setExportFormat("xlsx")} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${exportFormat === "xlsx" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>EXCEL</button>
+                                                        <button onClick={() => setExportFormat("ods")} className={`px-4 py-1.5 text-xs font-bold rounded-md transition-all ${exportFormat === "ods" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-500 hover:text-slate-700"}`}>ODS</button>
+                                                    </div>
+                                                </div>
+                                                <label className="flex items-center gap-3 p-3 bg-slate-50 border border-slate-100 rounded-xl cursor-pointer hover:bg-slate-100 transition-colors">
+                                                    <Checkbox id="includePrices" checked={includePrices} onCheckedChange={setIncludePrices} className="border-slate-300 data-[state=checked]:bg-emerald-500 data-[state=checked]:border-emerald-500" />
+                                                    <span className="text-sm font-medium text-slate-700 select-none">Incluir histórico de precios</span>
+                                                </label>
+                                                <Button onClick={handleExportDB} disabled={systemLoading} className="w-full bg-emerald-600 hover:bg-emerald-700 text-white h-12 rounded-xl font-semibold shadow-md transition-all">
+                                                    {systemLoading ? <RefreshCw className="w-5 h-5 mr-2 animate-spin" /> : <Download className="w-5 h-5 mr-2" />}
+                                                    Descargar Archivo
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+
+                                {/* Import Card */}
+                                <Card className="group relative overflow-hidden border-blue-100 bg-white hover:shadow-xl hover:shadow-blue-500/10 transition-all duration-500">
+                                    <div className="absolute inset-0 bg-gradient-to-bl from-blue-50/50 to-transparent opacity-0 group-hover:opacity-100 transition-opacity duration-500" />
+                                    <CardContent className="p-8 relative h-full flex flex-col">
+                                        <div className="flex flex-col items-center text-center space-y-6 flex-1">
+                                            <div className="w-16 h-16 bg-blue-100 rounded-2xl flex items-center justify-center text-blue-600 shadow-sm border border-blue-200 group-hover:scale-110 transition-transform duration-500">
+                                                <Upload className="w-8 h-8" />
+                                            </div>
+                                            <div className="space-y-2">
+                                                <h3 className="text-xl font-bold text-slate-800">Carga Masiva</h3>
+                                                <p className="text-sm text-slate-500 max-w-[250px] mx-auto">Sube una plantilla editada para sincronizar masivamente el catálogo.</p>
+                                            </div>
+
+                                            <div className="w-full mt-auto pt-8">
+                                                <div className="relative group/dropzone">
+                                                    <div className="absolute inset-0 bg-blue-50 rounded-xl border-2 border-dashed border-blue-200 transition-all group-hover/dropzone:border-blue-400 group-hover/dropzone:bg-blue-100/50" />
+                                                    <div className="relative p-8 flex flex-col items-center justify-center gap-3">
+                                                        <div className="w-12 h-12 bg-white rounded-full flex items-center justify-center shadow-sm text-blue-500 mb-1 group-hover/dropzone:scale-110 transition-transform">
+                                                            <Database className="w-6 h-6" />
+                                                        </div>
+                                                        <div className="space-y-1">
+                                                            <span className="block text-sm font-semibold text-blue-900">Haz clic para seleccionar</span>
+                                                            <span className="block text-xs text-blue-600/70">.xlsx, .xls, o .ods</span>
+                                                        </div>
+                                                    </div>
+                                                    <Input
+                                                        type="file"
+                                                        accept=".xlsx, .xls, .ods"
+                                                        onChange={(e) => { handleImportDB(e); }}
+                                                        disabled={systemLoading}
+                                                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                                                    />
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </CardContent>
+                                </Card>
+                            </div>
+
+                            <div className="mt-4 p-5 bg-amber-50 rounded-2xl border border-amber-200 relative overflow-hidden">
+                                <div className="absolute top-0 left-0 w-1.5 h-full bg-amber-400" />
+                                <h4 className="text-sm font-bold text-amber-900 mb-3 flex items-center gap-2">
+                                    <ShieldAlert className="w-4 h-4 text-amber-600" /> Atención: Reglas de Sincronización
+                                </h4>
+                                <div className="grid grid-cols-1 md:grid-cols-2 gap-x-8 gap-y-2.5 text-sm text-amber-800/90">
+                                    <p className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">•</span> <span>Si eliminas una fila en el Excel, se <strong>borrará</strong> permanentemente en la BD.</span></p>
+                                    <p className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">•</span> <span>Deja la columna <code className="bg-amber-100/50 px-1 border border-amber-200/50 rounded text-xs font-mono">id</code> vacía para crear nuevos registros automáticamente.</span></p>
+                                    <p className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">•</span> <span>Cada hoja (sheet) representa una colección de datos principal y se procesa por separado.</span></p>
+                                    <p className="flex items-start gap-2"><span className="text-amber-500 mt-0.5">•</span> <span>Se ignorarán las columnas o cabeceras duplicadas.</span></p>
+                                </div>
+                            </div>
+                        </Card>
+                    </TabsContent>
+                </Tabs>
+
+            </div>
 
 
             {/* Diálogos */}
@@ -2086,7 +2244,7 @@ const AdminPage = () => {
                                 }
                                 {brandCatalog.filter(bc => bc.brand_id === sellableForm.brand_id).length === 0 && (
                                     <div className="col-span-2 py-8 text-center text-slate-400 italic text-sm">
-                                        No hay productos en el catálogo conceptual de esta marca.<br/>
+                                        No hay productos en el catálogo conceptual de esta marca.<br />
                                         <Button variant="link" size="sm" onClick={() => setCatalogDialog(true)}>Gestionar Catálogo de Marca</Button>
                                     </div>
                                 )}
@@ -2348,185 +2506,87 @@ const AdminPage = () => {
                     </div>
                 </DialogContent>
             </Dialog>
-             <Dialog open={systemDialog} onOpenChange={setSystemDialog}>
-                <DialogContent className="max-w-4xl max-h-[90vh] overflow-y-auto">
+
+            <Dialog open={priceDialog} onOpenChange={setPriceDialog}>
+                <DialogContent className="max-w-md bg-white border-slate-200">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-xl">
-                            <Database className="w-5 h-5 text-emerald-600" />
-                            Gestión de Base de Datos
+                        <DialogTitle className="flex items-center gap-2 text-xl font-bold text-slate-800">
+                            <Pencil className="w-5 h-5 text-blue-500" />
+                            Modificar Reporte
                         </DialogTitle>
                     </DialogHeader>
-                    
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4">
-                        <Card className="border-emerald-100 bg-emerald-50/20">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-emerald-100 rounded-lg text-emerald-600">
-                                        <Download className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-base text-emerald-900">Exportar Configuración</CardTitle>
-                                        <p className="text-[11px] text-slate-500">Descarga estructura en XLSX u ODS</p>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
-                                <div className="flex flex-col gap-4">
-                                    <div className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-emerald-100">
-                                        <span className="text-xs font-medium text-emerald-900">Formato</span>
-                                        <div className="flex p-0.5 bg-slate-100 rounded-md">
-                                            <button 
-                                                onClick={() => setExportFormat("xlsx")}
-                                                className={`px-3 py-1 text-[10px] font-bold rounded-sm transition-all ${exportFormat === "xlsx" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400"}`}
-                                            >
-                                                EXCEL
-                                            </button>
-                                            <button 
-                                                onClick={() => setExportFormat("ods")}
-                                                className={`px-3 py-1 text-[10px] font-bold rounded-sm transition-all ${exportFormat === "ods" ? "bg-white text-emerald-600 shadow-sm" : "text-slate-400"}`}
-                                            >
-                                                ODS
-                                            </button>
-                                        </div>
-                                    </div>
-                                    <div className="flex items-center space-x-2 p-2 bg-slate-50 rounded-lg border border-slate-100 mb-2">
-                                        <Checkbox 
-                                            id="includePrices" 
-                                            checked={includePrices} 
-                                            onCheckedChange={setIncludePrices}
-                                        />
-                                        <label 
-                                            htmlFor="includePrices" 
-                                            className="text-[10px] font-medium text-slate-600 cursor-pointer select-none"
-                                        >
-                                            Incluir historial de precios (Datos de usuarios)
-                                        </label>
-                                    </div>
-                                    <Button 
-                                        onClick={handleExportDB} 
-                                        disabled={systemLoading}
-                                        className="w-full bg-emerald-600 hover:bg-emerald-700 h-10 shadow-sm"
-                                    >
-                                        {systemLoading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Download className="w-4 h-4 mr-2" />}
-                                        Descargar Base de Datos
-                                    </Button>
-                                </div>
-                            </CardContent>
-                        </Card>
+                    <div className="space-y-5 pt-4">
+                        <div className="rounded-xl border border-slate-100 bg-slate-50 p-4 text-sm text-slate-700 space-y-1.5 shadow-sm">
+                            <div className="flex justify-between items-center"><span className="text-slate-500">Producto</span> <span className="font-semibold text-slate-900">{editingItem?.product_name || "-"}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-slate-500">Tienda</span> <span className="font-medium">{editingItem?.supermarket_name || "-"}</span></div>
+                            <div className="flex justify-between items-center"><span className="text-slate-500">Usuario</span> <span className="font-medium text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md text-xs">{editingItem?.user_name || "-"}</span></div>
+                        </div>
 
-                        <Card className="border-blue-100 bg-blue-50/20">
-                            <CardHeader className="pb-3">
-                                <div className="flex items-center gap-3">
-                                    <div className="p-2 bg-blue-100 rounded-lg text-blue-600">
-                                        <Upload className="w-5 h-5" />
-                                    </div>
-                                    <div>
-                                        <CardTitle className="text-base text-blue-900">Carga Masiva</CardTitle>
-                                        <p className="text-[11px] text-slate-500">Importa o actualiza registros</p>
-                                    </div>
-                                </div>
-                            </CardHeader>
-                            <CardContent>
+                        <div className="grid grid-cols-2 gap-4">
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-semibold">Precio (€)</Label>
                                 <div className="relative">
-                                    <Input 
-                                        type="file" 
-                                        accept=".xlsx, .xls, .ods"
-                                        onChange={(e) => { handleImportDB(e); setSystemDialog(false); }}
-                                        disabled={systemLoading}
-                                        className="opacity-0 absolute inset-0 w-full h-full cursor-pointer z-10"
+                                    <Input
+                                        type="number"
+                                        step="0.01"
+                                        value={priceForm.price}
+                                        onChange={e => setPriceForm({ ...priceForm, price: parseFloat(e.target.value) })}
+                                        className="pl-8 text-lg font-bold bg-white"
                                     />
-                                    <Button 
-                                        variant="outline" 
-                                        disabled={systemLoading}
-                                        className="w-full h-10 border-blue-200 text-blue-700 bg-white hover:bg-blue-50 shadow-sm"
-                                    >
-                                        {systemLoading ? <RefreshCw className="w-4 h-4 mr-2 animate-spin" /> : <Upload className="w-4 h-4 mr-2" />}
-                                        Seleccionar Archivo
-                                    </Button>
+                                    <span className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-400 font-bold">€</span>
                                 </div>
-                                <p className="text-[10px] text-slate-400 mt-2 italic text-center underline decoration-rose-200 decoration-2">
-                                    Se ignorarán las cabeceras duplicadas
-                                </p>
-                            </CardContent>
-                        </Card>
-                    </div>
-
-                    <div className="mt-2 p-4 bg-slate-50 rounded-xl border border-slate-200">
-                        <h4 className="text-xs font-bold text-slate-700 mb-2 uppercase tracking-widest flex items-center gap-1.5">
-                            <BookOpen className="w-3.5 h-3.5" /> Guía de Importación
-                        </h4>
-                        <div className="space-y-1.5 text-xs text-slate-600 leading-relaxed">
-                            <p>• El archivo debe contener una pestaña por colección (<code className="bg-white px-1 border rounded">categories</code>, <code className="bg-white px-1 border rounded">brands</code>, etc.).</p>
-                            <p>• <strong>Sincronización Total:</strong> Los elementos que NO estén en el Excel para una hoja activa serán **ELIMINADOS** de la base de datos.</p>
-                            <p>• <strong>Nuevos Registros:</strong> Si dejas la columna <code className="bg-white px-1 border rounded font-mono">id</code> vacía, se generará uno nuevo automáticamente.</p>
-                            <p>• <strong>Campos JSON:</strong> Los atributos y unidades se parsean automáticamente desde el texto.</p>
+                            </div>
+                            <div className="space-y-2">
+                                <Label className="text-slate-700 font-semibold">Cantidad</Label>
+                                <Input
+                                    type="number"
+                                    step="1"
+                                    value={priceForm.quantity}
+                                    onChange={e => setPriceForm({ ...priceForm, quantity: parseFloat(e.target.value) })}
+                                    className="text-lg bg-white"
+                                />
+                            </div>
                         </div>
-                    </div>
-                </DialogContent>
-            </Dialog>
-            <Dialog open={priceDialog} onOpenChange={setPriceDialog}>
-
-                <DialogContent className="max-w-md">
-                    <DialogHeader>
-                        <DialogTitle>Modificar Reporte de Precio</DialogTitle>
-                    </DialogHeader>
-                    <div className="space-y-4 pt-4">
-                        <div className="rounded-lg border bg-slate-50 p-3 text-sm text-slate-600">
-                            <p><strong>Producto:</strong> {editingItem?.product_name || "-"}</p>
-                            <p><strong>Supermercado:</strong> {editingItem?.supermarket_name || "-"}</p>
-                            <p><strong>Usuario:</strong> {editingItem?.user_name || "-"}</p>
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Precio (€)</Label>
-                            <Input 
-                                type="number" 
-                                step="0.01" 
-                                value={priceForm.price} 
-                                onChange={e => setPriceForm({ ...priceForm, price: parseFloat(e.target.value) })} 
-                            />
-                        </div>
-                        <div className="space-y-2">
-                            <Label>Cantidad / Formato</Label>
-                            <Input 
-                                type="number" 
-                                step="1" 
-                                value={priceForm.quantity} 
-                                onChange={e => setPriceForm({ ...priceForm, quantity: parseFloat(e.target.value) })} 
-                            />
-                        </div>
-                        <Button onClick={handleSavePrice} className="w-full bg-emerald-500">
+                        <Button onClick={handleSavePrice} className="w-full bg-blue-600 hover:bg-blue-700 text-white h-11 font-semibold rounded-xl shadow-md transition-all">
                             Guardar Cambios
                         </Button>
                     </div>
                 </DialogContent>
             </Dialog>
+
             <Dialog open={invalidateDialog} onOpenChange={setInvalidateDialog}>
-                <DialogContent className="max-w-sm">
+                <DialogContent className="max-w-sm bg-white border-rose-100">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-rose-600">
-                            <ShieldAlert className="w-5 h-5" />
-                            Motivo de Invalidación
+                        <DialogTitle className="flex items-center gap-2 text-rose-600 text-xl font-bold">
+                            <div className="p-1.5 bg-rose-100 rounded-lg shadow-sm">
+                                <ShieldAlert className="w-5 h-5" />
+                            </div>
+                            Invalidar Reporte
                         </DialogTitle>
                     </DialogHeader>
-                    <div className="space-y-4 pt-2">
-                        <p className="text-xs text-slate-500">
-                            Se le restarán 20 puntos al usuario. Indica por qué este reporte no es válido:
-                        </p>
+                    <div className="space-y-5 pt-2">
+                        <div className="bg-rose-50 border border-rose-100 p-3 rounded-xl">
+                            <p className="text-xs text-rose-800 leading-relaxed font-medium">
+                                Esta acción notificará al usuario y le aplicará una penalización automática de <strong className="text-rose-900">-20 puntos</strong> de reputación.
+                            </p>
+                        </div>
+
                         <div className="space-y-2">
-                            <Label>Descripción del motivo</Label>
-                            <Input 
-                                value={invalidateReason} 
-                                onChange={e => setInvalidateReason(e.target.value)} 
-                                placeholder="Ej: Precio incorrecto, foto borrosa..."
+                            <Label className="text-slate-700 font-semibold">Motivo para el usuario</Label>
+                            <Input
+                                value={invalidateReason}
+                                onChange={e => setInvalidateReason(e.target.value)}
+                                placeholder="Ej: Foto borrosa, precio no coincide..."
                                 autoFocus
+                                className="bg-slate-50 focus-visible:ring-rose-500 border-slate-200"
                             />
                         </div>
-                        <div className="flex gap-2 pt-2">
-                            <Button variant="outline" className="flex-1" onClick={() => setInvalidateDialog(false)}>
+                        <div className="flex gap-3 pt-2">
+                            <Button variant="outline" className="flex-1 border-slate-200 hover:bg-slate-50 text-slate-600 font-semibold" onClick={() => setInvalidateDialog(false)}>
                                 Cancelar
                             </Button>
-                            <Button className="flex-1 bg-rose-600 hover:bg-rose-700" onClick={submitInvalidatePrice}>
-                                Confirmar Penalización
+                            <Button className="flex-[1.5] bg-rose-600 hover:bg-rose-700 text-white shadow-md font-semibold transition-all" onClick={submitInvalidatePrice}>
+                                Confirmar y Penalizar
                             </Button>
                         </div>
                     </div>
