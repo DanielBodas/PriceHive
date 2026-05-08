@@ -16,7 +16,6 @@ import {
     TooltipTrigger,
 } from "./ui/tooltip";
 import {
-    Tag,
     LayoutDashboard,
     MessageSquare,
     ShoppingCart,
@@ -30,6 +29,8 @@ import {
     Star
 } from "lucide-react";
 import { useState, useEffect } from "react";
+import BrandMark from "./brand/BrandMark";
+import EasterEgg from "./brand/EasterEgg";
 import axios from "axios";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -78,11 +79,11 @@ const Layout = ({ children }) => {
                     <div className="flex items-center justify-between h-12">
                         {/* Logo */}
                         <div className="flex items-center gap-2 flex-shrink-0">
-                            <Link to="/dashboard" className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center">
-                                    <Tag className="w-4 h-4 text-white" />
+                            <Link to="/dashboard" className="flex items-center gap-2.5 group">
+                                <div className="w-9 h-9 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-sm group-hover:scale-105 transition-transform">
+                                    <BrandMark className="w-6 h-6 text-primary" />
                                 </div>
-                                <span className="text-base font-bold text-slate-900 hidden sm:block" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                                <span className="text-lg font-extrabold text-slate-900 hidden sm:block tracking-tight font-heading">
                                     PriceHive
                                 </span>
                             </Link>
@@ -90,7 +91,7 @@ const Layout = ({ children }) => {
 
                         {/* Desktop Navigation - Responsive con 3 niveles */}
                         <TooltipProvider delayDuration={200}>
-                            <div className="hidden md:flex items-center gap-0.5 lg:gap-1 flex-1 justify-center max-w-2xl">
+                            <div className="hidden md:flex items-center gap-1 flex-1 justify-center max-w-2xl">
                                 {navItems.map((item) => {
                                     const isActive = location.pathname === item.path;
                                     const hasNotification = item.path === "/alerts" && unreadCount > 0;
@@ -102,9 +103,9 @@ const Layout = ({ children }) => {
                                                     <Button
                                                         variant={isActive ? "default" : "ghost"}
                                                         size="sm"
-                                                        className={`relative gap-2 transition-all ${isActive
-                                                                ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                                                                : "text-slate-600 hover:text-emerald-600 hover:bg-emerald-50"
+                                                        className={`relative gap-2 transition-all rounded-full px-4 ${isActive
+                                                                ? "bg-slate-900 text-white hover:bg-slate-800"
+                                                                : "text-slate-600 hover:text-primary hover:bg-primary/5"
                                                             }`}
                                                         data-testid={`nav-${item.path.slice(1)}`}
                                                     >
@@ -143,9 +144,9 @@ const Layout = ({ children }) => {
                         {/* Right Side - User Info */}
                         <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
                             {/* Points Badge */}
-                            <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-emerald-50 rounded-full">
-                                <Star className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                                <span className="font-mono text-xs font-medium text-emerald-600">
+                            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                                <Star className="w-3.5 h-3.5 text-primary flex-shrink-0 fill-primary" />
+                                <span className="font-mono text-xs font-bold text-primary">
                                     {user?.points || 0}
                                 </span>
                             </div>
@@ -153,18 +154,18 @@ const Layout = ({ children }) => {
                             {/* User Dropdown */}
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
-                                    <Button variant="ghost" size="sm" className="flex items-center gap-1.5 lg:gap-2 px-1.5 lg:px-2">
-                                        <Avatar className="w-7 h-7 lg:w-8 lg:h-8">
+                                    <Button variant="ghost" size="sm" className="flex items-center gap-1.5 lg:gap-2 px-1 rounded-full hover:bg-slate-100">
+                                        <Avatar className="w-8 h-8 lg:w-9 lg:h-9 border-2 border-white shadow-sm">
                                             <AvatarImage src={user?.picture} />
-                                            <AvatarFallback className="bg-emerald-100 text-emerald-600 text-xs lg:text-sm">
+                                            <AvatarFallback className="bg-primary text-primary-foreground text-xs lg:text-sm font-bold">
                                                 {user?.name?.charAt(0).toUpperCase()}
                                             </AvatarFallback>
                                         </Avatar>
-                                        <span className="hidden xl:block text-sm font-medium text-slate-700 max-w-[120px] truncate">
+                                        <span className="hidden xl:block text-sm font-semibold text-slate-700 max-w-[120px] truncate mr-1">
                                             {user?.name}
                                         </span>
                                         {user?.role === 'admin' && (
-                                            <span className="hidden xl:inline px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+                                            <span className="hidden xl:inline px-2 py-0.5 bg-slate-900 text-white text-[10px] font-bold rounded-full uppercase tracking-wider">
                                                 Admin
                                             </span>
                                         )}
@@ -222,18 +223,18 @@ const Layout = ({ children }) => {
                     <div className="md:hidden border-t border-slate-200 bg-white shadow-lg">
                         <div className="px-3 py-3 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
                             {/* User info en móvil */}
-                            <div className="flex items-center gap-3 px-3 py-3 bg-emerald-50 rounded-lg mb-3">
-                                <Avatar className="w-10 h-10">
+                            <div className="flex items-center gap-3 px-3 py-3 bg-primary/5 border border-primary/10 rounded-2xl mb-4">
+                                <Avatar className="w-12 h-12 shadow-md">
                                     <AvatarImage src={user?.picture} />
-                                    <AvatarFallback className="bg-emerald-100 text-emerald-600">
+                                    <AvatarFallback className="bg-primary text-primary-foreground font-bold">
                                         {user?.name?.charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-slate-900 truncate">{user?.name}</p>
+                                    <p className="text-sm font-bold text-slate-900 truncate">{user?.name}</p>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <Star className="w-3 h-3 text-emerald-500" />
-                                        <span className="text-xs font-mono text-emerald-600">{user?.points || 0} pts</span>
+                                        <Star className="w-3.5 h-3.5 text-primary fill-primary" />
+                                        <span className="text-xs font-mono font-bold text-primary">{user?.points || 0} pts</span>
                                     </div>
                                 </div>
                             </div>
@@ -251,9 +252,9 @@ const Layout = ({ children }) => {
                                     >
                                         <Button
                                             variant={isActive ? "default" : "ghost"}
-                                            className={`w-full justify-start gap-3 h-11 ${isActive
-                                                    ? "bg-emerald-500 text-white"
-                                                    : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                            className={`w-full justify-start gap-3 h-12 rounded-xl mb-1 ${isActive
+                                                    ? "bg-slate-900 text-white"
+                                                    : "text-slate-600 hover:bg-primary/5 hover:text-primary"
                                                 }`}
                                         >
                                             <span className="relative">
@@ -282,9 +283,9 @@ const Layout = ({ children }) => {
                             >
                                 <Button
                                     variant={location.pathname === "/profile" ? "default" : "ghost"}
-                                    className={`w-full justify-start gap-3 h-11 ${location.pathname === "/profile"
-                                            ? "bg-emerald-500 text-white"
-                                            : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                    className={`w-full justify-start gap-3 h-12 rounded-xl mb-1 ${location.pathname === "/profile"
+                                            ? "bg-slate-900 text-white"
+                                            : "text-slate-600 hover:bg-primary/5 hover:text-primary"
                                         }`}
                                 >
                                     <User className="w-5 h-5" />
@@ -298,9 +299,9 @@ const Layout = ({ children }) => {
                             >
                                 <Button
                                     variant={location.pathname === "/alerts" ? "default" : "ghost"}
-                                    className={`w-full justify-start gap-3 h-11 ${location.pathname === "/alerts"
-                                            ? "bg-emerald-500 text-white"
-                                            : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                    className={`w-full justify-start gap-3 h-12 rounded-xl mb-1 ${location.pathname === "/alerts"
+                                            ? "bg-slate-900 text-white"
+                                            : "text-slate-600 hover:bg-primary/5 hover:text-primary"
                                         }`}
                                 >
                                     <Bell className="w-5 h-5" />
@@ -320,9 +321,9 @@ const Layout = ({ children }) => {
                                 >
                                     <Button
                                         variant={location.pathname === "/admin" ? "default" : "ghost"}
-                                        className={`w-full justify-start gap-3 h-11 ${location.pathname === "/admin"
-                                                ? "bg-emerald-500 text-white"
-                                                : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                        className={`w-full justify-start gap-3 h-12 rounded-xl mb-1 ${location.pathname === "/admin"
+                                                ? "bg-slate-900 text-white"
+                                                : "text-slate-600 hover:bg-primary/5 hover:text-primary"
                                             }`}
                                     >
                                         <Settings className="w-5 h-5" />
@@ -350,6 +351,9 @@ const Layout = ({ children }) => {
                     {children}
                 </div>
             </main>
+
+            {/* Hidden Surprise */}
+            <EasterEgg />
         </div>
     );
 };

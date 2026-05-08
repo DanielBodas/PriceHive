@@ -6,52 +6,71 @@
 
 @layer base {
     :root {
+        /* Brand: Tranquil Gold & Slate */
         --background: 210 40% 98%;
         --foreground: 222 47% 11%;
+
         --card: 0 0% 100%;
         --card-foreground: 222 47% 11%;
+
         --popover: 0 0% 100%;
         --popover-foreground: 222 47% 11%;
-        --primary: 160 84% 39%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 222 47% 11%;
-        --secondary-foreground: 0 0% 100%;
-        --muted: 210 40% 96%;
-        --muted-foreground: 215 16% 47%;
-        --accent: 82 78% 44%;
-        --accent-foreground: 222 47% 11%;
-        --destructive: 350 89% 60%;
-        --destructive-foreground: 0 0% 100%;
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 160 84% 39%;
-        --chart-1: 160 84% 39%;
-        --chart-2: 82 78% 44%;
-        --chart-3: 350 89% 60%;
-        --chart-4: 215 16% 47%;
+
+        /* Softer Premium Gold (Tranquility) */
+        --primary: 35 45% 40%;
+        --primary-foreground: 35 20% 98%;
+
+        /* Slate-600 Softer */
+        --secondary: 215 15% 40%;
+        --secondary-foreground: 210 40% 98%;
+
+        --muted: 210 20% 96%;
+        --muted-foreground: 215 12% 45%;
+
+        /* Soft Cream/Gold Accent */
+        --accent: 35 50% 96%;
+        --accent-foreground: 35 45% 20%;
+
+        --border: 214 20% 90%;
+        --input: 214 20% 90%;
+
+        /* Softer Gold */
+        --ring: 35 45% 40%;
+
+        /* Chart palette aligned with brand */
+        --chart-1: 35 45% 40%;
+        --chart-2: 215 15% 40%;
+        --chart-3: 160 30% 45%;
+        --chart-4: 199 40% 50%;
         --chart-5: 222 47% 11%;
+
         --radius: 0.75rem;
     }
     .dark {
         --background: 222 47% 11%;
         --foreground: 210 40% 98%;
-        --card: 223 47% 14%;
+
+        --card: 222 47% 11%;
         --card-foreground: 210 40% 98%;
-        --popover: 223 47% 14%;
+
+        --popover: 222 47% 11%;
         --popover-foreground: 210 40% 98%;
-        --primary: 160 84% 39%;
-        --primary-foreground: 0 0% 100%;
-        --secondary: 215 28% 17%;
+
+        --primary: 35 45% 50%;
+        --primary-foreground: 35 20% 98%;
+
+        --secondary: 215 20% 18%;
         --secondary-foreground: 210 40% 98%;
-        --muted: 215 28% 17%;
-        --muted-foreground: 215 20% 65%;
-        --accent: 82 78% 44%;
-        --accent-foreground: 222 47% 11%;
-        --destructive: 350 89% 60%;
-        --destructive-foreground: 0 0% 100%;
-        --border: 215 28% 17%;
-        --input: 215 28% 17%;
-        --ring: 160 84% 39%;
+
+        --muted: 215 20% 18%;
+        --muted-foreground: 215 15% 60%;
+
+        --accent: 35 45% 15%;
+        --accent-foreground: 35 45% 55%;
+
+        --border: 215 20% 22%;
+        --input: 215 20% 22%;
+        --ring: 35 45% 50%;
     }
 }
 
@@ -122,16 +141,16 @@
 
 .shopping-list-tour-tooltip .introjs-button.introjs-nextbutton,
 .shopping-list-tour-tooltip .introjs-button.introjs-donebutton {
-    background: rgb(16 185 129) !important;
-    border-color: rgb(16 185 129) !important;
-    color: white !important;
+    background: hsl(var(--primary)) !important;
+    border-color: hsl(var(--primary)) !important;
+    color: hsl(var(--primary-foreground)) !important;
 }
 
 .shopping-list-tour-tooltip .introjs-progressbar {
-    background: rgb(16 185 129) !important;
+    background: hsl(var(--primary)) !important;
 }
 
 .shopping-list-tour-highlight {
     border-radius: 1.5rem !important;
-    box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.18) !important;
+    box-shadow: 0 0 0 8px hsla(var(--primary), 0.18) !important;
 }

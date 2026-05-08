@@ -25,7 +25,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <div className="animate-pulse text-emerald-600 text-lg font-medium">Cargando...</div>
+                <div className="animate-pulse text-primary text-lg font-black font-heading">Cargando...</div>
             </div>
         );
     }

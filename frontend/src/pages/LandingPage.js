@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
+import BrandMark from "../components/brand/BrandMark";
 import { useAuth } from "../contexts/AuthContext";
 import { Button } from "../components/ui/button";
 import {
     TrendingDown,
-    Tag,
     Sparkles,
     Users,
     Flame,
@@ -115,10 +115,10 @@ const LandingPage = () => {
             <nav className="fixed top-0 left-0 right-0 z-50 bg-white/80 backdrop-blur-xl border-b border-black/5">
                 <div className="max-w-7xl mx-auto px-6 py-4 flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
-                        <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
-                            <Tag className="w-5 h-5 text-white" />
+                        <div className="w-10 h-10 rounded-xl bg-primary/10 border border-primary/20 flex items-center justify-center shadow-sm">
+                            <BrandMark className="w-6 h-6 text-primary" />
                         </div>
-                        <span className="text-xl font-extrabold text-slate-900 tracking-tight">
+                        <span className="text-xl font-extrabold text-slate-900 tracking-tight font-heading">
                             PriceHive
                         </span>
                     </div>
@@ -147,29 +147,23 @@ const LandingPage = () => {
             {/* ── HERO ── */}
             <section className="pt-32 pb-16 px-6 relative">
                 {/* Decorative blobs */}
-                <div className="absolute top-40 left-10 w-64 h-64 rounded-full bg-emerald-300/20 blur-3xl -z-10" />
-                <div className="absolute top-20 right-10 w-72 h-72 rounded-full bg-teal-400/15 blur-3xl -z-10" />
+                <div className="absolute top-40 left-10 w-64 h-64 rounded-full bg-primary/10 blur-3xl -z-10" />
+                <div className="absolute top-20 right-10 w-72 h-72 rounded-full bg-amber-400/10 blur-3xl -z-10" />
 
                 <div className="max-w-7xl mx-auto">
                     <div className="grid lg:grid-cols-12 gap-10 items-center">
                         {/* Copy */}
                         <div className="lg:col-span-7 space-y-7">
-                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-emerald-50 text-emerald-700 rounded-full text-xs font-bold border border-emerald-100">
+                            <div className="inline-flex items-center gap-2 px-4 py-2 bg-primary/10 text-primary rounded-full text-xs font-bold border border-primary/20">
                                 <Sparkles className="w-3.5 h-3.5" />
                                 La red social de compradores inteligentes
                             </div>
-                            <h1 className="text-5xl lg:text-7xl font-extrabold text-slate-900 leading-[1.05] tracking-tighter">
+                            <h1 className="text-5xl lg:text-7xl font-extrabold text-slate-900 leading-[1.05] tracking-tighter font-heading">
                                 No más{" "}
-                                <span className="relative inline-block">
-                                    <span className="bg-gradient-to-r from-emerald-500 to-teal-500 bg-clip-text text-transparent">falsas ofertas</span>
+                                <span className="relative inline-block text-primary">
+                                    falsas ofertas
                                     <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 300 12" fill="none">
-                                        <path d="M2 9C75 3 150 3 298 9" stroke="url(#g)" strokeWidth="3" strokeLinecap="round" />
-                                        <defs>
-                                            <linearGradient id="g" x1="0" x2="300" y1="0" y2="0">
-                                                <stop stopColor="#10b981" />
-                                                <stop offset="1" stopColor="#14b8a6" />
-                                            </linearGradient>
-                                        </defs>
+                                        <path d="M2 9C75 3 150 3 298 9" stroke="currentColor" strokeWidth="3" strokeLinecap="round" />
                                     </svg>
                                 </span>
                             </h1>
@@ -179,7 +173,7 @@ const LandingPage = () => {
                             <div className="flex gap-3 flex-wrap">
                                 <Button
                                     size="lg"
-                                    className="bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-600 hover:to-teal-700 text-white rounded-full px-7 py-6 text-base font-bold shadow-xl shadow-emerald-500/30"
+                                    className="bg-slate-900 hover:bg-slate-800 text-white rounded-full px-8 py-6 text-base font-bold shadow-xl shadow-slate-900/20"
                                     data-testid="hero-cta-btn"
                                     onClick={loginWithGoogle}
                                 >
@@ -213,14 +207,14 @@ const LandingPage = () => {
 
                         {/* Mock feed card */}
                         <div className="lg:col-span-5 relative">
-                            <div className="absolute -inset-4 bg-gradient-to-br from-emerald-400/30 to-teal-600/30 blur-2xl rounded-3xl -z-10" />
+                            <div className="absolute -inset-4 bg-gradient-to-br from-primary/20 to-amber-600/20 blur-2xl rounded-3xl -z-10" />
                             <div className="bg-white border border-slate-100 rounded-3xl shadow-2xl p-5 space-y-3 rotate-1 hover:rotate-0 transition-transform duration-500">
                                 <div className="flex items-center justify-between">
                                     <div className="flex items-center gap-2">
-                                        <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                                        <div className="w-2 h-2 rounded-full bg-primary animate-pulse" />
                                         <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Feed en vivo</span>
                                     </div>
-                                    <Flame className="w-4 h-4 text-orange-500" />
+                                    <Flame className="w-4 h-4 text-orange-500 fill-orange-500" />
                                 </div>
                                 {mockPosts.map((p) => {
                                     const TIcon = p.typeIcon;
@@ -269,11 +263,11 @@ const LandingPage = () => {
             <section id="comunidad" className="py-24 px-6 bg-gradient-to-b from-white to-slate-50">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center max-w-2xl mx-auto mb-14">
-                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-emerald-100 text-emerald-700 rounded-full text-xs font-bold mb-4">
+                        <div className="inline-flex items-center gap-2 px-3 py-1 bg-primary/10 text-primary rounded-full text-xs font-bold mb-4">
                             <Users className="w-3.5 h-3.5" />
                             Una comunidad viva
                         </div>
-                        <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
+                        <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4 font-heading">
                             Hallazgos reales, compradores reales
                         </h2>
                         <p className="text-lg text-slate-600">
@@ -313,12 +307,12 @@ const LandingPage = () => {
                         </div>
 
                         {/* Best deals */}
-                        <div className="bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl p-5 text-white shadow-xl shadow-emerald-500/20">
+                        <div className="bg-slate-900 rounded-2xl p-5 text-white shadow-xl shadow-slate-900/20">
                             <div className="flex items-center gap-2 mb-4">
-                                <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                                    <TrendingDown className="w-4 h-4" />
+                                <div className="w-8 h-8 rounded-lg bg-primary/20 flex items-center justify-center">
+                                    <TrendingDown className="w-4 h-4 text-primary" />
                                 </div>
-                                <h3 className="text-sm font-bold">Mejores ofertas</h3>
+                                <h3 className="text-sm font-bold font-heading">Mejores ofertas</h3>
                             </div>
                             <div className="space-y-3">
                                 {[
@@ -370,7 +364,7 @@ const LandingPage = () => {
                             </div>
                             <div className="mt-4 pt-4 border-t border-slate-100 text-center">
                                 <p className="text-xs text-slate-500 mb-2">Gana puntos compartiendo hallazgos</p>
-                                <button onClick={loginWithGoogle} className="text-xs font-bold text-emerald-600 hover:underline inline-flex items-center gap-1">
+                                <button onClick={loginWithGoogle} className="text-xs font-bold text-primary hover:underline inline-flex items-center gap-1">
                                     Entrar al ranking
                                     <ChevronRight className="w-3 h-3" />
                                 </button>
@@ -384,7 +378,7 @@ const LandingPage = () => {
             <section id="features" className="py-24 px-6">
                 <div className="max-w-7xl mx-auto">
                     <div className="text-center max-w-2xl mx-auto mb-14">
-                        <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4">
+                        <h2 className="text-4xl md:text-5xl font-extrabold text-slate-900 tracking-tight mb-4 font-heading">
                             Herramientas que te hacen ahorrar
                         </h2>
                         <p className="text-lg text-slate-600">
@@ -392,7 +386,7 @@ const LandingPage = () => {
                         </p>
                     </div>
                     <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
-                        <FeatureCard icon={Activity} title="Precios en tiempo real" desc="Actualizados por la comunidad cada día, sin retrasos." accent="bg-emerald-50 text-emerald-600" />
+                        <FeatureCard icon={Activity} title="Precios en tiempo real" desc="Actualizados por la comunidad cada día, sin retrasos." accent="bg-primary/10 text-primary" />
                         <FeatureCard icon={ShoppingCart} title="Lista inteligente" desc="Calcula el total de tu compra antes de ir a la tienda." accent="bg-sky-50 text-sky-600" />
                         <FeatureCard icon={Shield} title="Detecta estafas" desc="Alertas automáticas cuando un precio sube sin aviso." accent="bg-rose-50 text-rose-600" />
                         <FeatureCard icon={Trophy} title="Gamificación" desc="Gana puntos, sube de nivel y compite en el ranking." accent="bg-amber-50 text-amber-600" />
@@ -412,7 +406,6 @@ const LandingPage = () => {
                     <div className="grid md:grid-cols-3 gap-6">
                         {[
                             { n: "01", icon: Zap, title: "Únete gratis", desc: "Regístrate con Google en 2 segundos." },
-                            { n: "02", icon: Tag, title: "Comparte precios", desc: "Registra un precio y gana +10 puntos." },
                             { n: "03", icon: TrendingDown, title: "Ahorra cada día", desc: "Compara, planifica y ahorra hasta un 23%." },
                         ].map((s, i) => (
                             <div key={i} className="relative bg-white rounded-2xl p-7 border border-slate-100 hover:shadow-lg transition-all">
@@ -431,25 +424,25 @@ const LandingPage = () => {
             {/* ── CTA ── */}
             <section className="py-24 px-6">
                 <div className="max-w-5xl mx-auto">
-                    <div className="relative rounded-3xl overflow-hidden bg-gradient-to-br from-emerald-500 via-teal-600 to-emerald-700 p-12 md:p-16 shadow-2xl shadow-emerald-500/30">
+                    <div className="relative rounded-3xl overflow-hidden bg-slate-900 p-12 md:p-16 shadow-2xl shadow-slate-900/20">
                         {/* Decorative */}
-                        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
-                        <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-white/10 blur-3xl" />
+                        <div className="absolute -top-20 -right-20 w-64 h-64 rounded-full bg-primary/20 blur-3xl" />
+                        <div className="absolute -bottom-20 -left-20 w-64 h-64 rounded-full bg-primary/10 blur-3xl" />
 
                         <div className="relative z-10 text-center max-w-2xl mx-auto">
-                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/20 backdrop-blur-sm text-white rounded-full text-xs font-bold mb-6">
+                            <div className="inline-flex items-center gap-2 px-3 py-1 bg-white/10 backdrop-blur-sm text-primary rounded-full text-xs font-bold mb-6 border border-white/10">
                                 <Sparkles className="w-3.5 h-3.5" />
                                 Gratis para siempre
                             </div>
-                            <h2 className="text-4xl md:text-6xl font-extrabold text-white mb-5 tracking-tight leading-[1.1]">
+                            <h2 className="text-4xl md:text-6xl font-extrabold text-white mb-5 tracking-tight leading-[1.1] font-heading">
                                 Empieza a ahorrar hoy
                             </h2>
-                            <p className="text-lg md:text-xl text-emerald-50 mb-8">
+                            <p className="text-lg md:text-xl text-slate-300 mb-8">
                                 Únete a miles de compradores que ya protegen su bolsillo.
                             </p>
                             <Button
                                 size="lg"
-                                className="bg-white text-emerald-700 hover:bg-slate-100 rounded-full px-8 py-6 text-base font-bold shadow-xl"
+                                className="bg-primary text-primary-foreground hover:bg-primary/90 rounded-full px-8 py-6 text-base font-bold shadow-xl shadow-primary/20"
                                 data-testid="cta-register-btn"
                                 onClick={loginWithGoogle}
                             >
@@ -463,16 +456,21 @@ const LandingPage = () => {
             </section>
 
             {/* ── FOOTER ── */}
-            <footer className="bg-slate-900 text-slate-400 py-12 px-6">
+            <footer className="bg-slate-950 text-slate-400 py-16 px-6 border-t border-white/5">
                 <div className="max-w-7xl mx-auto">
-                    <div className="flex flex-col md:flex-row items-center justify-between gap-4">
-                        <div className="flex items-center gap-2.5">
-                            <div className="w-8 h-8 rounded-lg bg-emerald-500 flex items-center justify-center">
-                                <Tag className="w-4 h-4 text-white" />
+                    <div className="flex flex-col md:flex-row items-center justify-between gap-8">
+                        <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-xl bg-primary/10 border border-white/10 flex items-center justify-center">
+                                <BrandMark className="w-6 h-6 text-primary" />
                             </div>
-                            <span className="text-white font-bold">PriceHive</span>
+                            <span className="text-white font-black text-xl tracking-tight font-heading">PriceHive</span>
                         </div>
-                        <p className="text-xs">La red social de compradores inteligentes · © 2026</p>
+                        <div className="flex gap-8 text-sm font-medium">
+                            <a href="#" className="hover:text-primary transition-colors">Privacidad</a>
+                            <a href="#" className="hover:text-primary transition-colors">Términos</a>
+                            <a href="#" className="hover:text-primary transition-colors">Contacto</a>
+                        </div>
+                        <p className="text-xs font-medium text-slate-500">© 2026 PriceHive Tech. Hecho con ❤️ para la comunidad.</p>
                     </div>
                 </div>
             </footer>

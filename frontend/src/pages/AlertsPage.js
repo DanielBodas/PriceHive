@@ -109,21 +109,21 @@ const AlertsPage = () => {
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                        <h1 className="text-3xl font-black text-slate-900 font-heading tracking-tight">
                             Alertas de Precio
                         </h1>
                         <p className="text-slate-500 mt-1">Recibe notificaciones cuando cambien los precios</p>
                     </div>
                     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button className="bg-emerald-500 hover:bg-emerald-600 gap-2" data-testid="create-alert-btn">
+                            <Button className="gap-2 rounded-full px-5" data-testid="create-alert-btn">
                                 <Plus className="w-4 h-4" />
                                 Nueva Alerta
                             </Button>
                         </DialogTrigger>
                         <DialogContent>
                             <DialogHeader>
-                                <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>Crear Alerta de Precio</DialogTitle>
+                                <DialogTitle className="font-heading">Crear Alerta de Precio</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4 pt-4">
                                 <div className="space-y-2">
@@ -184,7 +184,7 @@ const AlertsPage = () => {
                                 )}
                                 <Button 
                                     onClick={handleCreateAlert} 
-                                    className="w-full bg-emerald-500 hover:bg-emerald-600"
+                                    className="w-full py-6 font-bold rounded-2xl"
                                     data-testid="save-alert-btn"
                                 >
                                     Crear Alerta
@@ -210,31 +210,32 @@ const AlertsPage = () => {
                         {alerts.map((alert) => (
                             <Card 
                                 key={alert.id} 
-                                className={`border ${alert.triggered ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200'}`}
+                                className={`border-slate-200 rounded-2xl shadow-sm transition-all hover:shadow-md ${alert.triggered ? 'bg-primary/5 border-primary/20' : 'bg-white'}`}
                                 data-testid={`alert-card-${alert.id}`}
                             >
-                                <CardContent className="p-4">
+                                <CardContent className="p-5">
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
-                                            <div className="flex items-center gap-2 mb-2">
+                                            <div className="flex items-center gap-2 mb-3">
                                                 {getAlertTypeIcon(alert.alert_type)}
-                                                <span className="text-xs text-slate-500">
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">
                                                     {getAlertTypeLabel(alert.alert_type)}
                                                 </span>
                                                 {alert.triggered && (
-                                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full flex items-center gap-1">
+                                                    <span className="px-2 py-0.5 bg-primary/10 text-primary text-[10px] font-bold rounded-full flex items-center gap-1">
                                                         <Check className="w-3 h-3" />
                                                         Activada
                                                     </span>
                                                 )}
                                             </div>
-                                            <p className="font-medium text-slate-900">{alert.product_name}</p>
-                                            <p className="text-sm text-slate-500 mt-1">
+                                            <p className="font-bold text-slate-900 leading-tight">{alert.product_name}</p>
+                                            <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
+                                                <Store className="w-3 h-3" />
                                                 {alert.supermarket_name || "Cualquier supermercado"}
                                             </p>
                                             {alert.alert_type !== "any_change" && (
-                                                <p className="font-mono font-semibold text-lg text-emerald-600 mt-2">
-                                                    {alert.target_price.toFixed(2)} €
+                                                <p className="font-mono font-black text-xl text-primary mt-3">
+                                                    {alert.target_price.toFixed(2)}€
                                                 </p>
                                             )}
                                         </div>
