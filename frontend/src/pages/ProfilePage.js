@@ -172,7 +172,7 @@ const ProfilePage = () => {
                         {/* avatar */}
                         <div className="relative shrink-0">
                             <Avatar className="w-20 h-20 border-4 border-white/20 shadow-xl ring-4 ring-primary/20">
-                                <AvatarFallback className="bg-primary text-white text-2xl font-black" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                <AvatarFallback className="bg-primary text-white text-2xl font-black font-heading">
                                     {user?.name?.charAt(0)?.toUpperCase() ?? "?"}
                                 </AvatarFallback>
                                 <AvatarImage src={user?.picture} />
@@ -187,7 +187,7 @@ const ProfilePage = () => {
                         {/* name */}
                         <div className="flex-1 text-center sm:text-left min-w-0">
                             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-0.5">
-                                <h1 className="text-xl sm:text-2xl font-black text-white truncate" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                <h1 className="text-xl sm:text-2xl font-black text-white truncate font-heading">
                                     {user?.name ?? "Usuario"}
                                 </h1>
                                 {user?.role === "admin" && (
@@ -205,17 +205,17 @@ const ProfilePage = () => {
                         </div>
 
                         {/* stat pills */}
-                        <div className="shrink-0 flex divide-x divide-white/10 rounded-2xl bg-white/5 border border-white/10">
+                        <div className="w-full sm:w-auto shrink-0 flex divide-x divide-white/10 rounded-2xl bg-white/5 border border-white/10">
                             {[
                                 { icon: Sparkles, label: "Puntos",      val: loading ? "—" : points.toLocaleString("es-ES"), color: "text-primary" },
                                 { icon: Trophy,   label: "Ranking",     val: loading ? "—" : rank ? `#${rank}` : "—",        color: "text-amber-400"  },
                                 { icon: Activity, label: "Movimientos", val: loading ? "—" : history.length,                 color: "text-slate-300"  },
                             ].map(({ icon: Icon, label, val, color }) => (
-                                <div key={label} className="flex flex-col items-center gap-1 px-4 sm:px-5 py-3">
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1">
+                                <div key={label} className="flex-1 sm:flex-none flex flex-col items-center gap-1 px-3 sm:px-5 py-3">
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1 whitespace-nowrap">
                                         <Icon className={`w-3 h-3 ${color}`} />{label}
                                     </span>
-                                    <span className={`text-lg sm:text-xl font-black ${color}`} style={{ fontFamily: "Manrope, sans-serif" }}>
+                                    <span className={`text-base sm:text-xl font-black ${color} font-heading`}>
                                         {val}
                                     </span>
                                 </div>
@@ -228,7 +228,7 @@ const ProfilePage = () => {
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
                     {/* ── Left: tabbed content (2/3) ───────────────────────── */}
-                    <div className="lg:col-span-2 rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden order-2 lg:order-1">
+                    <div className="lg:col-span-2 rounded-[24px] border border-slate-200 bg-white shadow-sm overflow-hidden order-2 lg:order-1">
 
                         {/* tab bar */}
                         <div className="flex items-center border-b border-slate-100 bg-slate-50/60">
@@ -462,8 +462,8 @@ const ProfilePage = () => {
                         <div className="mt-4 rounded-2xl bg-primary/10 p-4">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-widest text-primary">Tu nivel</p>
-                                    <p className="text-xl font-black text-secondary">{levelMeta.current.label}</p>
+                                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Tu nivel</p>
+                                    <p className="text-xl font-black text-secondary font-heading">{levelMeta.current.label}</p>
                                 </div>
                                 <p className="text-sm font-bold text-primary tabular-nums">{points.toLocaleString("es-ES")} pts</p>
                             </div>

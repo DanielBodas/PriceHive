@@ -146,7 +146,7 @@ const LandingPage = () => {
             </nav>
 
             {/* ── HERO ── */}
-            <section className="pt-32 pb-16 px-6 relative">
+            <section className="pt-24 sm:pt-32 pb-12 sm:pb-16 px-4 sm:px-6 relative">
                 {/* Decorative blobs */}
                 <div className="absolute top-40 left-10 w-64 h-64 rounded-full bg-primary/20 blur-3xl -z-10" />
                 <div className="absolute top-20 right-10 w-72 h-72 rounded-full bg-accent/15 blur-3xl -z-10" />
@@ -159,9 +159,9 @@ const LandingPage = () => {
                                 <Sparkles className="w-3.5 h-3.5 fill-primary" />
                                 La red social de compradores inteligentes
                             </div>
-                            <h1 className="text-5xl lg:text-7xl font-extrabold text-secondary leading-[1.05] tracking-tighter">
+                            <h1 className="text-4xl xs:text-5xl lg:text-7xl font-extrabold text-secondary leading-[1.05] tracking-tighter">
                                 No más{" "}
-                                <span className="relative inline-block">
+                                <span className="relative inline-block whitespace-nowrap xs:whitespace-normal">
                                     <span className="bg-gradient-to-r from-primary to-accent bg-clip-text text-transparent">falsas ofertas</span>
                                     <svg className="absolute -bottom-2 left-0 w-full" viewBox="0 0 300 12" fill="none">
                                         <path d="M2 9C75 3 150 3 298 9" stroke="url(#g)" strokeWidth="3" strokeLinecap="round" />
@@ -282,7 +282,7 @@ const LandingPage = () => {
                         </p>
                     </div>
 
-                    <div className="grid md:grid-cols-3 gap-5">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
                         {/* Trending */}
                         <div className="bg-white rounded-2xl p-5 border border-slate-100 shadow-sm">
                             <div className="flex items-center gap-2 mb-4">
@@ -393,7 +393,7 @@ const LandingPage = () => {
                             Todo lo que necesitas para comprar de forma más inteligente.
                         </p>
                     </div>
-                    <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-5">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
                         <FeatureCard icon={Activity} title="Precios en tiempo real" desc="Actualizados por la comunidad cada día, sin retrasos." accent="bg-primary/10 text-primary" />
                         <FeatureCard icon={ShoppingCart} title="Lista inteligente" desc="Calcula el total de tu compra antes de ir a la tienda." accent="bg-sky-50 text-sky-600" />
                         <FeatureCard icon={Shield} title="Detecta estafas" desc="Alertas automáticas cuando un precio sube sin aviso." accent="bg-rose-50 text-rose-600" />
@@ -411,7 +411,7 @@ const LandingPage = () => {
                         </h2>
                         <p className="text-lg text-slate-600">Tres pasos. Cero complicaciones.</p>
                     </div>
-                    <div className="grid md:grid-cols-3 gap-6">
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
                         {[
                             { n: "01", icon: Zap, title: "Únete gratis", desc: "Regístrate con Google en 2 segundos." },
                             { n: "02", icon: Tag, title: "Comparte precios", desc: "Registra un precio y gana +10 puntos." },
