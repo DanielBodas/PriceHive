@@ -4,12 +4,12 @@ import { useLocation } from 'react-router-dom';
 // ==========================================
 // CONFIGURACIÓN GLOBAL PARAMETRIZADA
 // ==========================================
-const BEE_APPEARANCE_RATIO = 1.0;
-const BEE_INTERVAL = 10000;
+const BEE_APPEARANCE_RATIO = process.env.REACT_APP_BEE_APPEARANCE_RATIO !== undefined ? parseFloat(process.env.REACT_APP_BEE_APPEARANCE_RATIO) : 1.0;
+const BEE_INTERVAL = process.env.REACT_APP_BEE_INTERVAL !== undefined ? parseInt(process.env.REACT_APP_BEE_INTERVAL, 10) : 10000;
 
 // Parámetros de vuelo de la abeja
-const BEE_FLIGHT_DURATION = 3000; // Tiempo en milisegundos que tarda en cruzar (ej. 6000 = 6 segundos)
-const LOOP_CHANCE = 0.9; // Probabilidad de hacer un círculo (0.0 = nunca, 1.0 = siempre, 0.5 = 50%)
+const BEE_FLIGHT_DURATION = process.env.REACT_APP_BEE_FLIGHT_DURATION !== undefined ? parseInt(process.env.REACT_APP_BEE_FLIGHT_DURATION, 10) : 3000; // Tiempo en milisegundos
+const LOOP_CHANCE = process.env.REACT_APP_BEE_LOOP_CHANCE !== undefined ? parseFloat(process.env.REACT_APP_BEE_LOOP_CHANCE) : 0.9; // Probabilidad de círculo
 
 const MESSAGES = [
     "¡Bzzzt! ¿Buscando chollos? 🐝",
@@ -159,7 +159,7 @@ export const BeeEasterEgg = () => {
 
             {/* Contenedor 1: Movimiento Horizontal y tiempo total del vuelo */}
             <div
-                className="fixed z-[9999] pointer-events-none sm:pointer-events-auto"
+                className="fixed z-[9999] pointer-events-none"
                 style={{
                     top: position.top,
                     bottom: position.bottom,
@@ -186,7 +186,7 @@ export const BeeEasterEgg = () => {
                                 src="/icon.png"
                                 alt="PriceHive Bee"
                                 onClick={handleBeeClick}
-                                className={`w-14 h-14 object-contain opacity-60 hover:opacity-100 transition-all duration-500 ${isFlying ? `scale-125 ${side === 'left' ? 'scale-x-[-1]' : ''}` : `-rotate-12 hover:rotate-0 ${side === 'left' ? 'scale-x-[-1]' : ''} animate-bounce-subtle`} cursor-pointer drop-shadow-lg`}
+                                className={`pointer-events-auto w-14 h-14 object-contain opacity-60 hover:opacity-100 transition-all duration-500 ${isFlying ? `scale-125 ${side === 'left' ? 'scale-x-[-1]' : ''}` : `-rotate-12 hover:rotate-0 ${side === 'left' ? 'scale-x-[-1]' : ''} animate-bounce-subtle`} cursor-pointer drop-shadow-lg`}
                             />
                             {!isFlying && (
                                 <div className={`absolute bottom-full mb-2 px-3 py-1.5 bg-secondary text-white text-[10px] font-bold rounded-lg opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap shadow-xl ${side === 'right' ? 'right-0' : 'left-0'}`}>

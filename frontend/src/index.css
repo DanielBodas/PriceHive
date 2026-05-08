@@ -6,47 +6,68 @@
 
 @layer base {
     :root {
-        --background: 38 20% 98%;
+        /* Base Hue & Saturation for the Theme */
+        --theme-h: 42;
+        --theme-s: 85%;
+
+        --background: var(--theme-h) 20% 99%;
         --foreground: 222 47% 11%;
+        
         --card: 0 0% 100%;
         --card-foreground: 222 47% 11%;
+        
         --popover: 0 0% 100%;
         --popover-foreground: 222 47% 11%;
-        --primary: 38 92% 45%;
+        
+        /* A softer, premium honey color instead of aggressive orange */
+        --primary: var(--theme-h) var(--theme-s) 52%;
         --primary-foreground: 0 0% 100%;
+        
         --secondary: 222 47% 11%;
         --secondary-foreground: 0 0% 100%;
-        --muted: 38 20% 94%;
+        
+        --muted: var(--theme-h) 20% 94%;
         --muted-foreground: 215 16% 47%;
-        --accent: 45 93% 47%;
+        
+        /* Warmer, slightly lighter accent */
+        --accent: calc(var(--theme-h) + 6) 90% 56%;
         --accent-foreground: 222 47% 11%;
+        
         --destructive: 350 89% 60%;
         --destructive-foreground: 0 0% 100%;
-        --border: 38 15% 90%;
-        --input: 38 15% 90%;
-        --ring: 38 92% 45%;
+        
+        --border: var(--theme-h) 15% 90%;
+        --input: var(--theme-h) 15% 90%;
+        --ring: var(--theme-h) var(--theme-s) 52%;
+        
         --radius: 1rem;
     }
     .dark {
+        --theme-h: 42;
+        --theme-s: 85%;
+
         --background: 222 47% 11%;
         --foreground: 210 40% 98%;
         --card: 223 47% 14%;
         --card-foreground: 210 40% 98%;
         --popover: 223 47% 14%;
         --popover-foreground: 210 40% 98%;
-        --primary: 160 84% 39%;
+        
+        /* Dark mode primary can be slightly brighter for contrast */
+        --primary: var(--theme-h) var(--theme-s) 55%;
         --primary-foreground: 0 0% 100%;
+        
         --secondary: 215 28% 17%;
         --secondary-foreground: 210 40% 98%;
         --muted: 215 28% 17%;
         --muted-foreground: 215 20% 65%;
-        --accent: 82 78% 44%;
+        --accent: calc(var(--theme-h) + 6) 90% 50%;
         --accent-foreground: 222 47% 11%;
         --destructive: 350 89% 60%;
         --destructive-foreground: 0 0% 100%;
         --border: 215 28% 17%;
         --input: 215 28% 17%;
-        --ring: 160 84% 39%;
+        --ring: var(--theme-h) var(--theme-s) 55%;
     }
 }
 
@@ -76,6 +97,12 @@
         background-image: radial-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px);
         background-size: 24px 24px;
         background-position: 0 0, 12px 12px;
+    }
+    .honeycomb-header {
+        background: 
+            url("data:image/svg+xml,%3Csvg width='40' height='69.282' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' stroke='%23ffffff' stroke-width='2' stroke-opacity='0.25'%3E%3Cpath d='M40 17.321L20 5.774 0 17.321V40.415L20 51.962l20-11.547V17.321z'/%3E%3Cpath d='M0 51.962L20 63.508 40 51.962'/%3E%3C/g%3E%3C/svg%3E"),
+            linear-gradient(135deg, hsl(var(--theme-h) 85% 55%), hsl(var(--theme-h) 85% 45%));
+        background-blend-mode: overlay, normal;
     }
     .amber-gradient {
         @apply bg-gradient-to-br from-primary via-primary to-accent;
