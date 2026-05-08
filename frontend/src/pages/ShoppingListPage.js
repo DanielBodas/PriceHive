@@ -844,7 +844,7 @@ const ShoppingListPage = () => {
                     <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10 shadow-lg shadow-primary/5 animate-bounce-subtle">
                         <img src="/icon.png" alt="PriceHive Bee" className="h-12 w-12 object-contain" />
                     </div>
-                    <p className="mt-5 text-lg font-bold text-slate-950 font-heading">Aun no tienes listas</p>
+                    <p className="mt-5 text-lg font-bold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>Aun no tienes listas</p>
                     <p className="mt-1 text-sm text-slate-500">Crea una lista por supermercado para ir recopilando precios.</p>
                     <Button onClick={() => setDialogOpen(true)} className="mt-6 gap-2 rounded-2xl bg-primary text-white hover:bg-primary">
                         <Plus className="h-4 w-4" />
@@ -869,7 +869,7 @@ const ShoppingListPage = () => {
                                 <button type="button" onClick={() => handleSelectList(list)} className="flex flex-1 flex-col p-5 text-left">
                                     <div className="flex items-start justify-between gap-3">
                                         <div className="min-w-0 flex-1">
-                                            <h3 className="truncate text-lg font-bold text-slate-950 font-heading">
+                                            <h3 className="truncate text-lg font-bold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
                                                 {list.name}
                                             </h3>
                                             <p className="mt-1 flex items-center gap-1.5 text-sm text-slate-500">
@@ -959,7 +959,7 @@ const ShoppingListPage = () => {
             data-testid="list-detail-view"
         >
             {listMode === "shop" && (
-                <div className="sticky top-12 z-40 -mx-4 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:-mx-5 sm:px-5">
+                <div className="sticky top-0 z-40 -mx-4 border-b border-slate-200 bg-white/95 px-4 py-2.5 backdrop-blur sm:-mx-5 sm:px-5">
                     <div className="flex items-center gap-3">
                         <button
                             type="button"
@@ -968,13 +968,13 @@ const ShoppingListPage = () => {
                             aria-label="Salir del modo compra"
                         >
                             <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
-                            <span className="hidden xs:inline text-xs font-bold uppercase tracking-wider">Atrás</span>
+                            <span className="text-xs font-bold uppercase tracking-wider">Atrás</span>
                         </button>
 
                         <div className="min-w-0 flex-1">
                             <div className="flex items-center justify-between gap-4">
                                 <div className="min-w-0 flex-1">
-                                    <h2 className="truncate text-[10px] font-black uppercase tracking-widest text-slate-400 font-heading">
+                                    <h2 className="truncate text-xs font-black uppercase tracking-widest text-slate-400" style={{ fontFamily: "Manrope, sans-serif" }}>
                                         {selectedList.supermarket_name}
                                     </h2>
                                     <div className="mt-0.5 flex items-baseline gap-2">
@@ -1012,7 +1012,7 @@ const ShoppingListPage = () => {
                 </div>
             )}
             {/* Sticky top header */}
-            <div className={`sticky top-12 z-40 -mx-4 border-b border-slate-100 bg-white/95 px-4 py-2 backdrop-blur sm:-mx-5 sm:px-5 ${listMode === "shop" ? "hidden" : ""}`}>
+            <div className={`sticky top-0 z-40 -mx-4 border-b border-slate-100 bg-white/95 px-4 py-2 backdrop-blur sm:-mx-5 sm:px-5 ${listMode === "shop" ? "hidden" : ""}`}>
                 <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2 min-w-0">
                         <button
@@ -1027,7 +1027,7 @@ const ShoppingListPage = () => {
                         </button>
                         <div className="h-4 w-[1px] bg-slate-200" />
                         <div className="min-w-0">
-                            <h2 className="truncate text-sm font-black text-slate-950 font-heading">
+                            <h2 className="truncate text-sm font-black text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
                                 {selectedList.name}
                             </h2>
                             <div className="flex items-center gap-1.5 text-[10px] font-bold text-slate-400 uppercase tracking-tight">
@@ -1104,7 +1104,7 @@ const ShoppingListPage = () => {
             {/* Search & filter bar */}
             {totalItems > 0 && (
                 <div className={`sticky z-20 -mx-4 bg-white/90 px-4 backdrop-blur sm:-mx-5 sm:px-5 ${
-                    listMode === "shop" ? "top-[112px] py-2" : "top-[105px] py-2"
+                    listMode === "shop" ? "top-[50px] py-2" : "top-[53px] py-2"
                 }`}>
                     <div className="flex items-center gap-2">
                         <div className="relative flex-1">
@@ -1196,7 +1196,7 @@ const ShoppingListPage = () => {
                         <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-white shadow-sm">
                             <Package className="h-8 w-8 text-slate-400" />
                         </div>
-                        <p className="mt-5 text-lg font-bold text-slate-950 font-heading">
+                        <p className="mt-5 text-lg font-bold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
                             Lista vacia
                         </p>
                         <p className="mt-1 text-sm text-slate-500">Anade productos que vas a comprar en {selectedList.supermarket_name}</p>
@@ -1245,7 +1245,7 @@ const ShoppingListPage = () => {
                                             <Package className="h-5 w-5" />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <h3 className="truncate text-sm font-black text-slate-950 font-heading">
+                                            <h3 className="truncate text-sm font-black text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
                                                 {item.product_name}
                                             </h3>
                                             <div className="mt-0.5 flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-tight">
@@ -1317,9 +1317,9 @@ const ShoppingListPage = () => {
                                     <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
                                         {/* Product & Tags */}
                                         <div className="min-w-0 flex-1">
-                                            <h3 className={`truncate text-sm font-black transition-all font-heading ${
+                                            <h3 className={`truncate text-sm font-black transition-all ${
                                                 isPurchased ? "text-slate-400" : "text-slate-950"
-                                            }`}>
+                                            }`} style={{ fontFamily: "Manrope, sans-serif" }}>
                                                 {item.product_name}
                                             </h3>
                                             
@@ -1380,14 +1380,14 @@ const ShoppingListPage = () => {
                                         {/* Row for Quantity and Price - Independent and spaced */}
                                         <div className="flex items-center justify-between gap-3 sm:justify-end">
                                             {/* Quantity Picker */}
-                                            <div className="flex h-11 items-center rounded-xl border border-slate-200 bg-white/80 px-1 shadow-sm transition-colors focus-within:border-primary">
+                                            <div className="flex h-9 items-center rounded-xl border border-slate-200 bg-white/80 px-1 shadow-sm transition-colors focus-within:border-primary">
                                                 <button
                                                     type="button"
                                                     onClick={(e) => { e.stopPropagation(); handleQuantityStep(idx, -1); }}
-                                                    className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-900"
                                                     disabled={Number(item.quantity) <= 0.1}
                                                 >
-                                                    <Minus className="h-4 w-4" />
+                                                    <Minus className="h-3 w-3" />
                                                 </button>
                                                 <span className="min-w-[48px] px-1 text-center text-xs font-black tabular-nums text-slate-700">
                                                     {item.quantity}{item.unit_name}
@@ -1395,17 +1395,17 @@ const ShoppingListPage = () => {
                                                 <button
                                                     type="button"
                                                     onClick={(e) => { e.stopPropagation(); handleQuantityStep(idx, 1); }}
-                                                    className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-900"
+                                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-900"
                                                 >
-                                                    <Plus className="h-4 w-4" />
+                                                    <Plus className="h-3 w-3" />
                                                 </button>
                                             </div>
 
                                             {/* Price Input Area */}
                                             <div className="w-24 shrink-0 sm:w-28">
-                                                <div className={`group/price flex h-11 items-center rounded-xl border px-3 transition-all duration-200 ${
+                                                <div className={`group/price flex h-9 items-center rounded-xl border px-2 transition-all duration-200 ${
                                                     hasPrice
-                                                        ? "border-primary-300 bg-emerald-50"
+                                                        ? "border-primary-300 bg-primary/10/50"
                                                         : "border-slate-200 bg-slate-50 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10"
                                                 }`}>
                                                     <Input
@@ -1414,11 +1414,11 @@ const ShoppingListPage = () => {
                                                         value={item.price ?? ""}
                                                         onChange={(e) => handleShopPriceChange(idx, e.target.value)}
                                                         placeholder="0.00"
-                                                        className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-right text-[15px] font-black tabular-nums shadow-none focus-visible:ring-0 placeholder:text-slate-300"
+                                                        className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-right text-sm font-black tabular-nums shadow-none focus-visible:ring-0 placeholder:text-slate-300"
                                                     />
-                                                    <span className={`ml-1 text-[10px] font-black ${hasPrice ? "text-emerald-600" : "text-slate-300"}`}>€</span>
-                                                </div>
-                                            </div>
+                                                    <span className={`ml-1 text-[9px] font-black ${hasPrice ? "text-primary" : "text-slate-300"}`}>€</span>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
                         </div>
@@ -1487,9 +1487,9 @@ const ShoppingListPage = () => {
 
             {/* New List Dialog */}
             <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-                <DialogContent className="max-w-[95vw] sm:max-w-md max-h-[95vh] overflow-y-auto rounded-3xl">
+                <DialogContent>
                     <DialogHeader>
-                        <DialogTitle className="font-heading">Crear nueva lista</DialogTitle>
+                        <DialogTitle style={{ fontFamily: "Manrope, sans-serif" }}>Crear nueva lista</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
                         <div className="space-y-2">
@@ -1531,9 +1531,9 @@ const ShoppingListPage = () => {
                     if (!isOpen) resetNewItemForm();
                 }}
             >
-                <DialogContent className="max-w-[95vw] sm:max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl pb-10 sm:pb-6">
+                <DialogContent className="max-h-[90vh] overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="font-heading">
+                        <DialogTitle style={{ fontFamily: "Manrope, sans-serif" }}>
                             {editingItemIndex !== null ? "Editar producto" : "Anadir producto"}
                         </DialogTitle>
                     </DialogHeader>
@@ -1708,9 +1708,9 @@ const ShoppingListPage = () => {
 
             {/* Estimate Confirm Dialog */}
             <Dialog open={confirmEstimateOpen} onOpenChange={setConfirmEstimateOpen}>
-                <DialogContent className="max-w-[95vw] sm:max-w-md rounded-3xl">
+                <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-indigo-700 font-heading">
+                        <DialogTitle className="flex items-center gap-2 text-indigo-700" style={{ fontFamily: "Manrope, sans-serif" }}>
                             <Sparkles className="h-5 w-5" />
                             Calcular precios estimados
                         </DialogTitle>
@@ -1737,9 +1737,9 @@ const ShoppingListPage = () => {
 
             {/* Finish Sheet: Review & Submit */}
             <Dialog open={finishSheetOpen} onOpenChange={setFinishSheetOpen}>
-                <DialogContent className="max-w-[95vw] sm:max-w-xl max-h-[90vh] overflow-y-auto rounded-3xl">
+                <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 font-heading">
+                        <DialogTitle className="flex items-center gap-2" style={{ fontFamily: "Manrope, sans-serif" }}>
                             <CheckCircle2 className="h-5 w-5 text-primary" />
                             Cerrar compra
                         </DialogTitle>
@@ -1841,9 +1841,9 @@ const ShoppingListPage = () => {
 
             {/* Confirm submit dialog */}
             <Dialog open={confirmSubmitOpen} onOpenChange={setConfirmSubmitOpen}>
-                <DialogContent className="max-w-[95vw] sm:max-w-md rounded-3xl">
+                <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-primary font-heading">
+                        <DialogTitle className="flex items-center gap-2 text-primary" style={{ fontFamily: "Manrope, sans-serif" }}>
                             <CheckCircle2 className="h-5 w-5" />
                             Confirmar subida
                         </DialogTitle>
@@ -1866,9 +1866,9 @@ const ShoppingListPage = () => {
 
             {/* Product insight dialog */}
             <Dialog open={productInsightOpen} onOpenChange={setProductInsightOpen}>
-                <DialogContent className="max-w-[95vw] sm:max-w-lg max-h-[90vh] overflow-y-auto rounded-3xl">
+                <DialogContent className="max-h-[90vh] max-w-lg overflow-y-auto">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 font-heading">
+                        <DialogTitle className="flex items-center gap-2" style={{ fontFamily: "Manrope, sans-serif" }}>
                             <Info className="h-5 w-5 text-sky-600" />
                             {productInsightItem?.product_name || "Producto"}
                         </DialogTitle>
@@ -1951,9 +1951,9 @@ const ShoppingListPage = () => {
 
             {/* Menu Sheet (mobile-friendly actions menu) */}
             <Dialog open={menuOpen} onOpenChange={setMenuOpen}>
-                <DialogContent className="max-w-[95vw] sm:max-w-sm rounded-3xl">
+                <DialogContent className="max-w-sm">
                     <DialogHeader>
-                        <DialogTitle className="font-heading">Opciones de la lista</DialogTitle>
+                        <DialogTitle style={{ fontFamily: "Manrope, sans-serif" }}>Opciones de la lista</DialogTitle>
                     </DialogHeader>
                     <div className="space-y-1.5 pt-2">
                         <button
