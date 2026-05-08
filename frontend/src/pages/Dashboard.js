@@ -493,7 +493,7 @@ const Dashboard = () => {
                     }
                 />
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start max-w-5xl mx-auto">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start max-w-7xl mx-auto">
 
 
                         {/* ── CENTER FEED ── */}
@@ -508,10 +508,10 @@ const Dashboard = () => {
                                             <button
                                                 key={t.key}
                                                 onClick={() => setFilter(t.key)}
-                                                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border-none font-bold text-[12px] white-space-nowrap cursor-pointer transition-all ${
+                                                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-bold text-[12px] whitespace-nowrap cursor-pointer transition-all ${
                                                     active
-                                                        ? "bg-slate-900 text-white shadow-lg shadow-slate-900/20"
-                                                        : "bg-white text-slate-600 shadow-[0_0_0_1px_#e2e8f0]"
+                                                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                                                        : "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15"
                                                 }`}
                                             >
                                                 <t.icon className="w-3.5 h-3.5" />
