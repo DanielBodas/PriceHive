@@ -32,7 +32,7 @@ async def create_price(data: PriceCreate, user: dict = Depends(get_current_user)
     user_points = user_doc.get("points", 0) if user_doc else 0
     
     anomaly = analyze_price_anomaly(data.price, recent_prices, user_points)
-    initial_status = "suspicious" if anomaly["is_suspicious"] else "active"
+    initial_status = "suspicious" if anomaly["is_suspicious"] else "pending"
 
     price_id = str(uuid.uuid4())
     created_at = datetime.now(timezone.utc).isoformat()

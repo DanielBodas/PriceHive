@@ -95,7 +95,7 @@ const Layout = ({ children }) => {
                                 className="group relative z-50 focus:outline-none"
                             >
                                 <img 
-                                    src="/logo192.png" 
+                                    src="/logo.png" 
                                     alt="PriceHive" 
                                     className="h-24 w-auto object-contain transition-all group-hover:scale-105 drop-shadow-md" 
                                 />

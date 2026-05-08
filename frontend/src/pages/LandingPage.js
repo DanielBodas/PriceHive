@@ -117,7 +117,7 @@ const LandingPage = () => {
                     <div className="flex items-center w-48 h-full relative">
                         <Link to="/" className="absolute top-1/2 -translate-y-1/2 left-0 group z-50 py-4">
                             <img 
-                                src="/logo192.png" 
+                                src="/logo.png" 
                                 alt="PriceHive" 
                                 className="h-32 w-auto object-contain transition-all group-hover:scale-110 drop-shadow-2xl" 
                             />
@@ -469,7 +469,7 @@ const LandingPage = () => {
                 <div className="max-w-7xl mx-auto">
                     <div className="flex flex-col md:flex-row items-center justify-between gap-4">
                         <div className="flex items-center">
-                            <img src="/logo192.png" alt="PriceHive" className="h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity" />
+                            <img src="/logo.png" alt="PriceHive" className="h-8 w-auto object-contain opacity-80 hover:opacity-100 transition-opacity" />
                         </div>
                         <p className="text-xs">La red social de compradores inteligentes · © 2026</p>
                     </div>

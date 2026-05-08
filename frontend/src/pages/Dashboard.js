@@ -471,65 +471,33 @@ const Dashboard = () => {
                     tag="Resumen de comunidad"
                     title="Dashboard"
                     subtitle="Pulso de precios y conversación real de la comunidad en un vistazo."
+                    actions={
+                        pulse && (
+                            <div className="hidden sm:flex gap-4 items-center bg-black/20 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-white/10 shadow-inner">
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[9px] font-bold text-white/70 uppercase tracking-widest">Precios hoy</span>
+                                    <span className="text-sm font-black text-white">{pulse.prices_24h || 0}</span>
+                                </div>
+                                <div className="w-px h-6 bg-white/20"></div>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[9px] font-bold text-white/70 uppercase tracking-widest">Posts (7d)</span>
+                                    <span className="text-sm font-black text-white">{pulse.posts_7d || 0}</span>
+                                </div>
+                                <div className="w-px h-6 bg-white/20"></div>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[9px] font-bold text-white/70 uppercase tracking-widest">Usuarios (7d)</span>
+                                    <span className="text-sm font-black text-white">{pulse.active_users_7d || 0}</span>
+                                </div>
+                            </div>
+                        )
+                    }
                 />
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start max-w-5xl mx-auto">
 
-                        {/* ── LEFT SIDEBAR ── */}
-                        <aside className="hidden lg:block lg:col-span-3 space-y-4 lg:sticky lg:top-14">
-                            {/* User card */}
-                            <div className="bg-white rounded-[20px] p-4 border border-slate-200 mb-3">
-                                <div className="flex items-center gap-3">
-                                    <Avatar name={user?.name} picture={user?.picture} size="md" />
-                                    <div className="min-w-0">
-                                        <p className="font-bold text-sm text-slate-900 m-0 truncate">{user?.name}</p>
-                                        <p className="text-[11px] text-slate-400 m-0 truncate">{user?.email}</p>
-                                    </div>
-                                </div>
-                                <div className="mt-3 flex items-center gap-2 bg-emerald-50 rounded-xl p-2 px-3">
-                                    <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                                    <span className="text-sm font-bold text-emerald-800 tabular-nums">{user?.points || 0}</span>
-                                    <span className="text-[11px] text-emerald-400">puntos</span>
-                                </div>
-                            </div>
-
-                            {/* Quick nav */}
-                            <div className="bg-white rounded-[20px] p-2 border border-slate-200 mb-3">
-                                {quickNavItems.map((item) => (
-                                    <button
-                                        key={item.path}
-                                        onClick={() => navigate(item.path)}
-                                        className="flex items-center gap-3 w-full p-2.5 px-3 rounded-xl border-none bg-transparent cursor-pointer text-slate-600 text-sm font-semibold transition-all hover:bg-emerald-50 hover:text-emerald-600"
-                                    >
-                                        <item.icon className="w-4 h-4 shrink-0" />
-                                        <span>{item.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Community pulse */}
-                            {pulse && (
-                                <div className="bg-white rounded-[20px] p-3.5 border border-slate-200">
-                                    <div className="flex items-center gap-2 mb-3">
-                                        <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block shadow-[0_0_0_3px_#d1fae5] animate-pulse" />
-                                        <span className="text-[11px] font-bold uppercase tracking-widest text-slate-500">Pulso en vivo</span>
-                                    </div>
-                                    {[
-                                        { label: "Precios hoy", value: pulse.prices_24h || 0, color: "text-emerald-600" },
-                                        { label: "Usuarios activos (7d)", value: pulse.active_users_7d || 0, color: "text-sky-600" },
-                                        { label: "Posts esta semana", value: pulse.posts_7d || 0, color: "text-amber-600" },
-                                    ].map((s) => (
-                                        <div key={s.label} className="flex justify-between items-center py-1.5 border-b border-slate-100 last:border-0">
-                                            <span className="text-[12px] text-slate-500">{s.label}</span>
-                                            <span className={`text-sm font-extrabold ${s.color} tabular-nums`}>{s.value}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </aside>
 
                         {/* ── CENTER FEED ── */}
-                        <main className="col-span-1 lg:col-span-6 space-y-4">
+                        <main className="col-span-1 lg:col-span-8 space-y-4">
                             {/* Feed header */}
                             <div className="sticky top-12 z-10 bg-slate-50/90 backdrop-blur-md pb-3 mb-2">
                                 <h1 className="text-lg font-black text-slate-900 m-0 mb-3 font-heading">Actividad reciente</h1>
@@ -562,7 +530,7 @@ const Dashboard = () => {
                             {/* Posts */}
                             {loading ? (
                                 <div className="py-20 text-center">
-                                    <Sparkles className="w-8 h-8 text-emerald-300 mx-auto mb-3 animate-pulse" />
+                                    <Sparkles className="w-8 h-8 text-amber-300 mx-auto mb-3 animate-pulse" />
                                     <p className="text-[12px] text-slate-400 font-semibold uppercase tracking-widest">Cargando publicaciones…</p>
                                 </div>
                             ) : filteredPosts.length === 0 ? (
@@ -581,7 +549,22 @@ const Dashboard = () => {
                         </main>
 
                         {/* ── RIGHT SIDEBAR ── */}
-                        <aside className="col-span-1 lg:col-span-3 space-y-4 lg:sticky lg:top-14">
+                        <aside className="col-span-1 lg:col-span-4 space-y-4 lg:sticky lg:top-14">
+                            {/* User card (Moved from left) */}
+                            <div className="bg-white rounded-[20px] p-4 border border-slate-200">
+                                <div className="flex items-center gap-3">
+                                    <Avatar name={user?.name} picture={user?.picture} size="md" />
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-sm text-slate-900 m-0 truncate">{user?.name}</p>
+                                        <p className="text-[11px] text-slate-400 m-0 truncate">{user?.email}</p>
+                                    </div>
+                                </div>
+                                <div className="mt-3 flex items-center gap-2 bg-amber-50 rounded-xl p-2 px-3">
+                                    <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                    <span className="text-sm font-bold text-amber-800 tabular-nums">{user?.points || 0}</span>
+                                    <span className="text-[11px] text-amber-600">puntos</span>
+                                </div>
+                            </div>
 
                             {/* Trending */}
                             <div className="bg-white rounded-[20px] p-4 border border-slate-200">
@@ -600,7 +583,7 @@ const Dashboard = () => {
                                                 <span className="text-[11px] text-slate-500">{t.supermarket_name}</span>
                                                 <span className="text-[11px] font-bold text-slate-900">{t.last_price?.toFixed(2)}€</span>
                                                 {t.delta_pct !== 0 && (
-                                                    <span className={`text-[10px] font-bold ${t.delta_pct < 0 ? "text-emerald-600" : "text-rose-600"}`}>
+                                                    <span className={`text-[10px] font-bold ${t.delta_pct < 0 ? "text-amber-600" : "text-rose-600"}`}>
                                                         {t.delta_pct > 0 ? "+" : ""}{t.delta_pct}%
                                                     </span>
                                                 )}
@@ -617,28 +600,30 @@ const Dashboard = () => {
                             {/* Best deals */}
                             <div className="bg-white rounded-[20px] p-4 border border-slate-200">
                                 <div className="flex items-center gap-2 mb-3.5">
-                                    <TrendingDown className="w-4 h-4 text-emerald-500" />
+                                    <TrendingDown className="w-4 h-4 text-primary" />
                                     <h2 className="text-[13px] font-extrabold text-slate-900 m-0 flex-1">Mejores ofertas</h2>
-                                    <span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Hoy</span>
+                                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Hoy</span>
                                 </div>
                                 {bestDeals.length === 0 ? (
                                     <p className="text-[12px] text-slate-400 m-0">Sin ofertas detectadas</p>
                                 ) : bestDeals.map((d, idx) => (
                                     <div key={idx} className={`flex items-center gap-2.5 py-2 ${idx < bestDeals.length - 1 ? "border-b border-slate-100" : ""}`}>
-                                        <div className="w-8 h-8 rounded-xl bg-emerald-50 flex items-center justify-center shrink-0">
-                                            <ArrowDown className="w-3.5 h-3.5 text-emerald-500" />
+                                        <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                                            <ArrowDown className="w-3.5 h-3.5 text-primary" />
                                         </div>
                                         <div className="min-w-0 flex-1">
                                             <p className="text-[12px] font-bold text-slate-900 m-0 truncate">{d.product_name}</p>
                                             <p className="text-[11px] text-slate-500 m-0 truncate">{d.supermarket_name}</p>
                                         </div>
                                         <div className="text-right shrink-0">
-                                            <p className="text-[13px] font-extrabold text-emerald-600 m-0 tabular-nums">{d.current_price?.toFixed(2)}€</p>
-                                            <p className="text-[10px] font-bold text-emerald-500 m-0">{d.delta_pct}%</p>
+                                            <p className="text-[13px] font-extrabold text-primary m-0 tabular-nums">{d.current_price?.toFixed(2)}€</p>
+                                            <p className="text-[10px] font-bold text-amber-500 m-0">{d.delta_pct}%</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
+
+
 
                             {/* Recent prices */}
                             {generalStats?.recent_activity?.length > 0 && (

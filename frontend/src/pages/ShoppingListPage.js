@@ -1405,7 +1405,7 @@ const ShoppingListPage = () => {
                                             <div className="w-24 shrink-0 sm:w-28">
                                                 <div className={`group/price flex h-11 items-center rounded-xl border px-3 transition-all duration-200 ${
                                                     hasPrice
-                                                        ? "border-primary-300 bg-emerald-50"
+                                                        ? "border-primary-300 bg-amber-50"
                                                         : "border-slate-200 bg-slate-50 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10"
                                                 }`}>
                                                     <Input
@@ -1416,7 +1416,7 @@ const ShoppingListPage = () => {
                                                         placeholder="0.00"
                                                         className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-right text-[15px] font-black tabular-nums shadow-none focus-visible:ring-0 placeholder:text-slate-300"
                                                     />
-                                                    <span className={`ml-1 text-[10px] font-black ${hasPrice ? "text-emerald-600" : "text-slate-300"}`}>€</span>
+                                                    <span className={`ml-1 text-[10px] font-black ${hasPrice ? "text-amber-600" : "text-slate-300"}`}>€</span>
                                                 </div>
                                             </div>
                                 </div>

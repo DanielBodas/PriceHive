@@ -6,6 +6,14 @@ import { Button } from "../components/ui/button";
 import { Avatar, AvatarFallback, AvatarImage } from "../components/ui/avatar";
 import { toast } from "sonner";
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from "../components/ui/dialog";
+import {
     Trophy,
     TrendingUp,
     TrendingDown,
@@ -235,203 +243,219 @@ const ProfilePage = () => {
                     </div>
                 </div>
 
-                {/* ── BODY GRID ─────────────────────────────────────────────── */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                {/* ── BODY BENTO GRID ─────────────────────────────────────────────── */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
+                    
+                    {/* ── Personal Info ── */}
+                    <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <h3 className="text-sm font-bold text-slate-800 mb-4">Información Personal</h3>
+                            <div className="space-y-3">
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Usuario</label>
+                                    <p className="text-sm font-medium text-slate-900">{user?.name}</p>
+                                </div>
+                                <div>
+                                    <label className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Email</label>
+                                    <p className="text-sm font-medium text-slate-900">{user?.email}</p>
+                                </div>
+                            </div>
+                        </div>
+                        <button className="mt-5 w-full h-9 rounded-xl bg-slate-50 text-slate-600 text-xs font-bold hover:bg-slate-100 transition-colors border border-slate-100">
+                            Editar Perfil
+                        </button>
+                    </div>
 
-                    {/* ── Left: tabbed content (2/3) ───────────────────────── */}
-                    <div className="lg:col-span-2 rounded-[24px] border border-slate-200 bg-white shadow-sm overflow-hidden order-2 lg:order-1">
+                    {/* ── Billing & Credits ── */}
+                    <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 mb-4">
+                                <Coins className="w-4 h-4 text-amber-500" />
+                                <h3 className="text-sm font-bold text-slate-800">Saldo y Facturación</h3>
+                            </div>
+                            <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">Créditos Disponibles</p>
+                            <p className="text-3xl font-black text-slate-900 font-heading tabular-nums mt-1">{loading ? "—" : credits.toLocaleString("es-ES")}</p>
+                            <p className="text-xs text-slate-500 mt-2">Usados para revelaciones y estimaciones.</p>
+                        </div>
+                        <button className="mt-4 w-full h-10 rounded-xl bg-slate-900 text-white text-xs font-bold shadow-lg hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2">
+                            <CreditCard className="w-4 h-4" />
+                            Comprar Créditos
+                        </button>
+                    </div>
 
-                        {/* tab bar */}
-                        <div className="flex items-center border-b border-slate-100 bg-slate-50/60">
-                            {TABS.map((tab) => (
-                                <button
-                                    key={tab.id}
-                                    data-testid={`tab-${tab.id}`}
-                                    onClick={() => setActiveTab(tab.id)}
-                                    className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-colors whitespace-nowrap
-                                        ${activeTab === tab.id
-                                            ? "text-primary border-b-2 border-primary bg-white -mb-px"
-                                            : "text-slate-500 hover:text-slate-700"
-                                        }`}
-                                >
-                                    {tab.label}
-                                    {tab.badge && (
-                                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold">
-                                            {tab.badge}
-                                        </span>
-                                    )}
+                    {/* ── Reputation Level ── */}
+                    <div className="rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm flex flex-col justify-between">
+                        <div>
+                            <div className="flex items-center gap-2 mb-4">
+                                <Sparkles className="w-4 h-4 text-primary" />
+                                <h3 className="text-sm font-bold text-slate-800">Nivel de Reputación</h3>
+                            </div>
+                            <div className="flex items-center justify-between gap-3">
+                                <div>
+                                    <p className="text-xl font-black text-primary font-heading">{levelMeta.current.label}</p>
+                                </div>
+                                <p className="text-sm font-bold text-slate-700 tabular-nums">{points.toLocaleString("es-ES")} pts</p>
+                            </div>
+                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-slate-100">
+                                <div className="h-full rounded-full bg-primary" style={{ width: `${levelMeta.progress}%` }} />
+                            </div>
+                            <p className="mt-2 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
+                                {levelMeta.next ? `Faltan ${levelMeta.next.min - points} pts` : "Nivel máximo"}
+                            </p>
+                        </div>
+                        <Dialog>
+                            <DialogTrigger asChild>
+                                <button className="mt-4 w-full h-9 rounded-xl bg-slate-50 border border-slate-100 flex items-center justify-center gap-2 text-xs font-bold text-slate-600 hover:bg-slate-100 transition-colors">
+                                    <span>Ver información de niveles</span>
                                 </button>
-                            ))}
+                            </DialogTrigger>
+                            <DialogContent className="sm:max-w-md">
+                                <DialogHeader>
+                                    <DialogTitle>Niveles de Reputación</DialogTitle>
+                                    <DialogDescription>
+                                        Gana puntos aportando precios y validando ofertas para subir de nivel y obtener ventajas en la comunidad.
+                                    </DialogDescription>
+                                </DialogHeader>
+                                <div className="space-y-3 py-4 max-h-[60vh] overflow-y-auto">
+                                    {LEVELS.map((level) => (
+                                        <div key={level.label} className="rounded-xl border border-slate-100 bg-slate-50 px-4 py-3">
+                                            <div className="flex items-center justify-between gap-2 mb-1">
+                                                <p className="text-sm font-bold text-slate-800">{level.label}</p>
+                                                <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{level.min}+ pts</span>
+                                            </div>
+                                            <p className="text-xs text-slate-500 leading-relaxed">{level.perk}</p>
+                                        </div>
+                                    ))}
+                                </div>
+                            </DialogContent>
+                        </Dialog>
+                    </div>
 
-                            {activeTab === "notifications" && unreadCount > 0 && (
-                                <button
-                                    onClick={handleMarkAllRead}
-                                    data-testid="mark-all-read-btn"
-                                    className="ml-auto mr-4 text-xs text-primary hover:text-primary/80 font-bold flex items-center gap-1"
-                                >
-                                    <Check className="w-3 h-3" />
-                                    <span className="hidden sm:inline">Marcar leídas</span>
-                                    <span className="sm:hidden">Leído</span>
+                    {/* ── Badges / Achievements (NEW) ── */}
+                    <div className="lg:col-span-3 rounded-[24px] border border-slate-200 bg-white p-6 shadow-sm">
+                        <div className="flex items-center gap-2 mb-5">
+                            <div className="w-8 h-8 rounded-full bg-amber-100 text-amber-500 flex items-center justify-center">
+                                <Trophy className="w-4 h-4" />
+                            </div>
+                            <h3 className="text-sm font-bold text-slate-800">Tus Insignias <span className="ml-2 px-2 py-0.5 rounded bg-amber-50 text-amber-600 text-[9px] uppercase tracking-widest border border-amber-200">Próximamente</span></h3>
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+                            {[
+                                { title: "Cazachollos", desc: "10 precios subidos", active: true, icon: "🏷️" },
+                                { title: "Miel Fina", desc: "Top 10 Semanal", active: rank <= 10, icon: "🍯" },
+                                { title: "Abeja Reina", desc: "Nivel 4 alcanzado", active: points >= 700, icon: "👑" },
+                                { title: "Explorador", desc: "Visita 5 supers", active: false, icon: "🗺️" }
+                            ].map((badge, i) => (
+                                <div key={i} className={`group relative flex flex-col items-center justify-center p-4 rounded-2xl border ${badge.active ? "border-amber-200 bg-amber-50 shadow-sm" : "border-slate-100 bg-slate-50 opacity-60 grayscale"} text-center transition-all hover:scale-105 cursor-default overflow-hidden`}>
+                                    <span className="text-3xl drop-shadow-sm mb-2 group-hover:scale-110 transition-transform">{badge.icon}</span>
+                                    <p className={`text-xs font-bold ${badge.active ? "text-amber-700" : "text-slate-500"}`}>{badge.title}</p>
+                                    
+                                    <div className="absolute inset-0 bg-slate-900/90 flex flex-col items-center justify-center p-3 opacity-0 group-hover:opacity-100 transition-opacity backdrop-blur-sm z-10">
+                                        <p className="text-[10px] font-bold text-white text-center leading-relaxed">
+                                            {badge.active ? "¡Conseguido!" : "Cómo conseguirlo:"}<br/>
+                                            <span className="font-normal text-white/80">{badge.desc}</span>
+                                        </p>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+
+                    {/* ── Notifications ── */}
+                    <div className="rounded-[24px] border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+                            <div className="flex items-center gap-2">
+                                <Bell className="w-4 h-4 text-slate-400" />
+                                <h3 className="text-sm font-bold text-slate-800">Notificaciones</h3>
+                                {unreadCount > 0 && <span className="px-1.5 py-0.5 rounded-full bg-primary text-white text-[9px] font-bold">{unreadCount}</span>}
+                            </div>
+                            {unreadCount > 0 && (
+                                <button onClick={handleMarkAllRead} className="text-[10px] font-bold text-primary hover:underline uppercase tracking-widest">
+                                    Marcar leídas
                                 </button>
                             )}
                         </div>
-
-                        {/* ── Notifications ──────────────────────────────────── */}
-                        {activeTab === "profile" && (
-                            <div className="p-6 space-y-8 animate-in fade-in duration-300">
-                                <div className="space-y-4">
-                                    <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">Información Personal</h3>
-                                    <div className="grid sm:grid-cols-2 gap-4">
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-semibold text-slate-500">Nombre de usuario</label>
-                                            <input type="text" className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all" defaultValue={user?.name || ""} disabled />
-                                        </div>
-                                        <div className="space-y-1.5">
-                                            <label className="text-xs font-semibold text-slate-500">Correo electrónico</label>
-                                            <input type="email" className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all" defaultValue={user?.email || ""} disabled />
-                                        </div>
-                                    </div>
-                                    <button className="h-9 px-4 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-200 transition-colors">
-                                        Editar Perfil
-                                    </button>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">Saldo y Facturación</h3>
-                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 bg-slate-50">
-                                        <div className="flex items-center gap-3">
-                                            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
-                                                <Coins className="w-5 h-5" />
+                        <div className="divide-y divide-slate-50 flex-1 overflow-y-auto max-h-[300px]">
+                            {loading ? (
+                                <div className="p-6 text-center text-xs text-slate-400">Cargando...</div>
+                            ) : notifications.length === 0 ? (
+                                <EmptyState icon={BellOff} message="No tienes notificaciones pendientes" />
+                            ) : (
+                                notifications.slice(0, notiExpanded ? 20 : 3).map((n) => {
+                                    const isWarning = n.notification_type === "warning";
+                                    return (
+                                        <div key={n.id} className={`flex items-start gap-3 px-5 py-4 ${!n.read ? "bg-primary/5" : ""}`}>
+                                            <div className={`shrink-0 mt-0.5 w-7 h-7 rounded-xl flex items-center justify-center ${isWarning ? "bg-rose-100 text-rose-500" : "bg-primary/10 text-primary"}`}>
+                                                {isWarning ? <BellOff className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
                                             </div>
-                                            <div>
-                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Créditos Disponibles</p>
-                                                <p className="text-xl font-black text-slate-900 font-heading tabular-nums">{loading ? "—" : credits.toLocaleString("es-ES")}</p>
+                                            <div className="flex-1 min-w-0">
+                                                <p className={`text-sm font-semibold leading-snug ${!n.read ? "text-slate-900" : "text-slate-600"}`}>{n.title}</p>
+                                                <p className="text-xs text-slate-500 mt-0.5 leading-relaxed truncate">{n.message}</p>
                                             </div>
                                         </div>
-                                        <button className="w-full sm:w-auto h-10 px-4 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2">
-                                            <CreditCard className="w-4 h-4" />
-                                            Comprar Créditos
-                                        </button>
-                                    </div>
-                                    <p className="text-[11px] text-slate-500 font-medium">
-                                        Los créditos se utilizan para revelar información premium y realizar estimaciones precisas de precios en las listas de compra.
-                                    </p>
-                                </div>
-
-                                <div className="space-y-4">
-                                    <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">Preferencias de cuenta</h3>
-                                    <div className="space-y-3">
-                                        <div className="flex items-center justify-between">
-                                            <div>
-                                                <p className="text-sm font-semibold text-slate-800">Recibir Correos</p>
-                                                <p className="text-xs text-slate-500">Novedades y promociones semanales.</p>
-                                            </div>
-                                            <div className="w-11 h-6 rounded-full bg-primary relative cursor-pointer shadow-sm">
-                                                <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-white shadow-sm" />
-                                            </div>
-                                        </div>
-                                    </div>
-                                </div>
-                                
-                                <div className="space-y-4 pt-4 border-t border-slate-100">
-                                    <button className="h-10 px-4 rounded-xl text-rose-500 bg-rose-50 hover:bg-rose-100 text-sm font-bold transition-colors">
-                                        Cerrar Sesión
-                                    </button>
-                                </div>
-                            </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                        {notifications.length > 3 && (
+                            <button onClick={() => setNotiExpanded(!notiExpanded)} className="w-full py-3 text-xs font-bold text-slate-500 hover:text-slate-800 bg-slate-50 border-t border-slate-100 transition-colors outline-none">
+                                {notiExpanded ? "Ver menos" : `Ver todas (${notifications.length})`}
+                            </button>
                         )}
+                    </div>
 
-                        {activeTab === "notifications" && (
-                            <>
-                                {loading ? (
-                                    <div className="p-5 space-y-4">
-                                        {[...Array(4)].map((_, i) => (
-                                            <div key={i} className="flex items-start gap-3">
-                                                <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
-                                                <div className="flex-1 space-y-2">
-                                                    <Skeleton className="h-3 w-2/5" />
-                                                    <Skeleton className="h-3 w-3/4" />
+                    {/* ── Points History (NEW) ── */}
+                    <div className="rounded-[24px] border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col">
+                        <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100 bg-slate-50/60">
+                            <Activity className="w-4 h-4 text-slate-400" />
+                            <h3 className="text-sm font-bold text-slate-800">Últimos Movimientos</h3>
+                        </div>
+                        <div className="divide-y divide-slate-50 flex-1 overflow-y-auto max-h-[300px]">
+                            {loading ? (
+                                <div className="p-6 text-center text-xs text-slate-400">Cargando...</div>
+                            ) : history.length === 0 ? (
+                                <EmptyState icon={TrendingUp} message="Sin movimientos recientes" />
+                            ) : (
+                                history.slice(0, 3).map((entry, i) => {
+                                    const positive = entry.points >= 0;
+                                    return (
+                                        <div key={i} className="flex items-center justify-between gap-3 px-5 py-4">
+                                            <div className="flex items-center gap-3 min-w-0">
+                                                <div className={`shrink-0 w-7 h-7 rounded-xl flex items-center justify-center ${positive ? "bg-primary/10 text-primary" : "bg-rose-50 text-rose-500"}`}>
+                                                    {positive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
+                                                </div>
+                                                <div className="min-w-0">
+                                                    <p className="text-sm font-medium text-slate-800 truncate">{entry.reason}</p>
+                                                    <p className="text-[9px] text-slate-400 mt-0.5">{formatDate(entry.created_at)}</p>
                                                 </div>
                                             </div>
-                                        ))}
-                                    </div>
-                                ) : notifications.length === 0 ? (
-                                    <EmptyState icon={BellOff} message="No tienes notificaciones pendientes" />
-                                ) : (
-                                    <div className="divide-y divide-slate-50">
-                                        {visibleNotifs.map((n) => {
-                                            const isWarning = n.notification_type === "warning";
-                                            return (
-                                                <div
-                                                    key={n.id}
-                                                    data-testid={`notification-${n.id}`}
-                                                    className={`flex items-start gap-3 px-5 py-4 transition-colors ${!n.read ? "bg-primary/5" : "hover:bg-slate-50/50"}`}
-                                                >
-                                                    <div className={`shrink-0 mt-0.5 w-8 h-8 rounded-xl flex items-center justify-center ${isWarning ? "bg-rose-100 text-rose-500" : "bg-primary/10 text-primary"}`}>
-                                                        {isWarning ? <BellOff className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
-                                                    </div>
-                                                    <div className="flex-1 min-w-0">
-                                                        <div className="flex items-start justify-between gap-2">
-                                                            <p className={`text-sm font-semibold leading-snug ${!n.read ? "text-slate-900" : "text-slate-600"}`}>
-                                                                {n.title}
-                                                            </p>
-                                                            <span className="shrink-0 text-[10px] text-slate-400 tabular-nums mt-0.5">
-                                                                {formatDate(n.created_at)}
-                                                            </span>
-                                                        </div>
-                                                        <p className="text-xs text-slate-500 mt-0.5 leading-relaxed">
-                                                            {n.message}
-                                                        </p>
-                                                    </div>
-                                                    {!n.read && (
-                                                        <button
-                                                            onClick={() => handleMarkRead(n.id)}
-                                                            title="Marcar como leída"
-                                                            className="shrink-0 mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
-                                                        >
-                                                            <Check className="w-3.5 h-3.5" />
-                                                        </button>
-                                                    )}
-                                                </div>
-                                            );
-                                        })}
-                                    </div>
-                                )}
-                                <ShowMoreBtn
-                                    shown={visibleNotifs.length}
-                                    total={notifications.length}
-                                    expanded={notiExpanded}
-                                    onToggle={() => setNotiExpanded((v) => !v)}
-                                />
-                            </>
-                        )}
-
-                        {/* ── Points history ─────────────────────────────────── */}
-                        {activeTab === "points" && (
-                            <>
-                                {loading ? (
-                                    <div className="p-5 space-y-4">
-                                        {[...Array(5)].map((_, i) => (
-                                            <div key={i} className="flex items-center justify-between">
-                                                <div className="flex items-center gap-3">
-                                                    <Skeleton className="w-9 h-9 rounded-xl shrink-0" />
-                                                    <div className="space-y-2">
-                                                        <Skeleton className="h-3 w-36" />
-                                                        <Skeleton className="h-2 w-20" />
-                                                    </div>
-                                                </div>
-                                                <Skeleton className="h-4 w-10" />
-                                            </div>
-                                        ))}
-                                    </div>
-                                ) : history.length === 0 ? (
-                                    <EmptyState icon={TrendingUp} message="Aún no has ganado puntos. ¡Reporta precios para empezar!" />
-                                ) : (
-                                    <div className="divide-y divide-slate-50">
-                                        {visibleHistory.map((entry, i) => {
+                                            <span className={`shrink-0 text-sm font-black tabular-nums ${positive ? "text-primary" : "text-rose-500"}`}>
+                                                {positive ? `+${entry.points}` : entry.points}
+                                            </span>
+                                        </div>
+                                    );
+                                })
+                            )}
+                        </div>
+                        {history.length > 3 && (
+                            <Dialog>
+                                <DialogTrigger asChild>
+                                    <button className="w-full py-3 text-xs font-bold text-slate-500 hover:text-slate-800 bg-slate-50 border-t border-slate-100 transition-colors outline-none">
+                                        Ver historial completo
+                                    </button>
+                                </DialogTrigger>
+                                <DialogContent className="sm:max-w-md">
+                                    <DialogHeader>
+                                        <DialogTitle>Historial de Movimientos</DialogTitle>
+                                        <DialogDescription>
+                                            Registro completo de tus puntos ganados y perdidos.
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <div className="divide-y divide-slate-50 max-h-[60vh] overflow-y-auto">
+                                        {history.map((entry, i) => {
                                             const positive = entry.points >= 0;
                                             return (
-                                                <div key={i} className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
+                                                <div key={i} className="flex items-center justify-between gap-4 px-4 py-3 hover:bg-slate-50 transition-colors">
                                                     <div className="flex items-center gap-3 min-w-0">
                                                         <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center ${positive ? "bg-primary/10 text-primary" : "bg-rose-50 text-rose-500"}`}>
                                                             {positive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
@@ -451,126 +475,42 @@ const ProfilePage = () => {
                                             );
                                         })}
                                     </div>
-                                )}
-                                <ShowMoreBtn
-                                    shown={visibleHistory.length}
-                                    total={history.length}
-                                    expanded={pointsExpanded}
-                                    onToggle={() => setPointsExpanded((v) => !v)}
-                                />
-                            </>
+                                </DialogContent>
+                            </Dialog>
                         )}
                     </div>
 
-                    {/* ── Right: leaderboard (1/3) ─────────────────────────── */}
-                    <div className="space-y-5 order-1 lg:order-2">
-                    <div className="rounded-2xl border border-slate-200 bg-white shadow-sm overflow-hidden">
-                        <div className="flex items-center gap-2 px-5 py-4 border-b border-slate-100">
+                    {/* ── Leaderboard ── */}
+                    <div className="rounded-[24px] border border-slate-200 bg-white shadow-sm overflow-hidden flex flex-col">
+                        <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-100 bg-slate-50/60">
                             <Trophy className="w-4 h-4 text-amber-500" />
                             <h3 className="text-sm font-bold text-slate-800">Top Contribuidores</h3>
                         </div>
-
-                        <div className="divide-y divide-slate-50">
+                        <div className="divide-y divide-slate-50 flex-1 overflow-y-auto max-h-[300px] px-2 py-2">
                             {loading ? (
-                                <div className="p-4 space-y-3">
-                                    {[...Array(5)].map((_, i) => (
-                                        <div key={i} className="flex items-center gap-3">
-                                            <Skeleton className="w-7 h-7 rounded-full shrink-0" />
-                                            <Skeleton className="h-3 flex-1" />
-                                            <Skeleton className="h-3 w-10" />
-                                        </div>
-                                    ))}
-                                </div>
+                                <div className="p-6 text-center text-xs text-slate-400">Cargando...</div>
                             ) : leaderboard.length === 0 ? (
-                                <EmptyState icon={Trophy} message="Sin datos de ranking aún" />
+                                <EmptyState icon={Trophy} message="Sin ranking" />
                             ) : (
                                 leaderboard.map((entry) => {
                                     const isMe = entry.user_id === user?.id;
                                     const meta = getRankMeta(entry.rank);
                                     return (
-                                        <div
-                                            key={entry.user_id}
-                                            data-testid={`leaderboard-entry-${entry.rank}`}
-                                            className={`flex items-center gap-3 px-4 py-3 transition-colors ${isMe ? "bg-primary/10" : "hover:bg-slate-50/50"}`}
-                                        >
+                                        <div key={entry.user_id} className={`flex items-center gap-3 px-4 py-2.5 rounded-xl transition-colors ${isMe ? "bg-primary/10" : "hover:bg-slate-50"}`}>
                                             <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border ${meta.bg} ${meta.border} ${meta.color}`}>
                                                 {entry.rank <= 3 ? meta.emoji : entry.rank}
                                             </div>
                                             <span className={`flex-1 text-sm truncate ${isMe ? "text-primary font-bold" : "text-slate-700 font-medium"}`}>
                                                 {entry.user_name}
-                                                {isMe && <span className="ml-1 text-[10px] text-primary/60 font-normal">(tú)</span>}
                                             </span>
-                                            <span className="shrink-0 text-xs font-bold text-slate-500 tabular-nums">
-                                                {entry.points.toLocaleString("es-ES")}
-                                            </span>
+                                            <span className="shrink-0 text-xs font-bold text-slate-500 tabular-nums">{entry.points.toLocaleString("es-ES")}</span>
                                         </div>
                                     );
                                 })
                             )}
                         </div>
-
-                        {/* my rank footer if not in top list */}
-                        {!loading && rank && !leaderboard.some((e) => e.user_id === user?.id) && (() => {
-                            const meta = getRankMeta(rank);
-                            return (
-                                <div className="border-t border-slate-100 px-4 py-3 bg-primary/5 flex items-center gap-3">
-                                    <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border ${meta.bg} ${meta.border} ${meta.color}`}>
-                                        {rank}
-                                    </div>
-                                    <span className="flex-1 text-sm font-bold text-primary truncate">
-                                        {user?.name}
-                                        <span className="ml-1 text-[10px] text-primary/60 font-normal">(tú)</span>
-                                    </span>
-                                    <span className="shrink-0 text-xs font-bold text-slate-500 tabular-nums">
-                                        {points.toLocaleString("es-ES")}
-                                    </span>
-                                </div>
-                            );
-                        })()}
                     </div>
 
-                    <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
-                        <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-primary" />
-                            <h3 className="text-sm font-bold text-slate-800">Niveles de reputacion</h3>
-                        </div>
-                        <div className="mt-4 rounded-2xl bg-primary/10 p-4">
-                            <div className="flex items-center justify-between gap-3">
-                                <div>
-                                    <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Tu nivel</p>
-                                    <p className="text-xl font-black text-secondary font-heading">{levelMeta.current.label}</p>
-                                </div>
-                                <p className="text-sm font-bold text-primary tabular-nums">{points.toLocaleString("es-ES")} pts</p>
-                            </div>
-                            <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-                                <div className="h-full rounded-full bg-primary" style={{ width: `${levelMeta.progress}%` }} />
-                            </div>
-                            <p className="mt-2 text-xs text-primary">
-                                {levelMeta.next ? `${levelMeta.next.min - points} puntos para ${levelMeta.next.label}` : "Nivel maximo alcanzado."}
-                            </p>
-                        </div>
-                        <details className="mt-3 group">
-                            <summary className="list-none cursor-pointer p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700 select-none outline-none focus-visible:ring-2 focus-visible:ring-primary">
-                                <span>Ver todos los niveles</span>
-                                <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
-                            </summary>
-                            <div className="mt-2 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300 px-1">
-                                {LEVELS.map((level) => (
-                                    <div key={level.label} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                                        <div className="flex items-center justify-between gap-2">
-                                            <p className="text-sm font-bold text-slate-800">{level.label}</p>
-                                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{level.min}+ pts</span>
-                                        </div>
-                                        <p className="mt-0.5 text-xs text-slate-500">{level.perk}</p>
-                                    </div>
-                                ))}
-                            </div>
-                        </details>
-                        <p className="mt-3 text-[11px] text-slate-400">
-                            Creditos y reputacion son distintos: los creditos se gastan para consultar/estimar precios; la reputacion mide confianza y progreso.
-                        </p>
-                    </div>
-                    </div>
                 </div>
             </div>
         </Layout>
