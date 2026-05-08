@@ -18,7 +18,8 @@ import {
     Search,
     Tag,
     Layers,
-    Download
+    Download,
+    ChevronDown
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -41,6 +42,7 @@ const AnalyticsPage = () => {
     const [productAnalytics, setProductAnalytics] = useState(null);
     const [comparison, setComparison] = useState(null);
     const [analyticsLoading, setAnalyticsLoading] = useState(false);
+    const [showFilters, setShowFilters] = useState(true);
 
     useEffect(() => {
         fetchBaseData();
@@ -339,7 +341,7 @@ const AnalyticsPage = () => {
             return (
                 <div className="bg-white/95 backdrop-blur-sm border border-slate-200 rounded-lg p-3 shadow-lg">
                     <p className="text-sm text-slate-500 mb-1">{formatDateTime(label)}</p>
-                    <p className="font-mono font-semibold text-emerald-600">
+                    <p className="font-mono font-semibold text-primary">
                         {formatUnitPrice(data.unit_price, productAnalytics?.unit_name)}
                     </p>
                     {data.quantity && data.quantity !== 1 && (
@@ -363,7 +365,7 @@ const AnalyticsPage = () => {
     }, [selectedProduct, productUnits]);
 
     // Color palette for bar chart
-    const BAR_COLORS = ["#10b981", "#34d399", "#6ee7b7", "#a7f3d0", "#059669", "#047857"];
+    const BAR_COLORS = ["hsl(var(--primary))", "hsl(var(--primary) / 0.8)", "hsl(var(--primary) / 0.6)", "hsl(var(--primary) / 0.4)", "hsl(var(--accent))", "hsl(var(--accent) / 0.8)"];
 
     return (
         <Layout>
@@ -375,10 +377,20 @@ const AnalyticsPage = () => {
                 />
 
                 {/* Search & Filters */}
-                <Card className="border-slate-200" data-testid="search-card">
-                    <CardContent className="p-6">
+                <Card className="border-slate-200 overflow-hidden" data-testid="search-card">
+                    <div
+                        className="md:hidden flex items-center justify-between p-4 bg-slate-50 cursor-pointer"
+                        onClick={() => setShowFilters(!showFilters)}
+                    >
+                        <span className="text-sm font-bold text-slate-700 flex items-center gap-2">
+                            <Search className="w-4 h-4" />
+                            {showFilters ? "Ocultar filtros" : "Mostrar filtros de búsqueda"}
+                        </span>
+                        <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
+                    </div>
+                    <CardContent className={`p-4 sm:p-6 ${showFilters ? "block" : "hidden md:block"}`}>
                         {/* Row 1: Search + Category */}
-                        <div className="grid md:grid-cols-3 gap-4 mb-4">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <Input
@@ -407,7 +419,7 @@ const AnalyticsPage = () => {
                         </div>
                         
                         {/* Row 2: Product + Brand + Supermarket + Action buttons */}
-                        <div className="grid md:grid-cols-4 gap-4 items-end">
+                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
                                     <Package className="w-3.5 h-3.5" />
@@ -482,7 +494,7 @@ const AnalyticsPage = () => {
                                 <Button 
                                     onClick={runAnalysis}
                                     disabled={analyticsLoading || !selectedProduct}
-                                    className="flex-1 bg-emerald-500 hover:bg-emerald-600 gap-2"
+                                    className="flex-1 bg-primary hover:bg-primary/90 gap-2 shadow-lg shadow-primary/20"
                                     data-testid="analyze-btn"
                                 >
                                     <TrendingUp className="w-4 h-4" />
@@ -539,7 +551,7 @@ const AnalyticsPage = () => {
                 </Card>
 
                 {(productAnalytics || comparison) && (
-                    <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
+                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-sm text-slate-600">Precio Actual</CardTitle>
@@ -572,11 +584,11 @@ const AnalyticsPage = () => {
                                         {trend.direction === "up" ? (
                                             <TrendingUp className="w-5 h-5 text-rose-600" />
                                         ) : trend.direction === "down" ? (
-                                            <TrendingDown className="w-5 h-5 text-emerald-600" />
+                                            <TrendingDown className="w-5 h-5 text-primary" />
                                         ) : (
                                             <BarChart3 className="w-5 h-5 text-slate-500" />
                                         )}
-                                        <p className={`text-2xl font-bold ${trend.direction === "up" ? "text-rose-600" : trend.direction === "down" ? "text-emerald-600" : "text-slate-700"}`}>
+                                        <p className={`text-2xl font-bold ${trend.direction === "up" ? "text-rose-600" : trend.direction === "down" ? "text-primary" : "text-slate-700"}`}>
                                             {trend.deltaPct > 0 ? "+" : ""}{trend.deltaPct.toFixed(1)}%
                                         </p>
                                     </div>
@@ -608,7 +620,7 @@ const AnalyticsPage = () => {
                             <CardContent>
                                 {priceSpread ? (
                                     <>
-                                        <p className="text-2xl font-bold text-emerald-600">
+                                        <p className="text-2xl font-bold text-primary">
                                             {formatUnitPrice(priceSpread.delta, productAnalytics?.unit_name || comparison?.unit_name)}
                                         </p>
                                         <p className="text-xs text-slate-400 mt-1">entre el más barato y más caro (unitario)</p>
@@ -625,11 +637,11 @@ const AnalyticsPage = () => {
                 <div className="grid lg:grid-cols-2 gap-6">
                     {/* Price Evolution Chart */}
                     {productAnalytics && (
-                        <Card className="border-slate-200" data-testid="evolution-card">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                                    <TrendingUp className="w-5 h-5 text-emerald-500" />
-                                    Evolucion de Precio
+                        <Card className="border-slate-200 overflow-hidden" data-testid="evolution-card">
+                            <CardHeader className="p-4 sm:p-6">
+                                <CardTitle className="flex items-center gap-2 font-heading">
+                                    <TrendingUp className="w-5 h-5 text-primary" />
+                                    Evolución de Precio
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -650,28 +662,28 @@ const AnalyticsPage = () => {
                                             <span>{historySpanDays != null ? `${historySpanDays} dias de ventana` : "Ventana corta"}</span>
                                         </div>
                                         {/* Stats */}
-                                        <div className="grid grid-cols-4 gap-4 mb-6">
-                                            <div className="text-center p-3 bg-slate-50 rounded-lg">
-                                                <p className="text-xs text-slate-500">Actual</p>
-                                                <p className="font-mono font-semibold text-slate-900">
+                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-6">
+                                            <div className="text-center p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                <p className="text-[10px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider">Actual</p>
+                                                <p className="font-mono text-sm sm:text-base font-bold text-slate-900 mt-1">
                                                     {formatUnitPrice(productAnalytics.current_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
-                                            <div className="text-center p-3 bg-slate-50 rounded-lg">
-                                                <p className="text-xs text-slate-500">Media</p>
-                                                <p className="font-mono font-semibold text-slate-900">
+                                            <div className="text-center p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
+                                                <p className="text-[10px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider">Media</p>
+                                                <p className="font-mono text-sm sm:text-base font-bold text-slate-900 mt-1">
                                                     {formatUnitPrice(productAnalytics.avg_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
-                                            <div className="text-center p-3 bg-emerald-50 rounded-lg">
-                                                <p className="text-xs text-emerald-600">Minimo</p>
-                                                <p className="font-mono font-semibold text-emerald-600">
+                                            <div className="text-center p-2.5 sm:p-3 bg-emerald-50 rounded-xl border border-emerald-100">
+                                                <p className="text-[10px] sm:text-xs text-emerald-600 uppercase font-bold tracking-wider">Mínimo</p>
+                                                <p className="font-mono text-sm sm:text-base font-bold text-emerald-600 mt-1">
                                                     {formatUnitPrice(productAnalytics.min_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
-                                            <div className="text-center p-3 bg-rose-50 rounded-lg">
-                                                <p className="text-xs text-rose-600">Maximo</p>
-                                                <p className="font-mono font-semibold text-rose-600">
+                                            <div className="text-center p-2.5 sm:p-3 bg-rose-50 rounded-xl border border-rose-100">
+                                                <p className="text-[10px] sm:text-xs text-rose-600 uppercase font-bold tracking-wider">Máximo</p>
+                                                <p className="font-mono text-sm sm:text-base font-bold text-rose-600 mt-1">
                                                     {formatUnitPrice(productAnalytics.max_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
@@ -695,10 +707,10 @@ const AnalyticsPage = () => {
                                                     <Line 
                                                         type="monotone" 
                                                         dataKey="unit_price"
-                                                        stroke="#10b981" 
-                                                        strokeWidth={2}
-                                                        dot={{ fill: '#10b981', strokeWidth: 2 }}
-                                                        activeDot={{ r: 6, fill: '#10b981' }}
+                                                        stroke="hsl(var(--primary))" 
+                                                        strokeWidth={3}
+                                                        dot={{ fill: 'hsl(var(--primary))', strokeWidth: 2, r: 4 }}
+                                                        activeDot={{ r: 6, fill: 'hsl(var(--primary))', stroke: 'white', strokeWidth: 2 }}
                                                     />
                                                 </LineChart>
                                             </ResponsiveContainer>
@@ -719,11 +731,11 @@ const AnalyticsPage = () => {
 
                     {/* Comparison Chart */}
                     {comparison && (
-                        <Card className="border-slate-200" data-testid="comparison-card">
-                            <CardHeader>
-                                <CardTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                                    <BarChart3 className="w-5 h-5 text-emerald-500" />
-                                    Comparacion por Supermercado
+                        <Card className="border-slate-200 overflow-hidden" data-testid="comparison-card">
+                            <CardHeader className="p-4 sm:p-6">
+                                <CardTitle className="flex items-center gap-2 font-heading">
+                                    <BarChart3 className="w-5 h-5 text-primary" />
+                                    Comparación por Súper
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -741,11 +753,11 @@ const AnalyticsPage = () => {
                                     <>
                                         {/* Best Price Highlight */}
                                         {bestPrice && (
-                                            <div className="mb-6 p-4 bg-emerald-50 rounded-xl border border-emerald-200">
+                                            <div className="mb-6 p-4 bg-primary/10 rounded-xl border border-primary/20">
                                                 <div className="flex items-center justify-between">
                                                     <div>
-                                                        <p className="text-sm text-emerald-600 font-medium">Mejor Precio</p>
-                                                        <p className="font-semibold text-slate-900">{bestPrice.supermarket_name}</p>
+                                                        <p className="text-sm text-primary font-bold">Mejor Precio</p>
+                                                        <p className="font-bold text-secondary">{bestPrice.supermarket_name}</p>
                                                         {bestPrice.brand_name && (
                                                             <p className="text-xs text-slate-500 flex items-center gap-1 mt-0.5">
                                                                 <Tag className="w-3 h-3" />
@@ -760,7 +772,7 @@ const AnalyticsPage = () => {
                                                         )}
                                                     </div>
                                                     <div className="text-right">
-                                                        <p className="font-mono text-2xl font-bold text-emerald-600">
+                                                        <p className="font-mono text-2xl font-black text-primary">
                                                             {formatUnitPrice(bestPrice.unit_price || bestPrice.price, comparison.unit_name)}
                                                         </p>
                                                         <p className="text-[10px] text-slate-400">
@@ -772,7 +784,7 @@ const AnalyticsPage = () => {
                                         )}
 
                                         {/* Bar Chart */}
-                                        <div className="h-56">
+                                        <div className="h-64 sm:h-72">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart 
                                                     data={comparisonSorted} 
@@ -826,12 +838,12 @@ const AnalyticsPage = () => {
                                                 <div 
                                                     key={index}
                                                     className={`flex items-center justify-between p-3 rounded-lg ${
-                                                        index === 0 ? 'bg-emerald-50 border border-emerald-100' : 'bg-slate-50'
+                                                        index === 0 ? 'bg-primary/10 border border-primary/20' : 'bg-slate-50'
                                                     }`}
                                                 >
                                                     <div className="flex flex-col">
                                                         <div className="flex items-center gap-2">
-                                                            {index === 0 && <TrendingDown className="w-4 h-4 text-emerald-600" />}
+                                                            {index === 0 && <TrendingDown className="w-4 h-4 text-primary" />}
                                                             <span className="text-slate-700 font-medium">{item.supermarket_name}</span>
                                                         </div>
                                                         <div className="flex items-center gap-2 mt-0.5">
@@ -848,7 +860,7 @@ const AnalyticsPage = () => {
                                                     </div>
                                                     <div className="text-right">
                                                         <p className={`font-mono font-semibold ${
-                                                            index === 0 ? 'text-emerald-600' : 'text-slate-900'
+                                                            index === 0 ? 'text-primary' : 'text-slate-900'
                                                         }`}>
                                                             {formatUnitPrice(item.unit_price || item.price, comparison.unit_name)}
                                                         </p>
@@ -877,15 +889,15 @@ const AnalyticsPage = () => {
                 </div>
 
                 {(productAnalytics || comparison) && (recommendations.length > 0 || (selectedVsBest && selectedSupermarketRow)) && (
-                    <Card className="border-slate-200">
-                        <CardHeader>
-                            <CardTitle className="text-lg" style={{ fontFamily: 'Manrope, sans-serif' }}>Recomendaciones y Hallazgos</CardTitle>
+                    <Card className="border-slate-200 overflow-hidden">
+                        <CardHeader className="p-4 sm:p-6">
+                            <CardTitle className="text-lg font-heading">Recomendaciones y Hallazgos</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
                             {selectedVsBest && selectedSupermarketRow && (
                                 <div className="rounded-lg border p-3 bg-slate-50 text-sm">
                                     En {selectedSupermarketRow.supermarket_name}, el producto esta{" "}
-                                    <span className={selectedVsBest.delta > 0 ? "text-rose-600 font-semibold" : "text-emerald-600 font-semibold"}>
+                                    <span className={selectedVsBest.delta > 0 ? "text-rose-600 font-semibold" : "text-primary font-semibold"}>
                                         {selectedVsBest.delta > 0 ? "+" : ""}{formatUnitPrice(selectedVsBest.delta, productAnalytics?.unit_name || comparison?.unit_name)}
                                     </span>{" "}
                                     frente al mejor precio disponible (unitario).

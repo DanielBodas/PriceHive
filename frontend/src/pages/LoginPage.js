@@ -46,17 +46,17 @@ const LoginPage = () => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-6 py-12">
+        <div className="min-h-screen bg-slate-50 flex items-center justify-center px-4 sm:px-6 py-8 sm:py-12">
             <div className="w-full max-w-md">
-                <Link to="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-emerald-600 mb-8 transition-colors">
+                <Link to="/" className="inline-flex items-center gap-2 text-slate-600 hover:text-primary mb-8 transition-colors font-semibold">
                     <ArrowLeft className="w-4 h-4" />
                     Volver al inicio
                 </Link>
 
-                <Card className="border-slate-200 shadow-xl">
+                <Card className="border-slate-200 shadow-xl rounded-3xl overflow-hidden">
                     <CardHeader className="text-center pb-2">
-                        <div className="w-16 h-16 rounded-2xl bg-emerald-500 flex items-center justify-center mx-auto mb-4">
-                            <Tag className="w-8 h-8 text-white" />
+                        <div className="w-16 h-16 rounded-2xl bg-primary flex items-center justify-center mx-auto mb-4 shadow-lg shadow-primary/20">
+                            <img src="/icon.png" alt="PriceHive" className="w-10 h-10 object-contain" />
                         </div>
                         <CardTitle className="text-2xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
                             Iniciar Sesión
@@ -100,7 +100,7 @@ const LoginPage = () => {
                                     value={email}
                                     onChange={(e) => setEmail(e.target.value)}
                                     required
-                                    className="h-12 bg-slate-50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500"
+                                    className="h-12 bg-slate-50 border-slate-200 focus:border-primary focus:ring-primary"
                                     data-testid="login-email-input"
                                 />
                             </div>
@@ -113,14 +113,14 @@ const LoginPage = () => {
                                     value={password}
                                     onChange={(e) => setPassword(e.target.value)}
                                     required
-                                    className="h-12 bg-slate-50 border-slate-200 focus:border-emerald-500 focus:ring-emerald-500"
+                                    className="h-12 bg-slate-50 border-slate-200 focus:border-primary focus:ring-primary"
                                     data-testid="login-password-input"
                                 />
                             </div>
                             <Button
                                 type="submit"
                                 disabled={loading}
-                                className="w-full h-12 bg-emerald-500 hover:bg-emerald-600 text-white rounded-xl font-semibold btn-lift"
+                                className="w-full h-12 bg-primary hover:bg-primary/90 text-white rounded-xl font-bold btn-lift shadow-lg shadow-primary/20"
                                 data-testid="login-submit-btn"
                             >
                                 {loading ? "Iniciando sesión..." : "Iniciar Sesión"}
@@ -129,7 +129,7 @@ const LoginPage = () => {
                         <div className="mt-6 text-center">
                             <p className="text-slate-600">
                                 ¿No tienes cuenta?{" "}
-                                <Link to="/register" className="text-emerald-600 hover:text-emerald-700 font-medium">
+                                <Link to="/register" className="text-primary hover:text-primary/80 font-bold">
                                     Regístrate
                                 </Link>
                             </p>

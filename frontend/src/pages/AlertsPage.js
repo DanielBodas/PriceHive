@@ -84,7 +84,7 @@ const AlertsPage = () => {
     const getAlertTypeIcon = (type) => {
         switch (type) {
             case "below":
-                return <TrendingDown className="w-4 h-4 text-emerald-500" />;
+                return <TrendingDown className="w-4 h-4 text-primary" />;
             case "above":
                 return <TrendingUp className="w-4 h-4 text-rose-500" />;
             default:
@@ -107,23 +107,23 @@ const AlertsPage = () => {
         <Layout>
             <div className="space-y-6" data-testid="alerts-page">
                 {/* Header */}
-                <div className="flex items-center justify-between">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div>
-                        <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                        <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 font-heading">
                             Alertas de Precio
                         </h1>
-                        <p className="text-slate-500 mt-1">Recibe notificaciones cuando cambien los precios</p>
+                        <p className="text-sm text-slate-500 mt-1">Recibe notificaciones cuando cambien los precios</p>
                     </div>
                     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button className="bg-emerald-500 hover:bg-emerald-600 gap-2" data-testid="create-alert-btn">
+                            <Button className="bg-primary hover:bg-primary/90 gap-2 shadow-lg shadow-primary/20 w-full sm:w-auto h-11 sm:h-10 font-bold" data-testid="create-alert-btn">
                                 <Plus className="w-4 h-4" />
                                 Nueva Alerta
                             </Button>
                         </DialogTrigger>
-                        <DialogContent>
+                        <DialogContent className="max-w-[95vw] sm:max-w-md rounded-3xl">
                             <DialogHeader>
-                                <DialogTitle style={{ fontFamily: 'Manrope, sans-serif' }}>Crear Alerta de Precio</DialogTitle>
+                                <DialogTitle className="font-heading">Crear Alerta de Precio</DialogTitle>
                             </DialogHeader>
                             <div className="space-y-4 pt-4">
                                 <div className="space-y-2">
@@ -184,7 +184,7 @@ const AlertsPage = () => {
                                 )}
                                 <Button 
                                     onClick={handleCreateAlert} 
-                                    className="w-full bg-emerald-500 hover:bg-emerald-600"
+                                    className="w-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 font-bold"
                                     data-testid="save-alert-btn"
                                 >
                                     Crear Alerta
@@ -198,22 +198,22 @@ const AlertsPage = () => {
                 {loading ? (
                     <div className="text-center py-12 text-slate-500">Cargando alertas...</div>
                 ) : alerts.length === 0 ? (
-                    <Card className="border-slate-200">
+                    <Card className="border-slate-200 rounded-3xl overflow-hidden">
                         <CardContent className="p-12 text-center">
                             <Bell className="w-16 h-16 text-slate-300 mx-auto mb-4" />
-                            <p className="text-slate-500 text-lg">No tienes alertas configuradas</p>
+                            <p className="text-slate-500 text-lg font-heading font-bold">No tienes alertas configuradas</p>
                             <p className="text-sm text-slate-400 mt-1">Crea una alerta para recibir notificaciones de cambios de precio</p>
                         </CardContent>
                     </Card>
                 ) : (
-                    <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-4">
+                    <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
                         {alerts.map((alert) => (
                             <Card 
                                 key={alert.id} 
-                                className={`border ${alert.triggered ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200'}`}
+                                className={`border ${alert.triggered ? 'border-primary/30 bg-primary/5' : 'border-slate-200'} hover:shadow-md transition-shadow rounded-2xl overflow-hidden`}
                                 data-testid={`alert-card-${alert.id}`}
                             >
-                                <CardContent className="p-4">
+                                <CardContent className="p-5">
                                     <div className="flex items-start justify-between">
                                         <div className="flex-1">
                                             <div className="flex items-center gap-2 mb-2">
@@ -222,8 +222,8 @@ const AlertsPage = () => {
                                                     {getAlertTypeLabel(alert.alert_type)}
                                                 </span>
                                                 {alert.triggered && (
-                                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full flex items-center gap-1">
-                                                        <Check className="w-3 h-3" />
+                                                    <span className="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold rounded-full flex items-center gap-1 uppercase tracking-wider">
+                                                        <Check className="w-2.5 h-2.5" />
                                                         Activada
                                                     </span>
                                                 )}
@@ -233,7 +233,7 @@ const AlertsPage = () => {
                                                 {alert.supermarket_name || "Cualquier supermercado"}
                                             </p>
                                             {alert.alert_type !== "any_change" && (
-                                                <p className="font-mono font-semibold text-lg text-emerald-600 mt-2">
+                                                <p className="font-mono font-bold text-lg text-primary mt-2">
                                                     {alert.target_price.toFixed(2)} €
                                                 </p>
                                             )}

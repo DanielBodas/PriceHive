@@ -62,7 +62,7 @@ const getInitials = (name) => {
 };
 
 const avatarColors = [
-    "bg-emerald-100 text-emerald-700",
+    "bg-primary/10 text-primary",
     "bg-sky-100 text-sky-700",
     "bg-amber-100 text-amber-700",
     "bg-rose-100 text-rose-700",
@@ -79,7 +79,7 @@ const colorForName = (name = "") => {
 const postTypeConfig = {
     update: { label: "General", icon: Megaphone, color: "text-slate-600", bg: "bg-slate-100" },
     price_alert: { label: "Alerta", icon: AlertTriangle, color: "text-rose-600", bg: "bg-rose-50" },
-    tip: { label: "Consejo", icon: Lightbulb, color: "text-emerald-600", bg: "bg-emerald-50" },
+    tip: { label: "Consejo", icon: Lightbulb, color: "text-primary", bg: "bg-primary/10" },
 };
 
 /* ──────────────────────────────────────────────
@@ -188,7 +188,7 @@ const CommentsBox = ({ postId, onCountChange }) => {
                         onClick={submit}
                         disabled={sending || !text.trim()}
                         size="icon"
-                        className="h-9 w-9 rounded-full bg-emerald-500 hover:bg-emerald-600"
+                        className="h-9 w-9 rounded-full bg-primary hover:bg-primary/90"
                     >
                         <Send className="w-4 h-4" />
                     </Button>
@@ -214,7 +214,7 @@ const PostCard = ({ post, onReact }) => {
     const reactionButtons = [
         { key: "like", icon: ThumbsUp, color: "text-sky-500", bg: "bg-sky-50" },
         { key: "love", icon: Heart, color: "text-rose-500", bg: "bg-rose-50" },
-        { key: "useful", icon: CheckCircle2, color: "text-emerald-500", bg: "bg-emerald-50" },
+        { key: "useful", icon: CheckCircle2, color: "text-primary", bg: "bg-primary/10" },
         { key: "warning", icon: AlertTriangle, color: "text-amber-500", bg: "bg-amber-50" },
     ];
 
@@ -324,7 +324,7 @@ const Composer = ({ onPosted }) => {
     const tabs = [
         { key: "update", label: "General", icon: Megaphone, color: "text-slate-600", activeBg: "bg-slate-900 text-white" },
         { key: "price_alert", label: "Alerta", icon: AlertTriangle, color: "text-rose-600", activeBg: "bg-rose-500 text-white" },
-        { key: "tip", label: "Consejo", icon: Lightbulb, color: "text-emerald-600", activeBg: "bg-emerald-500 text-white" },
+        { key: "tip", label: "Consejo", icon: Lightbulb, color: "text-primary", activeBg: "bg-primary text-white shadow-lg shadow-primary/20" },
     ];
 
     return (
@@ -377,7 +377,7 @@ const Composer = ({ onPosted }) => {
                                 <Button
                                     onClick={submit}
                                     disabled={posting || !content.trim()}
-                                    className="rounded-full bg-emerald-500 hover:bg-emerald-600 text-white font-bold px-5 text-xs h-9"
+                                    className="rounded-full bg-primary hover:bg-primary/90 text-white font-bold px-5 text-xs h-9 shadow-lg shadow-primary/20"
                                 >
                                     <Send className="w-3.5 h-3.5 mr-1.5" />
                                     Publicar
@@ -394,408 +394,6 @@ const Composer = ({ onPosted }) => {
 /* ──────────────────────────────────────────────
    Main Dashboard
    ────────────────────────────────────────────── */
-
-const DashboardLegacy = () => {
-    const navigate = useNavigate();
-    const { user } = useAuth();
-    const [userData] = useState(null);
-    const leaderboard = [];
-    const notifications = [];
-    const [posts, setPosts] = useState([]);
-    const [trending, setTrending] = useState([]);
-    const [bestDeals, setBestDeals] = useState([]);
-    const [pulse, setPulse] = useState(null);
-    const [generalStats, setGeneralStats] = useState(null);
-    const [filter, setFilter] = useState("all"); // all | update | price_alert | tip
-    const [loading, setLoading] = useState(true);
-
-    const fetchAll = async () => {
-        try {
-            const [postsRes, trRes, bdRes, pulseRes, statsRes] = await Promise.all([
-                axios.get(`${API}/posts`),
-                axios.get(`${API}/community/trending?limit=5`).catch(() => ({ data: [] })),
-                axios.get(`${API}/community/best-deals?limit=5`).catch(() => ({ data: [] })),
-                axios.get(`${API}/community/pulse`).catch(() => ({ data: null })),
-                axios.get(`${API}/analytics/stats`).catch(() => ({ data: null })),
-            ]);
-            setPosts(postsRes.data);
-            setTrending(trRes.data);
-            setBestDeals(bdRes.data);
-            setPulse(pulseRes.data);
-            setGeneralStats(statsRes.data);
-        } catch (e) {
-            console.error(e);
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    useEffect(() => {
-        fetchAll();
-    }, []);
-
-    const handleReact = async (postId, reactionType) => {
-        try {
-            const res = await axios.post(`${API}/posts/${postId}/react`, { reaction_type: reactionType });
-            setPosts((ps) => ps.map((p) => (p.id === postId ? { ...p, reactions: res.data.reactions } : p)));
-        } catch {
-            toast.error("Error al reaccionar");
-        }
-    };
-
-    const refreshPosts = async () => {
-        try {
-            const res = await axios.get(`${API}/posts`);
-            setPosts(res.data);
-        } catch { /* ignore */ }
-    };
-
-    const filteredPosts = filter === "all" ? posts : posts.filter((p) => p.post_type === filter);
-
-    const level = Math.floor((userData?.points || 0) / 100) + 1;
-    const pointsForNext = level * 100;
-    const progress = Math.min(100, ((userData?.points || 0) % 100));
-
-    const filterTabs = [
-        { key: "all", label: "Todo", icon: Sparkles },
-        { key: "update", label: "General", icon: Megaphone },
-        { key: "price_alert", label: "Alertas", icon: AlertTriangle },
-        { key: "tip", label: "Consejos", icon: Lightbulb },
-    ];
-
-    return (
-        <Layout>
-            <div className="space-y-6" data-testid="dashboard-page">
-                <PageHeader
-                        tag="Resumen de comunidad"
-                        title="Dashboard"
-                        subtitle="Pulso de precios y conversación de la comunidad en un vistazo."
-                        className="mb-6"
-                    />
-
-                    {/* ── 3-COLUMN LAYOUT ── */}
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
-                        {[
-                            { label: "Precios 24h", value: pulse?.prices_24h || 0, icon: Tag, color: "text-emerald-600", bg: "bg-emerald-50" },
-                            { label: "Usuarios 7d", value: pulse?.active_users_7d || 0, icon: Users, color: "text-sky-600", bg: "bg-sky-50" },
-                            { label: "Posts 7d", value: pulse?.posts_7d || 0, icon: MessageCircle, color: "text-amber-600", bg: "bg-amber-50" },
-                            { label: "Productos", value: generalStats?.total_products || 0, icon: Store, color: "text-indigo-600", bg: "bg-indigo-50" },
-                        ].map((item) => (
-                            <Card key={item.label} className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                                <div className={`w-9 h-9 rounded-xl ${item.bg} flex items-center justify-center mb-3`}>
-                                    <item.icon className={`w-4 h-4 ${item.color}`} />
-                                </div>
-                                <p className="text-2xl font-extrabold text-slate-900 tabular-nums">{item.value}</p>
-                                <p className="text-xs font-semibold text-slate-500 mt-0.5">{item.label}</p>
-                            </Card>
-                        ))}
-                    </div>
-
-                    <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-
-                        {/* LEFT SIDEBAR */}
-                        {false && (
-                        <aside className="hidden">
-                            {/* Profile card */}
-                            <Card className="bg-gradient-to-br from-emerald-500 to-teal-600 border-none rounded-2xl p-5 text-white shadow-lg">
-                                <div className="flex items-center gap-3">
-                                    <Avatar name={user?.name} picture={user?.picture} size="lg" />
-                                    <div className="min-w-0">
-                                        <p className="font-bold truncate">{user?.name}</p>
-                                        <p className="text-xs text-emerald-100 truncate">{user?.email}</p>
-                                    </div>
-                                </div>
-                                <div className="mt-5 grid grid-cols-2 gap-3">
-                                    <div>
-                                        <p className="text-[10px] uppercase tracking-widest text-emerald-100 font-bold">Puntos</p>
-                                        <p className="text-2xl font-extrabold tabular-nums">{userData?.points || 0}</p>
-                                    </div>
-                                    <div>
-                                        <p className="text-[10px] uppercase tracking-widest text-emerald-100 font-bold">Ranking</p>
-                                        <p className="text-2xl font-extrabold tabular-nums">#{userData?.rank || "–"}</p>
-                                    </div>
-                                </div>
-                                <div className="mt-4">
-                                    <div className="flex items-center justify-between text-[10px] font-bold text-emerald-100 mb-1.5">
-                                        <span>NIVEL {level}</span>
-                                        <span>{pointsForNext - (userData?.points || 0)} para subir</span>
-                                    </div>
-                                    <div className="h-2 bg-white/20 rounded-full overflow-hidden">
-                                        <div
-                                            className="h-full bg-white rounded-full transition-all duration-700"
-                                            style={{ width: `${progress}%` }}
-                                        />
-                                    </div>
-                                </div>
-                            </Card>
-
-                            {/* Points history */}
-                            <Card className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                                <SectionTitle icon={Trophy} title="Tus últimos puntos" accent="text-amber-500" />
-                                {!userData?.history?.length ? (
-                                    <p className="text-xs text-slate-400 px-1 py-2">Aún no hay movimientos de puntos.</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {userData.history.slice(0, 4).map((entry, idx) => (
-                                            <div key={`${entry.created_at}-${idx}`} className="flex items-start gap-3">
-                                                <div className="w-8 h-8 rounded-lg bg-amber-50 text-amber-600 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                                                    +{entry.points}
-                                                </div>
-                                                <div className="min-w-0">
-                                                    <p className="text-sm font-semibold text-slate-700 leading-snug">{entry.reason}</p>
-                                                    <p className="text-[10px] text-slate-400 mt-0.5">{timeAgo(entry.created_at)}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </Card>
-                        </aside>
-                        )}
-
-                        {/* CENTER FEED */}
-                        <div className="lg:col-span-8 space-y-4">
-                            <Composer onPosted={refreshPosts} />
-
-                            {/* Filter tabs */}
-                            <div className="flex gap-1.5 overflow-x-auto pb-1 scrollbar-hide">
-                                {filterTabs.map((t) => {
-                                    const active = filter === t.key;
-                                    return (
-                                        <button
-                                            key={t.key}
-                                            onClick={() => setFilter(t.key)}
-                                            className={`inline-flex items-center gap-1.5 px-3.5 py-2 rounded-full text-xs font-bold whitespace-nowrap transition-all ${
-                                                active
-                                                    ? "bg-slate-900 text-white shadow-sm"
-                                                    : "bg-white border border-slate-200 text-slate-600 hover:border-slate-300"
-                                            }`}
-                                        >
-                                            <t.icon className="w-3.5 h-3.5" />
-                                            {t.label}
-                                        </button>
-                                    );
-                                })}
-                            </div>
-
-                            {/* Posts */}
-                            {loading ? (
-                                <div className="py-20 text-center">
-                                    <Sparkles className="w-8 h-8 text-emerald-300 animate-pulse mx-auto" />
-                                    <p className="text-xs text-slate-400 mt-3 font-semibold uppercase tracking-widest">Cargando feed…</p>
-                                </div>
-                            ) : filteredPosts.length === 0 ? (
-                                <Card className="bg-white border border-dashed border-slate-200 rounded-2xl p-10 text-center">
-                                    <MessageCircle className="w-10 h-10 text-slate-300 mx-auto mb-3" />
-                                    <p className="font-bold text-slate-600">Nada por aquí todavía</p>
-                                    <p className="text-sm text-slate-400 mt-1">Sé el primero en compartir un hallazgo</p>
-                                </Card>
-                            ) : (
-                                <div className="space-y-4">
-                                    {filteredPosts.map((post) => (
-                                        <PostCard key={post.id} post={post} onReact={handleReact} />
-                                    ))}
-                                </div>
-                            )}
-                        </div>
-
-                        {/* RIGHT SIDEBAR */}
-                        <aside className="lg:col-span-4 space-y-4">
-                            {/* Real data summary */}
-                            {generalStats && (
-                                <Card className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                                    <SectionTitle icon={Tag} title="Datos registrados" accent="text-emerald-500" />
-                                    <div className="grid grid-cols-2 gap-2">
-                                        {[
-                                            { label: "Productos", value: generalStats.total_products },
-                                            { label: "Precios", value: generalStats.total_prices },
-                                            { label: "Tiendas", value: generalStats.total_supermarkets },
-                                            { label: "Usuarios", value: generalStats.total_users },
-                                        ].map((item) => (
-                                            <div key={item.label} className="rounded-xl bg-slate-50 px-3 py-2">
-                                                <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{item.label}</p>
-                                                <p className="text-lg font-extrabold text-slate-900 tabular-nums">{item.value || 0}</p>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            )}
-
-                            {/* Recent prices */}
-                            {generalStats?.recent_activity?.length > 0 && (
-                                <Card className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                                    <SectionTitle icon={Clock} title="Últimos precios" accent="text-sky-500" />
-                                    <div className="space-y-2.5">
-                                        {generalStats.recent_activity.slice(0, 4).map((item, idx) => (
-                                            <div key={`${item.created_at}-${idx}`} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
-                                                <div className="w-9 h-9 rounded-xl bg-sky-50 flex items-center justify-center flex-shrink-0">
-                                                    <Tag className="w-4 h-4 text-sky-500" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-bold text-slate-900 truncate">{item.product_name}</p>
-                                                    <p className="text-[11px] text-slate-500 truncate">{item.supermarket_name} · {timeAgo(item.created_at)}</p>
-                                                </div>
-                                                <span className="text-sm font-extrabold text-slate-900 tabular-nums">{formatPrice(item.price)}</span>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            )}
-
-                            {/* Trending */}
-                            <Card className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                                <SectionTitle
-                                    icon={Flame}
-                                    title="Tendencias"
-                                    accent="text-orange-500"
-                                />
-                                {trending.length === 0 ? (
-                                    <p className="text-xs text-slate-400 px-1 py-2">Sin tendencias aún</p>
-                                ) : (
-                                    <div className="space-y-3">
-                                        {trending.map((t, idx) => (
-                                            <div key={idx} className="flex items-start gap-3 group cursor-default">
-                                                <div className="w-6 h-6 rounded-lg bg-orange-50 text-orange-500 flex items-center justify-center font-bold text-xs flex-shrink-0">
-                                                    {idx + 1}
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-bold text-slate-900 truncate">{t.product_name}</p>
-                                                    <div className="flex items-center gap-1.5 mt-0.5">
-                                                        <Store className="w-3 h-3 text-slate-400" />
-                                                        <span className="text-[11px] text-slate-500 truncate">{t.supermarket_name}</span>
-                                                        <span className="text-slate-300">·</span>
-                                                        <span className="text-[11px] font-bold text-slate-900">{t.last_price?.toFixed(2)}€</span>
-                                                    </div>
-                                                    <div className="mt-1 flex items-center gap-1">
-                                                        <Activity className="w-3 h-3 text-orange-500" />
-                                                        <span className="text-[10px] font-bold text-orange-500">{t.count} registros</span>
-                                                        {t.delta_pct !== 0 && (
-                                                            <>
-                                                                <span className="text-slate-300">·</span>
-                                                                <span className={`text-[10px] font-bold ${t.delta_pct < 0 ? "text-emerald-500" : "text-rose-500"}`}>
-                                                                    {t.delta_pct > 0 ? "+" : ""}{t.delta_pct}%
-                                                                </span>
-                                                            </>
-                                                        )}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </Card>
-
-                            {/* Best deals */}
-                            <Card className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                                <SectionTitle
-                                    icon={TrendingDown}
-                                    title="Mejores ofertas"
-                                    accent="text-emerald-500"
-                                    action={<span className="text-[10px] font-bold text-emerald-500 uppercase tracking-widest">Hoy</span>}
-                                />
-                                {bestDeals.length === 0 ? (
-                                    <p className="text-xs text-slate-400 px-1 py-2">Sin ofertas detectadas</p>
-                                ) : (
-                                    <div className="space-y-2.5">
-                                        {bestDeals.map((d, idx) => (
-                                            <div key={idx} className="flex items-center gap-3 p-2 rounded-xl hover:bg-slate-50 transition-colors">
-                                                <div className="w-9 h-9 rounded-xl bg-emerald-50 flex items-center justify-center flex-shrink-0">
-                                                    <ArrowDown className="w-4 h-4 text-emerald-500" />
-                                                </div>
-                                                <div className="flex-1 min-w-0">
-                                                    <p className="text-sm font-bold text-slate-900 truncate">{d.product_name}</p>
-                                                    <p className="text-[11px] text-slate-500 truncate">{d.supermarket_name}</p>
-                                                </div>
-                                                <div className="text-right flex-shrink-0">
-                                                    <p className="text-sm font-extrabold text-emerald-600 tabular-nums">{d.current_price?.toFixed(2)}€</p>
-                                                    <p className="text-[10px] font-bold text-emerald-500">{d.delta_pct}%</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                )}
-                            </Card>
-
-                            {/* Leaderboard */}
-                            <Card className="hidden">
-                                <SectionTitle
-                                    icon={Crown}
-                                    title="Top contribuidores"
-                                    accent="text-amber-500"
-                                />
-                                <div className="space-y-2.5">
-                                    {leaderboard.map((u, idx) => {
-                                        const medal = ["🥇", "🥈", "🥉"][idx];
-                                        const isMe = u.user_id === user?.id;
-                                        return (
-                                            <div
-                                                key={u.user_id}
-                                                className={`flex items-center gap-3 p-2 rounded-xl ${
-                                                    isMe ? "bg-emerald-50" : "hover:bg-slate-50"
-                                                } transition-colors`}
-                                            >
-                                                <div className="w-7 flex items-center justify-center flex-shrink-0">
-                                                    {medal ? (
-                                                        <span className="text-lg">{medal}</span>
-                                                    ) : (
-                                                        <span className="text-xs font-bold text-slate-400">#{idx + 1}</span>
-                                                    )}
-                                                </div>
-                                                <Avatar name={u.user_name} size="sm" />
-                                                <div className="flex-1 min-w-0">
-                                                    <p className={`text-sm font-bold truncate ${isMe ? "text-emerald-700" : "text-slate-900"}`}>
-                                                        {u.user_name} {isMe && <span className="text-[10px] text-emerald-600">(tú)</span>}
-                                                    </p>
-                                                </div>
-                                                <span className="text-xs font-bold text-slate-700 tabular-nums">{u.points}pts</span>
-                                            </div>
-                                        );
-                                    })}
-                                </div>
-                            </Card>
-
-                            {/* Notifications preview */}
-                            {notifications.length > 0 && (
-                                <Card className="bg-white border border-slate-100 rounded-2xl p-4 shadow-sm">
-                                    <SectionTitle
-                                        icon={Bell}
-                                        title="Notificaciones"
-                                        accent="text-sky-500"
-                                        action={
-                                            <button
-                                                onClick={() => navigate("/alerts")}
-                                                className="text-[10px] font-bold text-sky-500 hover:underline uppercase tracking-widest"
-                                            >
-                                                Ver todo
-                                            </button>
-                                        }
-                                    />
-                                    <div className="space-y-2">
-                                        {notifications.map((n) => (
-                                            <div
-                                                key={n.id}
-                                                className={`flex items-start gap-2 p-2 rounded-xl ${
-                                                    !n.read ? "bg-sky-50" : "hover:bg-slate-50"
-                                                } transition-colors`}
-                                            >
-                                                <Clock className="w-3.5 h-3.5 text-sky-500 mt-0.5 flex-shrink-0" />
-                                                <div className="min-w-0">
-                                                    <p className="text-xs font-semibold text-slate-700 leading-snug line-clamp-2">
-                                                        {n.message || n.title}
-                                                    </p>
-                                                    <p className="text-[10px] text-slate-400 mt-0.5">{timeAgo(n.created_at)}</p>
-                                                </div>
-                                            </div>
-                                        ))}
-                                    </div>
-                                </Card>
-                            )}
-                        </aside>
-                </div>
-            </div>
-        </Layout>
-    );
-};
 
 const Dashboard = () => {
     const { user } = useAuth();
@@ -873,87 +471,50 @@ const Dashboard = () => {
                     tag="Resumen de comunidad"
                     title="Dashboard"
                     subtitle="Pulso de precios y conversación real de la comunidad en un vistazo."
+                    actions={
+                        pulse && (
+                            <div className="hidden sm:flex gap-4 items-center bg-black/20 backdrop-blur-md px-5 py-2.5 rounded-2xl border border-white/10 shadow-inner">
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[9px] font-bold text-white/70 uppercase tracking-widest">Precios hoy</span>
+                                    <span className="text-sm font-black text-white">{pulse.prices_24h || 0}</span>
+                                </div>
+                                <div className="w-px h-6 bg-white/20"></div>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[9px] font-bold text-white/70 uppercase tracking-widest">Posts (7d)</span>
+                                    <span className="text-sm font-black text-white">{pulse.posts_7d || 0}</span>
+                                </div>
+                                <div className="w-px h-6 bg-white/20"></div>
+                                <div className="flex flex-col items-center">
+                                    <span className="text-[9px] font-bold text-white/70 uppercase tracking-widest">Usuarios (7d)</span>
+                                    <span className="text-sm font-black text-white">{pulse.active_users_7d || 0}</span>
+                                </div>
+                            </div>
+                        )
+                    }
                 />
 
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start max-w-7xl mx-auto">
 
-                        {/* ── LEFT SIDEBAR ── */}
-                        <aside className="hidden lg:block lg:col-span-3 space-y-4" style={{ position: "sticky", top: "3.5rem" }}>
-                            {/* User card */}
-                            <div style={{ background: "white", borderRadius: 20, padding: "1rem", border: "1px solid #e2e8f0", marginBottom: "0.75rem" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
-                                    <Avatar name={user?.name} picture={user?.picture} size="md" />
-                                    <div style={{ minWidth: 0 }}>
-                                        <p style={{ fontWeight: 700, fontSize: 14, color: "#0f172a", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.name}</p>
-                                        <p style={{ fontSize: 11, color: "#94a3b8", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{user?.email}</p>
-                                    </div>
-                                </div>
-                                <div style={{ marginTop: "0.75rem", display: "flex", alignItems: "center", gap: "0.5rem", background: "#f0fdf4", borderRadius: 12, padding: "0.5rem 0.75rem" }}>
-                                    <Trophy style={{ width: 14, height: 14, color: "#f59e0b", flexShrink: 0 }} />
-                                    <span style={{ fontSize: 13, fontWeight: 700, color: "#065f46", fontVariantNumeric: "tabular-nums" }}>{user?.points || 0}</span>
-                                    <span style={{ fontSize: 11, color: "#6ee7b7" }}>puntos</span>
-                                </div>
-                            </div>
-
-                            {/* Quick nav */}
-                            <div style={{ background: "white", borderRadius: 20, padding: "0.5rem", border: "1px solid #e2e8f0", marginBottom: "0.75rem" }}>
-                                {quickNavItems.map((item) => (
-                                    <button
-                                        key={item.path}
-                                        onClick={() => navigate(item.path)}
-                                        style={{ display: "flex", alignItems: "center", gap: "0.75rem", width: "100%", padding: "0.625rem 0.75rem", borderRadius: 14, border: "none", background: "transparent", cursor: "pointer", color: "#475569", fontSize: 13, fontWeight: 600, transition: "all 0.15s" }}
-                                        onMouseEnter={e => { e.currentTarget.style.background = "#f0fdf4"; e.currentTarget.style.color = "#059669"; }}
-                                        onMouseLeave={e => { e.currentTarget.style.background = "transparent"; e.currentTarget.style.color = "#475569"; }}
-                                    >
-                                        <item.icon style={{ width: 16, height: 16, flexShrink: 0 }} />
-                                        <span>{item.label}</span>
-                                    </button>
-                                ))}
-                            </div>
-
-                            {/* Community pulse */}
-                            {pulse && (
-                                <div style={{ background: "white", borderRadius: 20, padding: "0.875rem", border: "1px solid #e2e8f0" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.75rem" }}>
-                                        <span style={{ width: 8, height: 8, borderRadius: "50%", background: "#10b981", display: "inline-block", boxShadow: "0 0 0 3px #d1fae5", animation: "pulse 2s infinite" }} />
-                                        <span style={{ fontSize: 11, fontWeight: 700, textTransform: "uppercase", letterSpacing: "0.08em", color: "#64748b" }}>Pulso en vivo</span>
-                                    </div>
-                                    {[
-                                        { label: "Precios hoy", value: pulse.prices_24h || 0, color: "#059669" },
-                                        { label: "Usuarios activos (7d)", value: pulse.active_users_7d || 0, color: "#0284c7" },
-                                        { label: "Posts esta semana", value: pulse.posts_7d || 0, color: "#d97706" },
-                                    ].map((s) => (
-                                        <div key={s.label} style={{ display: "flex", justifyContent: "space-between", alignItems: "center", padding: "0.375rem 0", borderBottom: "1px solid #f1f5f9" }}>
-                                            <span style={{ fontSize: 12, color: "#64748b" }}>{s.label}</span>
-                                            <span style={{ fontSize: 14, fontWeight: 800, color: s.color, fontVariantNumeric: "tabular-nums" }}>{s.value}</span>
-                                        </div>
-                                    ))}
-                                </div>
-                            )}
-                        </aside>
 
                         {/* ── CENTER FEED ── */}
-                        <main className="col-span-1 lg:col-span-6 space-y-4">
+                        <main className="col-span-1 lg:col-span-8 space-y-4">
                             {/* Feed header */}
-                            <div style={{ position: "sticky", top: "3rem", zIndex: 10, background: "rgba(248,250,252,0.92)", backdropFilter: "blur(12px)", paddingBottom: "0.75rem", marginBottom: "0.5rem" }}>
-                                <h1 style={{ fontSize: 18, fontWeight: 900, color: "#0f172a", margin: "0 0 0.75rem", fontFamily: "Manrope, sans-serif" }}>Actividad reciente</h1>
-                                <div style={{ display: "flex", gap: "0.5rem", overflowX: "auto", paddingBottom: "2px" }}>
+                            <div className="sticky top-12 z-10 bg-slate-50/90 backdrop-blur-md pb-3 mb-2">
+                                <h1 className="text-lg font-black text-slate-900 m-0 mb-3 font-heading">Actividad reciente</h1>
+                                <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-hide -mx-1 px-1">
                                     {filterTabs.map((t) => {
                                         const active = filter === t.key;
                                         return (
                                             <button
                                                 key={t.key}
                                                 onClick={() => setFilter(t.key)}
-                                                style={{
-                                                    display: "inline-flex", alignItems: "center", gap: "0.375rem",
-                                                    padding: "0.375rem 0.875rem", borderRadius: 999, border: "none",
-                                                    fontWeight: 700, fontSize: 12, whiteSpace: "nowrap", cursor: "pointer", transition: "all 0.15s",
-                                                    background: active ? "#0f172a" : "white",
-                                                    color: active ? "white" : "#475569",
-                                                    boxShadow: active ? "0 2px 8px rgba(15,23,42,0.18)" : "0 0 0 1px #e2e8f0",
-                                                }}
+                                                className={`inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full font-bold text-[12px] whitespace-nowrap cursor-pointer transition-all ${
+                                                    active
+                                                        ? "bg-primary text-white shadow-md shadow-primary/20"
+                                                        : "bg-primary/10 text-primary border border-primary/20 hover:bg-primary/15"
+                                                }`}
                                             >
-                                                <t.icon style={{ width: 13, height: 13 }} />
+                                                <t.icon className="w-3.5 h-3.5" />
                                                 {t.label}
                                             </button>
                                         );
@@ -962,24 +523,24 @@ const Dashboard = () => {
                             </div>
 
                             {/* Composer */}
-                            <div style={{ marginBottom: "1rem" }}>
+                            <div className="mb-4">
                                 <Composer onPosted={refreshPosts} />
                             </div>
 
                             {/* Posts */}
                             {loading ? (
-                                <div style={{ padding: "5rem 0", textAlign: "center" }}>
-                                    <Sparkles style={{ width: 32, height: 32, color: "#6ee7b7", margin: "0 auto 0.75rem" }} />
-                                    <p style={{ fontSize: 12, color: "#94a3b8", fontWeight: 600, textTransform: "uppercase", letterSpacing: "0.1em" }}>Cargando publicaciones…</p>
+                                <div className="py-20 text-center">
+                                    <Sparkles className="w-8 h-8 text-amber-300 mx-auto mb-3 animate-pulse" />
+                                    <p className="text-[12px] text-slate-400 font-semibold uppercase tracking-widest">Cargando publicaciones…</p>
                                 </div>
                             ) : filteredPosts.length === 0 ? (
-                                <div style={{ background: "white", borderRadius: 20, border: "2px dashed #e2e8f0", padding: "3rem", textAlign: "center" }}>
-                                    <MessageCircle style={{ width: 40, height: 40, color: "#cbd5e1", margin: "0 auto 0.75rem" }} />
-                                    <p style={{ fontWeight: 700, color: "#475569", margin: "0 0 0.25rem" }}>Nada por aquí todavía</p>
-                                    <p style={{ fontSize: 13, color: "#94a3b8", margin: 0 }}>Sé el primero en compartir un hallazgo</p>
+                                <div className="bg-white rounded-[20px] border-2 border-dashed border-slate-200 p-12 text-center">
+                                    <MessageCircle className="w-10 h-10 text-slate-300 mx-auto mb-3" />
+                                    <p className="font-bold text-slate-600 m-0 mb-1">Nada por aquí todavía</p>
+                                    <p className="text-[13px] text-slate-400 m-0">Sé el primero en compartir un hallazgo</p>
                                 </div>
                             ) : (
-                                <div style={{ display: "flex", flexDirection: "column", gap: "1rem" }}>
+                                <div className="flex flex-col gap-4">
                                     {filteredPosts.map((post) => (
                                         <PostCard key={post.id} post={post} onReact={handleReact} />
                                     ))}
@@ -988,33 +549,48 @@ const Dashboard = () => {
                         </main>
 
                         {/* ── RIGHT SIDEBAR ── */}
-                        <aside className="hidden lg:block lg:col-span-3 space-y-4" style={{ position: "sticky", top: "3.5rem" }}>
+                        <aside className="col-span-1 lg:col-span-4 space-y-4 lg:sticky lg:top-14">
+                            {/* User card (Moved from left) */}
+                            <div className="bg-white rounded-[20px] p-4 border border-slate-200">
+                                <div className="flex items-center gap-3">
+                                    <Avatar name={user?.name} picture={user?.picture} size="md" />
+                                    <div className="min-w-0">
+                                        <p className="font-bold text-sm text-slate-900 m-0 truncate">{user?.name}</p>
+                                        <p className="text-[11px] text-slate-400 m-0 truncate">{user?.email}</p>
+                                    </div>
+                                </div>
+                                <div className="mt-3 flex items-center gap-2 bg-amber-50 rounded-xl p-2 px-3">
+                                    <Trophy className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                                    <span className="text-sm font-bold text-amber-800 tabular-nums">{user?.points || 0}</span>
+                                    <span className="text-[11px] text-amber-600">puntos</span>
+                                </div>
+                            </div>
 
                             {/* Trending */}
-                            <div style={{ background: "white", borderRadius: 20, padding: "1rem", border: "1px solid #e2e8f0" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
-                                    <Flame style={{ width: 15, height: 15, color: "#f97316" }} />
-                                    <h2 style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", margin: 0 }}>Tendencias</h2>
+                            <div className="bg-white rounded-[20px] p-4 border border-slate-200">
+                                <div className="flex items-center gap-2 mb-3.5">
+                                    <Flame className="w-4 h-4 text-orange-500" />
+                                    <h2 className="text-[13px] font-extrabold text-slate-900 m-0">Tendencias</h2>
                                 </div>
                                 {trending.length === 0 ? (
-                                    <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>Sin tendencias aún</p>
+                                    <p className="text-[12px] text-slate-400 m-0">Sin tendencias aún</p>
                                 ) : trending.map((t, idx) => (
-                                    <div key={idx} style={{ display: "flex", gap: "0.625rem", alignItems: "flex-start", padding: "0.5rem 0", borderBottom: idx < trending.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                                        <span style={{ minWidth: 20, height: 20, borderRadius: 8, background: "#fff7ed", color: "#f97316", fontSize: 11, fontWeight: 800, display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>{idx + 1}</span>
-                                        <div style={{ minWidth: 0 }}>
-                                            <p style={{ fontSize: 13, fontWeight: 700, color: "#0f172a", margin: "0 0 0.125rem", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{t.product_name}</p>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "0.375rem", flexWrap: "wrap" }}>
-                                                <span style={{ fontSize: 11, color: "#64748b" }}>{t.supermarket_name}</span>
-                                                <span style={{ fontSize: 11, fontWeight: 700, color: "#0f172a" }}>{t.last_price?.toFixed(2)}€</span>
+                                    <div key={idx} className={`flex gap-2.5 items-start py-2 ${idx < trending.length - 1 ? "border-b border-slate-100" : ""}`}>
+                                        <span className="min-w-[20px] h-5 rounded-lg bg-orange-50 text-orange-500 text-[11px] font-extrabold flex items-center justify-center shrink-0">{idx + 1}</span>
+                                        <div className="min-w-0">
+                                            <p className="text-[13px] font-bold text-slate-900 m-0 mb-0.5 truncate">{t.product_name}</p>
+                                            <div className="flex items-center gap-1.5 flex-wrap">
+                                                <span className="text-[11px] text-slate-500">{t.supermarket_name}</span>
+                                                <span className="text-[11px] font-bold text-slate-900">{t.last_price?.toFixed(2)}€</span>
                                                 {t.delta_pct !== 0 && (
-                                                    <span style={{ fontSize: 10, fontWeight: 700, color: t.delta_pct < 0 ? "#059669" : "#e11d48" }}>
+                                                    <span className={`text-[10px] font-bold ${t.delta_pct < 0 ? "text-amber-600" : "text-rose-600"}`}>
                                                         {t.delta_pct > 0 ? "+" : ""}{t.delta_pct}%
                                                     </span>
                                                 )}
                                             </div>
-                                            <div style={{ display: "flex", alignItems: "center", gap: "0.25rem", marginTop: "0.125rem" }}>
-                                                <Activity style={{ width: 10, height: 10, color: "#f97316" }} />
-                                                <span style={{ fontSize: 10, fontWeight: 700, color: "#f97316" }}>{t.count} registros</span>
+                                            <div className="flex items-center gap-1 mt-0.5">
+                                                <Activity className="w-2.5 h-2.5 text-orange-500" />
+                                                <span className="text-[10px] font-bold text-orange-500">{t.count} registros</span>
                                             </div>
                                         </div>
                                     </div>
@@ -1022,48 +598,50 @@ const Dashboard = () => {
                             </div>
 
                             {/* Best deals */}
-                            <div style={{ background: "white", borderRadius: 20, padding: "1rem", border: "1px solid #e2e8f0" }}>
-                                <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
-                                    <TrendingDown style={{ width: 15, height: 15, color: "#10b981" }} />
-                                    <h2 style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", margin: 0, flex: 1 }}>Mejores ofertas</h2>
-                                    <span style={{ fontSize: 10, fontWeight: 700, color: "#10b981", textTransform: "uppercase", letterSpacing: "0.08em" }}>Hoy</span>
+                            <div className="bg-white rounded-[20px] p-4 border border-slate-200">
+                                <div className="flex items-center gap-2 mb-3.5">
+                                    <TrendingDown className="w-4 h-4 text-primary" />
+                                    <h2 className="text-[13px] font-extrabold text-slate-900 m-0 flex-1">Mejores ofertas</h2>
+                                    <span className="text-[10px] font-bold text-primary uppercase tracking-widest">Hoy</span>
                                 </div>
                                 {bestDeals.length === 0 ? (
-                                    <p style={{ fontSize: 12, color: "#94a3b8", margin: 0 }}>Sin ofertas detectadas</p>
+                                    <p className="text-[12px] text-slate-400 m-0">Sin ofertas detectadas</p>
                                 ) : bestDeals.map((d, idx) => (
-                                    <div key={idx} style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.5rem 0", borderBottom: idx < bestDeals.length - 1 ? "1px solid #f1f5f9" : "none" }}>
-                                        <div style={{ width: 32, height: 32, borderRadius: 10, background: "#f0fdf4", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                            <ArrowDown style={{ width: 14, height: 14, color: "#10b981" }} />
+                                    <div key={idx} className={`flex items-center gap-2.5 py-2 ${idx < bestDeals.length - 1 ? "border-b border-slate-100" : ""}`}>
+                                        <div className="w-8 h-8 rounded-xl bg-amber-50 flex items-center justify-center shrink-0">
+                                            <ArrowDown className="w-3.5 h-3.5 text-primary" />
                                         </div>
-                                        <div style={{ minWidth: 0, flex: 1 }}>
-                                            <p style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.product_name}</p>
-                                            <p style={{ fontSize: 11, color: "#64748b", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{d.supermarket_name}</p>
+                                        <div className="min-w-0 flex-1">
+                                            <p className="text-[12px] font-bold text-slate-900 m-0 truncate">{d.product_name}</p>
+                                            <p className="text-[11px] text-slate-500 m-0 truncate">{d.supermarket_name}</p>
                                         </div>
-                                        <div style={{ textAlign: "right", flexShrink: 0 }}>
-                                            <p style={{ fontSize: 13, fontWeight: 800, color: "#059669", margin: 0, fontVariantNumeric: "tabular-nums" }}>{d.current_price?.toFixed(2)}€</p>
-                                            <p style={{ fontSize: 10, fontWeight: 700, color: "#10b981", margin: 0 }}>{d.delta_pct}%</p>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-[13px] font-extrabold text-primary m-0 tabular-nums">{d.current_price?.toFixed(2)}€</p>
+                                            <p className="text-[10px] font-bold text-amber-500 m-0">{d.delta_pct}%</p>
                                         </div>
                                     </div>
                                 ))}
                             </div>
 
+
+
                             {/* Recent prices */}
                             {generalStats?.recent_activity?.length > 0 && (
-                                <div style={{ background: "white", borderRadius: 20, padding: "1rem", border: "1px solid #e2e8f0" }}>
-                                    <div style={{ display: "flex", alignItems: "center", gap: "0.5rem", marginBottom: "0.875rem" }}>
-                                        <Clock style={{ width: 15, height: 15, color: "#0284c7" }} />
-                                        <h2 style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", margin: 0 }}>Últimos precios</h2>
+                                <div className="bg-white rounded-[20px] p-4 border border-slate-200">
+                                    <div className="flex items-center gap-2 mb-3.5">
+                                        <Clock className="w-4 h-4 text-sky-500" />
+                                        <h2 className="text-[13px] font-extrabold text-slate-900 m-0">Últimos precios</h2>
                                     </div>
                                     {generalStats.recent_activity.slice(0, 5).map((item, idx) => (
-                                        <div key={`${item.created_at}-${idx}`} style={{ display: "flex", alignItems: "center", gap: "0.625rem", padding: "0.5rem 0", borderBottom: idx < 4 ? "1px solid #f1f5f9" : "none" }}>
-                                            <div style={{ width: 32, height: 32, borderRadius: 10, background: "#f0f9ff", display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0 }}>
-                                                <Tag style={{ width: 14, height: 14, color: "#0284c7" }} />
+                                        <div key={`${item.created_at}-${idx}`} className={`flex items-center gap-2.5 py-2 ${idx < 4 ? "border-b border-slate-100" : ""}`}>
+                                            <div className="w-8 h-8 rounded-xl bg-sky-50 flex items-center justify-center shrink-0">
+                                                <Tag className="w-3.5 h-3.5 text-sky-500" />
                                             </div>
-                                            <div style={{ minWidth: 0, flex: 1 }}>
-                                                <p style={{ fontSize: 12, fontWeight: 700, color: "#0f172a", margin: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{item.product_name}</p>
-                                                <p style={{ fontSize: 11, color: "#64748b", margin: 0 }}>{item.supermarket_name} · {timeAgo(item.created_at)}</p>
+                                            <div className="min-w-0 flex-1">
+                                                <p className="text-[12px] font-bold text-slate-900 m-0 truncate">{item.product_name}</p>
+                                                <p className="text-[11px] text-slate-500 m-0">{item.supermarket_name} · {timeAgo(item.created_at)}</p>
                                             </div>
-                                            <span style={{ fontSize: 13, fontWeight: 800, color: "#0f172a", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{formatPrice(item.price)}</span>
+                                            <span className="text-[13px] font-extrabold text-slate-900 shrink-0 tabular-nums">{formatPrice(item.price)}</span>
                                         </div>
                                     ))}
                                 </div>
