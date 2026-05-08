@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../components/ui/dialog";
 import { toast } from "sonner";
 import { useShoppingListTutorial } from "../hooks/useShoppingListTutorial";
+import { PageHeader } from "../components/ui/page-header";
 import {
     ShoppingCart,
     Plus,
@@ -603,6 +604,17 @@ const ShoppingListPage = () => {
         return newItems;
     };
 
+    const handleSwapBrand = (idx, newSellableId) => {
+        const sp = sellableProducts.find(s => s.id === newSellableId);
+        if (!sp) return;
+        const brand = brands.find(b => b.id === sp.brand_id);
+        updateLocalItem(idx, {
+            sellable_product_id: sp.id,
+            brand_id: sp.brand_id,
+            brand_name: brand?.name || "Desconocido"
+        });
+    };
+
     const handleShopPriceChange = (index, rawValue) => {
         let nextPrice = null;
         if (rawValue !== "" && rawValue !== null && rawValue !== undefined) {
@@ -791,45 +803,35 @@ const ShoppingListPage = () => {
 
     const renderListsGrid = () => (
         <div className="space-y-4 pb-24" data-testid="lists-grid-view">
-            {/* Hero header */}
-            <div className="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-emerald-500 via-emerald-500 to-teal-600 p-6 text-white shadow-lg sm:p-8">
-                <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/10" />
-                <div className="absolute -bottom-20 -left-12 h-56 w-56 rounded-full bg-white/5" />
-
-                <div className="relative flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-                    <div className="min-w-0">
-                        <p className="text-sm font-medium uppercase tracking-wider text-emerald-100">Mis compras</p>
-                        <h1 className="mt-1 text-3xl font-black leading-tight sm:text-4xl" style={{ fontFamily: "Manrope, sans-serif" }}>
-                            Lista de compra
-                        </h1>
-                        <p className="mt-2 max-w-md text-sm text-emerald-50">
-                            {lists.length === 0
-                                ? "Crea tu primera lista para empezar a recopilar precios reales."
-                                : `${lists.length} ${lists.length === 1 ? "lista activa" : "listas activas"}. Elige una para comprar.`}
-                        </p>
-                    </div>
-
-                    <div className="flex gap-2">
+            <PageHeader
+                tag="Mis compras"
+                title="Lista de compra"
+                subtitle={lists.length === 0
+                    ? "Crea tu primera lista para empezar a recopilar precios reales."
+                    : `${lists.length} ${lists.length === 1 ? "lista activa" : "listas activas"}. Elige una para comprar.`
+                }
+                actions={
+                    <>
                         <Button
                             variant="ghost"
                             onClick={() => startTutorial()}
-                            className="gap-2 rounded-2xl border border-white/20 bg-white/10 text-white hover:bg-white/20"
+                            className="h-10 gap-2 rounded-xl border-white/20 bg-white/10 px-4 font-bold text-white hover:bg-white/20"
+                            aria-label="Tutorial"
                         >
                             <HelpCircle className="h-4 w-4" />
-                            <span className="hidden sm:inline">Tutorial</span>
+                            <span>Tutorial</span>
                         </Button>
                         <Button
                             onClick={() => setDialogOpen(true)}
-                            className="gap-2 rounded-2xl bg-white font-semibold text-emerald-700 shadow-md hover:bg-emerald-50"
+                            className="h-10 gap-2 rounded-xl bg-white px-4 font-black text-emerald-700 shadow-lg hover:bg-emerald-50"
                             data-testid="new-list-btn"
-                            data-tutorial="new-list-btn"
                         >
-                            <Plus className="h-4 w-4" />
-                            Nueva lista
+                            <Plus className="h-4 w-4" strokeWidth={3} />
+                            <span>Nueva lista</span>
                         </Button>
-                    </div>
-                </div>
-            </div>
+                    </>
+                }
+            />
 
             {/* Grid */}
             {loading ? (
@@ -962,7 +964,7 @@ const ShoppingListPage = () => {
                         <button
                             type="button"
                             onClick={() => handleSetListMode("plan")}
-                            className="group flex h-9 items-center gap-1.5 rounded-xl px-2.5 text-slate-500 transition hover:bg-slate-100 hover:text-slate-900"
+                            className="group flex h-9 items-center gap-1.5 rounded-xl border border-slate-200 bg-white px-3 text-slate-500 transition-all hover:bg-slate-50 hover:text-slate-900 active:scale-95"
                             aria-label="Salir del modo compra"
                         >
                             <ArrowLeft className="h-4 w-4 transition-transform group-hover:-translate-x-0.5" />
@@ -970,24 +972,40 @@ const ShoppingListPage = () => {
                         </button>
 
                         <div className="min-w-0 flex-1">
-                            <div className="flex items-center justify-between">
-                                <h2 className="truncate text-sm font-black text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
-                                    {selectedList.name}
-                                </h2>
-                                <div className="text-right">
-                                    <span className="text-sm font-black text-slate-950 tabular-nums">{formatCurrencyShort(totalActualLive)}</span>
+                            <div className="flex items-center justify-between gap-4">
+                                <div className="min-w-0 flex-1">
+                                    <h2 className="truncate text-xs font-black uppercase tracking-widest text-slate-400" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                        {selectedList.supermarket_name}
+                                    </h2>
+                                    <div className="mt-0.5 flex items-baseline gap-2">
+                                        <span className="text-base font-black text-slate-950 tabular-nums">{formatCurrencyShort(totalActualLive)}</span>
+                                        <span className="text-[10px] font-bold text-slate-400 uppercase tabular-nums">{purchasedCount}/{totalItems}</span>
+                                    </div>
                                 </div>
+
+                                <Button
+                                    onClick={() => setFinishSheetOpen(true)}
+                                    disabled={!readyToSubmitCount}
+                                    className={`h-10 gap-2 rounded-xl px-4 text-xs font-black shadow-lg transition-all active:scale-95 ${
+                                        readyToSubmitCount > 0
+                                            ? "bg-emerald-500 text-white shadow-emerald-500/25 hover:bg-emerald-600"
+                                            : "bg-slate-100 text-slate-400 shadow-none"
+                                    }`}
+                                >
+                                    <CheckCircle2 className="h-4 w-4" />
+                                    <span className="hidden sm:inline">Finalizar</span>
+                                    <span className={`flex h-5 min-w-[20px] items-center justify-center rounded-full px-1.5 text-[10px] font-black ${
+                                        readyToSubmitCount > 0 ? "bg-white/20 text-white" : "bg-slate-200 text-slate-400"
+                                    }`}>
+                                        {readyToSubmitCount}
+                                    </span>
+                                </Button>
                             </div>
-                            <div className="mt-1.5 flex items-center gap-3">
-                                <div className="h-1.5 flex-1 overflow-hidden rounded-full bg-slate-100">
-                                    <div
-                                        className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out shadow-[0_0_8px_rgba(16,185,129,0.4)]"
-                                        style={{ width: `${progressPct}%` }}
-                                    />
-                                </div>
-                                <span className="text-[10px] font-black text-emerald-600 tabular-nums uppercase tracking-tighter">
-                                    {purchasedCount}/{totalItems}
-                                </span>
+                            <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-100">
+                                <div
+                                    className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out shadow-[0_0_8px_rgba(16,185,129,0.4)]"
+                                    style={{ width: `${progressPct}%` }}
+                                />
                             </div>
                         </div>
                     </div>
@@ -1214,56 +1232,49 @@ const ShoppingListPage = () => {
                         // Visual state
                         const isPurchased = item.purchased;
                         const hasPrice = Boolean(item.price);
-                        const stateColor = !isPurchased
-                            ? "bg-white border-slate-200"
-                            : hasPrice
-                                ? "bg-emerald-50/60 border-emerald-200"
-                                : "bg-amber-50/60 border-amber-200";
 
                         if (listMode === "plan") {
                             return (
                                 <article
                                     key={`${item.sellable_product_id}-${idx}`}
-                                    className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm"
+                                    className="group relative flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:border-emerald-200 hover:shadow-md"
                                     data-testid={`item-card-${idx}`}
                                 >
-                                    <div className="flex items-center gap-3">
-                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl bg-emerald-50 text-emerald-600">
+                                    <div className="flex min-w-0 flex-1 items-center gap-3">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-500">
                                             <Package className="h-5 w-5" />
                                         </div>
                                         <div className="min-w-0 flex-1">
-                                            <h3 className="truncate text-base font-bold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
+                                            <h3 className="truncate text-sm font-black text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
                                                 {item.product_name}
                                             </h3>
-                                            <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                                                    {item.brand_name || "Sin marca"}
+                                            <div className="mt-0.5 flex items-center gap-2 text-[10px] font-bold text-slate-500 uppercase tracking-tight">
+                                                <span className="flex items-center gap-1">
+                                                    <Tag className="h-3 w-3 text-slate-300" />
+                                                    {item.brand_name}
                                                 </span>
-                                                <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-600">
-                                                    {item.quantity} {item.unit_name}
-                                                </span>
-                                                {item.attribute_values && Object.values(item.attribute_values).filter(Boolean).map((value) => (
-                                                    <span key={value} className="rounded-full bg-slate-100 px-2 py-0.5 text-[11px] font-semibold text-slate-500">
-                                                        {value}
-                                                    </span>
-                                                ))}
+                                                <span className="text-slate-200">•</span>
+                                                <span className="tabular-nums">{item.quantity} {item.unit_name}</span>
                                             </div>
                                         </div>
+                                    </div>
+
+                                    <div className="flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100">
                                         <button
                                             type="button"
                                             onClick={() => openEditDialog(item, idx)}
-                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-slate-500 transition hover:bg-slate-100"
-                                            aria-label="Editar producto"
+                                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-950"
+                                            aria-label="Editar"
                                         >
-                                            <Edit3 className="h-4 w-4" />
+                                            <Edit3 className="h-3.5 w-3.5" />
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => handleRemoveItem(idx)}
-                                            className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl text-rose-500 transition hover:bg-rose-50"
-                                            aria-label="Quitar producto"
+                                            className="flex h-8 w-8 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
+                                            aria-label="Eliminar"
                                         >
-                                            <Trash2 className="h-4 w-4" />
+                                            <Trash2 className="h-3.5 w-3.5" />
                                         </button>
                                     </div>
                                 </article>
@@ -1273,15 +1284,19 @@ const ShoppingListPage = () => {
                         return (
                             <article
                                 key={`${item.sellable_product_id}-${idx}`}
-                                className={`rounded-xl border px-2.5 py-2 shadow-sm transition-all ${stateColor}`}
+                                className={`group relative rounded-2xl border bg-white p-2.5 transition-all duration-300 ${
+                                    isPurchased 
+                                        ? "border-emerald-100 bg-emerald-50/20" 
+                                        : "border-slate-100 hover:border-emerald-200 hover:shadow-md"
+                                }`}
                                 data-testid={`item-card-${idx}`}
                             >
-                                {/* Top: product, status and price */}
-                                <div className="grid grid-cols-[2.25rem_minmax(0,1fr)_7.25rem] items-start gap-2 sm:grid-cols-[2.5rem_minmax(0,1fr)_8rem]">
+                                <div className="flex items-center gap-3">
+                                    {/* Checkbox */}
                                     <button
                                         type="button"
                                         onClick={() => updateLocalItem(idx, { purchased: !isPurchased })}
-                                        className={`group relative flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border-2 transition-all duration-300 sm:h-11 sm:w-11 ${
+                                        className={`group/check relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 transition-all duration-300 ${
                                             isPurchased
                                                 ? hasPrice
                                                     ? "border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
@@ -1294,197 +1309,155 @@ const ShoppingListPage = () => {
                                         {isPurchased ? (
                                             <CheckCircle2 className="h-6 w-6 animate-in zoom-in-75 duration-300" strokeWidth={3} />
                                         ) : (
-                                            <div className="h-2 w-2 rounded-full bg-slate-300 opacity-0 transition-opacity group-hover:opacity-100" />
+                                            <div className="h-2 w-2 rounded-full bg-slate-300 opacity-0 transition-opacity group/check-hover:opacity-100" />
                                         )}
                                     </button>
 
-                                    <div className="min-w-0 flex-1">
-                                        <div className="flex items-start justify-between gap-2">
-                                            <h3 className={`text-sm font-bold leading-tight sm:text-base ${
-                                                isPurchased ? "text-slate-500 line-through" : "text-slate-950"
+                                    {/* Main Content Area: Info | Quantity | Price */}
+                                    <div className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-4">
+                                        {/* Product & Tags */}
+                                        <div className="min-w-0 flex-1">
+                                            <h3 className={`truncate text-sm font-black transition-all ${
+                                                isPurchased ? "text-slate-400" : "text-slate-950"
                                             }`} style={{ fontFamily: "Manrope, sans-serif" }}>
                                                 {item.product_name}
                                             </h3>
+                                            
+                                            <div className="mt-1 flex flex-wrap items-center gap-2">
+                                                <div className="relative">
+                                                    <button
+                                                        type="button"
+                                                        onClick={(e) => {
+                                                            e.stopPropagation();
+                                                            if (alternatives.length > 0) {
+                                                                setExpandedBrandSwitcher(brandSwitcherOpen ? null : idx);
+                                                            }
+                                                        }}
+                                                        className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all ${
+                                                            alternatives.length > 0
+                                                                ? "bg-slate-100 text-slate-600 hover:bg-emerald-500 hover:text-white"
+                                                                : "bg-slate-50 text-slate-400"
+                                                        }`}
+                                                    >
+                                                        <Tag className="h-2.5 w-2.5" />
+                                                        {item.brand_name}
+                                                        {alternatives.length > 0 && <ChevronDown className={`h-2.5 w-2.5 transition-transform ${brandSwitcherOpen ? "rotate-180" : ""}`} />}
+                                                    </button>
 
-                                            <div className="flex h-7 shrink-0 items-center rounded-lg border border-slate-200 bg-white/50 px-1">
+                                                    {brandSwitcherOpen && alternatives.length > 0 && (
+                                                        <div className="absolute left-0 top-full z-50 mt-1 min-w-[160px] rounded-xl border border-slate-100 bg-white p-1 shadow-xl animate-in fade-in slide-in-from-top-2">
+                                                            <div className="mb-1 border-b border-slate-50 px-2 py-1">
+                                                                <p className="text-[8px] font-bold uppercase tracking-widest text-slate-400">Alternativas</p>
+                                                            </div>
+                                                            {alternatives.map((alt) => (
+                                                                <button
+                                                                    key={alt.sellable_id}
+                                                                    type="button"
+                                                                    onClick={(e) => {
+                                                                        e.stopPropagation();
+                                                                        handleSwapBrand(idx, alt.sellable_id);
+                                                                        setExpandedBrandSwitcher(null);
+                                                                    }}
+                                                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[10px] font-bold text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700"
+                                                                >
+                                                                    <div className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-50 text-slate-400">
+                                                                        <Tag className="h-2.5 w-2.5" />
+                                                                    </div>
+                                                                    <span className="truncate">{alt.brand_name}</span>
+                                                                </button>
+                                                            ))}
+                                                         </div>
+                                                     )}
+                                                 </div>
+                                                {Object.entries(item.attribute_values || {}).map(([k, v]) => (
+                                                    <span key={k} className="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">
+                                                        {v}
+                                                    </span>
+                                                ))}
+                                            </div>
+                                        </div>
+
+                                        {/* Row for Quantity and Price - Independent and spaced */}
+                                        <div className="flex items-center justify-between gap-3 sm:justify-end">
+                                            {/* Quantity Picker */}
+                                            <div className="flex h-9 items-center rounded-xl border border-slate-200 bg-white/80 px-1 shadow-sm transition-colors focus-within:border-emerald-500">
                                                 <button
                                                     type="button"
                                                     onClick={(e) => { e.stopPropagation(); handleQuantityStep(idx, -1); }}
-                                                    className="flex h-5 w-5 items-center justify-center rounded text-slate-500 hover:bg-slate-100 disabled:opacity-30"
+                                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-900"
                                                     disabled={Number(item.quantity) <= 0.1}
-                                                    aria-label="Reducir cantidad"
                                                 >
-                                                    <Minus className="h-2.5 w-2.5" />
+                                                    <Minus className="h-3 w-3" />
                                                 </button>
-                                                <span className="w-10 text-center text-[10px] font-bold tabular-nums text-slate-700">
-                                                    {item.quantity} {item.unit_name}
+                                                <span className="min-w-[48px] px-1 text-center text-xs font-black tabular-nums text-slate-700">
+                                                    {item.quantity}{item.unit_name}
                                                 </span>
                                                 <button
                                                     type="button"
                                                     onClick={(e) => { e.stopPropagation(); handleQuantityStep(idx, 1); }}
-                                                    className="flex h-5 w-5 items-center justify-center rounded text-slate-500 hover:bg-slate-100"
-                                                    aria-label="Aumentar cantidad"
+                                                    className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-400 hover:bg-slate-100 hover:text-slate-900"
                                                 >
-                                                    <Plus className="h-2.5 w-2.5" />
+                                                    <Plus className="h-3 w-3" />
                                                 </button>
                                             </div>
-                                        </div>
 
-                                        <div className="mt-1 flex flex-wrap items-center gap-1.5">
-                                            <button
-                                                type="button"
-                                                onClick={() => alternatives.length > 0 && setExpandedBrandSwitcher(brandSwitcherOpen ? null : idx)}
-                                                className={`inline-flex max-w-full items-center gap-1 rounded-full border px-2 py-0.5 text-[10px] font-semibold transition ${
-                                                    alternatives.length > 0
-                                                        ? "border-slate-200 bg-white text-slate-700 hover:border-emerald-300 hover:text-emerald-700"
-                                                        : "border-slate-200 bg-slate-50 text-slate-500 cursor-default"
-                                                }`}
-                                                data-tutorial={visualIndex === 0 ? "brand-switcher" : undefined}
-                                                disabled={alternatives.length === 0}
-                                            >
-                                                <Tag className="h-2.5 w-2.5" />
-                                                <span className="truncate">{item.brand_name || "Sin marca"}</span>
-                                                {alternatives.length > 0 && (
-                                                    <span className="text-[9px] text-slate-400">· cambiar</span>
-                                                )}
-                                            </button>
-                                            {item.attribute_values && Object.entries(item.attribute_values).map(([attrId, value]) => (
-                                                <span
-                                                    key={attrId}
-                                                    className="rounded-full border border-slate-200 bg-white/80 px-2 py-0.5 text-[10px] font-medium text-slate-600"
-                                                >
-                                                    {value}
-                                                </span>
-                                            ))}
-                                            {item.estimated_price && !hasPrice && estimatedUnitStr && (
-                                                <span className="rounded-full bg-indigo-50 px-2 py-0.5 text-[10px] font-semibold text-indigo-700">
-                                                    ~{estimatedUnitStr}
-                                                </span>
-                                            )}
-                                        </div>
-
-                                        {/* Brand alternatives - inline expandable */}
-                                        {brandSwitcherOpen && alternatives.length > 0 && (
-                                            <div className="mt-2 rounded-xl border border-emerald-100 bg-white p-2">
-                                                <div className="flex items-center justify-between px-1">
-                                                    <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">Cambiar marca</p>
-                                                    <button
-                                                        type="button"
-                                                        onClick={() => setExpandedBrandSwitcher(null)}
-                                                        className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:bg-slate-100"
-                                                    >
-                                                        <X className="h-3 w-3" />
-                                                    </button>
-                                                </div>
-                                                <div className="mt-1.5 flex flex-wrap gap-1">
-                                                    {alternatives.map((alt) => (
-                                                        <button
-                                                            key={alt.sellable_id}
-                                                            type="button"
-                                                            onClick={() => handleShopSwitchBrand(idx, alt)}
-                                                            className="rounded-lg border border-emerald-200 bg-emerald-50 px-2.5 py-1 text-xs font-semibold text-emerald-700 transition hover:bg-emerald-100"
-                                                        >
-                                                            {alt.brand_name}
-                                                        </button>
-                                                    ))}
-                                                </div>
-                                            </div>
-                                        )}
-                                    </div>
-
-                                    <div className="min-w-0">
-                                        <div className={`group/price flex h-10 items-center rounded-xl border px-2.5 transition-all duration-200 ${
-                                            hasPrice
-                                                ? "border-emerald-300 bg-emerald-50/30"
-                                                : "border-slate-200 bg-white focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10"
-                                        }`}>
-                                            <Input
-                                                type="number"
-                                                inputMode="decimal"
-                                                min="0"
-                                                step="0.01"
-                                                placeholder="0.00"
-                                                value={item.price ?? ""}
-                                                onChange={(event) => handleShopPriceChange(idx, event.target.value)}
-                                                className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-right text-base font-black tabular-nums shadow-none focus-visible:ring-0 placeholder:text-slate-300"
-                                                data-testid={`item-price-${idx}`}
-                                            />
-                                            <span className={`ml-1 text-[10px] font-black transition-colors ${hasPrice ? "text-emerald-500" : "text-slate-300"}`}>EUR</span>
-                                        </div>
-                                        <div className="mt-1 min-h-[14px] text-right">
-                                            {unitPriceStr ? (
-                                                <span className="text-[10px] font-bold text-slate-500 tabular-nums bg-slate-100 px-1.5 py-0.5 rounded-md">
-                                                    {unitPriceStr}
-                                                </span>
-                                            ) : (item.estimated_price && !hasPrice ? (
-                                                <span className="text-[10px] font-bold text-indigo-500/80 tabular-nums">
-                                                    ~{formatCurrencyShort(item.estimated_price)}
-                                                </span>
-                                            ) : null)}
+                                            {/* Price Input Area */}
+                                            <div className="w-24 shrink-0 sm:w-28">
+                                                <div className={`group/price flex h-9 items-center rounded-xl border px-2 transition-all duration-200 ${
+                                                    hasPrice
+                                                        ? "border-emerald-300 bg-emerald-50/50"
+                                                        : "border-slate-200 bg-slate-50 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10"
+                                                }`}>
+                                                    <Input
+                                                        type="number"
+                                                        inputMode="decimal"
+                                                        value={item.price ?? ""}
+                                                        onChange={(e) => handleShopPriceChange(idx, e.target.value)}
+                                                        placeholder="0.00"
+                                                        className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-right text-sm font-black tabular-nums shadow-none focus-visible:ring-0 placeholder:text-slate-300"
+                                                    />
+                                                    <span className={`ml-1 text-[9px] font-black ${hasPrice ? "text-emerald-500" : "text-slate-300"}`}>€</span>
                                         </div>
                                     </div>
                                 </div>
+                            </div>
+                        </div>
 
-                                {/* Footer: insight + actions */}
-                                <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_auto] items-center gap-2 border-t border-white/40 pt-1.5">
-                                    {priceInsight && !priceInsight.neutral ? (
-                                        <div className={`flex items-center gap-1.5 rounded-xl px-2.5 py-1 text-[11px] font-bold ${
-                                            priceInsight.isHigher
-                                                ? "bg-amber-100 text-amber-900"
-                                                : "bg-emerald-100 text-emerald-900"
-                                        }`}>
-                                            {priceInsight.isHigher ? <TrendingUp className="h-3 w-3" /> : <TrendingDown className="h-3 w-3" />}
-                                            <span>{priceInsight.label}</span>
-                                        </div>
-                                    ) : priceInsight?.neutral ? (
-                                        <span className="text-[11px] font-semibold text-slate-500">Igual al estimado</span>
-                                    ) : item.purchased && !item.price ? (
-                                        <span className="inline-flex items-center gap-1 text-[11px] font-semibold text-amber-700">
-                                            <AlertTriangle className="h-3 w-3" />
-                                            Falta el precio
-                                        </span>
-                                    ) : (
-                                        <span className="text-[11px] text-transparent">.</span>
-                                    )}
-
-                                    <div className="flex items-center justify-end gap-0.5">
+                                {/* Price insight and actions */}
+                                <div className="mt-2 flex items-center justify-between border-t border-slate-50 pt-2">
+                                    <div className="flex items-center gap-2">
+                                        {priceInsight && !priceInsight.neutral ? (
+                                            <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${
+                                                priceInsight.isHigher ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+                                            }`}>
+                                                {priceInsight.isHigher ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
+                                                <span>{priceInsight.label}</span>
+                                            </div>
+                                        ) : (
+                                            <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">PriceHive Insight</span>
+                                        )}
+                                    </div>
+                                    <div className="flex items-center gap-1">
                                         <button
                                             type="button"
                                             onClick={() => handleOpenProductInsight(item)}
-                                            className="flex h-7 w-7 items-center justify-center rounded-lg text-sky-600 transition hover:bg-sky-50 hover:text-sky-700"
-                                            title="Ver precio historico y comparativa"
-                                            aria-label="Ver precio historico y comparativa"
+                                            className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 transition hover:bg-sky-50 hover:text-sky-600"
                                         >
-                                            <Info className="h-3 w-3" />
+                                            <Info className="h-3.5 w-3.5" />
                                         </button>
-                                        {isPurchased && (
-                                            <button
-                                                type="button"
-                                                onClick={() => handleSkipShopItem(idx)}
-                                                className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                                                title="Marcar pendiente"
-                                                aria-label="Marcar pendiente"
-                                            >
-                                                <Ban className="h-3 w-3" />
-                                            </button>
-                                        )}
                                         <button
                                             type="button"
                                             onClick={() => openEditDialog(item, idx)}
-                                            className="flex h-7 w-7 items-center justify-center rounded-lg text-slate-500 transition hover:bg-slate-100 hover:text-slate-700"
-                                            title="Editar producto"
-                                            aria-label="Editar producto"
+                                            className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 transition hover:bg-slate-100 hover:text-slate-900"
                                         >
-                                            <Edit3 className="h-3 w-3" />
+                                            <Edit3 className="h-3.5 w-3.5" />
                                         </button>
                                         <button
                                             type="button"
                                             onClick={() => handleRemoveItem(idx)}
-                                            className="flex h-7 w-7 items-center justify-center rounded-lg text-rose-500 transition hover:bg-rose-50 hover:text-rose-700"
-                                            title="Quitar de la lista"
-                                            aria-label="Quitar de la lista"
+                                            className="flex h-6 w-6 items-center justify-center rounded-lg text-slate-400 transition hover:bg-rose-50 hover:text-rose-600"
                                         >
-                                            <Trash2 className="h-3 w-3" />
+                                            <Trash2 className="h-3.5 w-3.5" />
                                         </button>
                                     </div>
                                 </div>
@@ -1494,49 +1467,9 @@ const ShoppingListPage = () => {
                 )}
             </div>
 
-            {listMode === "shop" && <div className="pb-24" />}
+            {listMode === "shop" && <div className="pb-12" />}
 
-            {listMode === "shop" && (
-            <div className="fixed bottom-0 left-0 right-0 z-[60] border-t border-slate-200 bg-white/95 px-4 py-3 shadow-[0_-8px_24px_rgba(15,23,42,0.06)] backdrop-blur">
-                <div className="mx-auto flex max-w-3xl items-center gap-3">
-                    <div className="min-w-0 flex-1">
-                        <div className="flex items-baseline gap-2">
-                            <span className="text-lg font-black text-slate-950 tabular-nums">
-                                {formatCurrencyShort(totalActualLive)}
-                            </span>
-                            <span className="text-xs font-semibold text-slate-500">
-                                {listMode === "shop" ? `${readyToSubmitCount} listos` : `${totalItems} productos`}
-                            </span>
-                        </div>
-                        <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-slate-100">
-                            <div
-                                className="h-full rounded-full bg-emerald-500 transition-all"
-                                style={{ width: `${progressPct}%` }}
-                            />
-                        </div>
-                    </div>
-                    <button
-                        type="button"
-                        onClick={() => {
-                            if (listMode === "shop") {
-                                setFinishSheetOpen(true);
-                            } else {
-                                setAddItemDialogOpen(true);
-                            }
-                        }}
-                        disabled={listMode === "shop" && !readyToSubmitCount}
-                        className="flex h-11 shrink-0 items-center gap-2 rounded-xl bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800 active:scale-[0.98] disabled:bg-slate-200 disabled:text-slate-400"
-                    >
-                        {listMode === "shop" ? (
-                            <CheckCircle2 className="h-4 w-4 text-emerald-400" />
-                        ) : (
-                            <Plus className="h-4 w-4" />
-                        )}
-                        <span>{listMode === "shop" ? "Cerrar" : "Anadir"}</span>
-                    </button>
-                </div>
-            </div>
-            )}
+
         </div>
     );
 

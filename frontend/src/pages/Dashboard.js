@@ -8,6 +8,7 @@ import { Button } from "../components/ui/button";
 import { Textarea } from "../components/ui/textarea";
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
+import { PageHeader } from "../components/ui/page-header";
 import {
     Trophy,
     MessageCircle,
@@ -464,41 +465,13 @@ const DashboardLegacy = () => {
 
     return (
         <Layout>
-            <div className="-mt-8 -mx-4 sm:-mx-6 bg-gradient-to-b from-slate-50 to-white min-h-screen">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 py-6">
-
-                    {/* ── HEADER WELCOME ── */}
-                    <div className="flex flex-col gap-2 mb-5">
-                        <div>
-                            <h1 className="text-3xl md:text-4xl font-extrabold text-slate-900 tracking-tight">
-                                Dashboard
-                            </h1>
-                            <p className="text-slate-500 text-sm mt-1">Pulso de precios y conversación de la comunidad en un vistazo.</p>
-                        </div>
-                        {pulse && (
-                            <div className="hidden">
-                                <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                    <div className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                                    <span className="text-xs font-bold text-slate-500">DATOS REALES</span>
-                                </div>
-                                <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                    <Tag className="w-4 h-4 text-emerald-500" />
-                                    <span className="text-xs font-bold text-slate-900">{pulse.prices_24h}</span>
-                                    <span className="text-xs text-slate-500">precios 24h</span>
-                                </div>
-                                <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                    <Users className="w-4 h-4 text-sky-500" />
-                                    <span className="text-xs font-bold text-slate-900">{pulse.active_users_7d}</span>
-                                    <span className="text-xs text-slate-500">usuarios 7d</span>
-                                </div>
-                                <div className="flex items-center gap-2 px-3 py-2 bg-white border border-slate-100 rounded-2xl shadow-sm">
-                                    <MessageCircle className="w-4 h-4 text-amber-500" />
-                                    <span className="text-xs font-bold text-slate-900">{pulse.posts_7d}</span>
-                                    <span className="text-xs text-slate-500">posts 7d</span>
-                                </div>
-                            </div>
-                        )}
-                    </div>
+            <div className="space-y-6" data-testid="dashboard-page">
+                <PageHeader
+                        tag="Resumen de comunidad"
+                        title="Dashboard"
+                        subtitle="Pulso de precios y conversación de la comunidad en un vistazo."
+                        className="mb-6"
+                    />
 
                     {/* ── 3-COLUMN LAYOUT ── */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 mb-6">
@@ -818,7 +791,6 @@ const DashboardLegacy = () => {
                                 </Card>
                             )}
                         </aside>
-                    </div>
                 </div>
             </div>
         </Layout>
@@ -896,37 +868,17 @@ const Dashboard = () => {
 
     return (
         <Layout>
-            <div style={{ margin: "-2rem -1rem 0", minHeight: "100vh", background: "#f8fafc" }}>
-                <div style={{ maxWidth: 1200, margin: "0 auto", padding: "1.5rem 1rem" }}>
-                    
-                    {/* Slim Brand Banner */}
-                    <div style={{ 
-                        background: "linear-gradient(135deg, #10b981 0%, #059669 100%)", 
-                        borderRadius: 24, 
-                        padding: "1rem 2rem", 
-                        color: "white", 
-                        marginBottom: "1.5rem", 
-                        position: "relative", 
-                        overflow: "hidden", 
-                        boxShadow: "0 10px 15px -3px rgba(16, 185, 129, 0.15)",
-                        display: "flex",
-                        alignItems: "center",
-                        justifyContent: "space-between"
-                    }}>
-                        <div style={{ position: "absolute", top: -20, right: -20, width: 120, height: 120, borderRadius: "50%", background: "rgba(255,255,255,0.08)" }} />
-                        <div style={{ position: "relative", zIndex: 1 }}>
-                            <p style={{ margin: 0, fontSize: 10, fontWeight: 800, textTransform: "uppercase", letterSpacing: "0.1em", opacity: 0.8 }}>Comunidad</p>
-                            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, fontFamily: "Manrope, sans-serif" }}>Dashboard</h1>
-                        </div>
-                        <div style={{ position: "relative", zIndex: 1, textAlign: "right" }}>
-                            <p style={{ margin: 0, fontSize: 13, fontWeight: 500, opacity: 0.9 }}>Pulso de precios y conversación real de PriceHive.</p>
-                        </div>
-                    </div>
+            <div className="space-y-6" data-testid="dashboard-page">
+                <PageHeader
+                    tag="Resumen de comunidad"
+                    title="Dashboard"
+                    subtitle="Pulso de precios y conversación real de la comunidad en un vistazo."
+                />
 
-                    <div style={{ display: "grid", gridTemplateColumns: "240px 1fr 280px", gap: "1.5rem", alignItems: "start" }}>
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
 
                         {/* ── LEFT SIDEBAR ── */}
-                        <aside style={{ position: "sticky", top: "3.5rem" }}>
+                        <aside className="hidden lg:block lg:col-span-3 space-y-4" style={{ position: "sticky", top: "3.5rem" }}>
                             {/* User card */}
                             <div style={{ background: "white", borderRadius: 20, padding: "1rem", border: "1px solid #e2e8f0", marginBottom: "0.75rem" }}>
                                 <div style={{ display: "flex", alignItems: "center", gap: "0.75rem" }}>
@@ -981,7 +933,7 @@ const Dashboard = () => {
                         </aside>
 
                         {/* ── CENTER FEED ── */}
-                        <main>
+                        <main className="col-span-1 lg:col-span-6 space-y-4">
                             {/* Feed header */}
                             <div style={{ position: "sticky", top: "3rem", zIndex: 10, background: "rgba(248,250,252,0.92)", backdropFilter: "blur(12px)", paddingBottom: "0.75rem", marginBottom: "0.5rem" }}>
                                 <h1 style={{ fontSize: 18, fontWeight: 900, color: "#0f172a", margin: "0 0 0.75rem", fontFamily: "Manrope, sans-serif" }}>Actividad reciente</h1>
@@ -1036,7 +988,7 @@ const Dashboard = () => {
                         </main>
 
                         {/* ── RIGHT SIDEBAR ── */}
-                        <aside style={{ position: "sticky", top: "3.5rem", display: "flex", flexDirection: "column", gap: "0.75rem" }}>
+                        <aside className="hidden lg:block lg:col-span-3 space-y-4" style={{ position: "sticky", top: "3.5rem" }}>
 
                             {/* Trending */}
                             <div style={{ background: "white", borderRadius: 20, padding: "1rem", border: "1px solid #e2e8f0" }}>
@@ -1117,7 +1069,6 @@ const Dashboard = () => {
                                 </div>
                             )}
                         </aside>
-                    </div>
                 </div>
             </div>
         </Layout>
