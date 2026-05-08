@@ -18,6 +18,8 @@ import {
     Activity,
     ChevronDown,
     ChevronUp,
+    Coins,
+    CreditCard,
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -101,7 +103,7 @@ const ProfilePage = () => {
     const [notifications, setNotifications] = useState([]);
     const [leaderboard, setLeaderboard]   = useState([]);
     const [loading, setLoading]           = useState(true);
-    const [activeTab, setActiveTab]       = useState("notifications");
+    const [activeTab, setActiveTab]       = useState("profile");
     const [notiExpanded, setNotiExpanded] = useState(false);
     const [pointsExpanded, setPointsExpanded] = useState(false);
 
@@ -145,6 +147,7 @@ const ProfilePage = () => {
 
     // derived
     const points      = pointsData?.points ?? user?.points ?? 0;
+    const credits     = pointsData?.credits ?? user?.credits ?? 0;
     const rank        = pointsData?.rank ?? null;
     const rankMeta    = rank ? getRankMeta(rank) : null;
     const levelMeta   = getLevelMeta(points);
@@ -155,8 +158,9 @@ const ProfilePage = () => {
     const visibleHistory = pointsExpanded ? history       : history.slice(0, PAGE_SIZE);
 
     const TABS = [
+        { id: "profile",       label: "Mi Perfil",      badge: null },
         { id: "notifications", label: "Notificaciones", badge: unreadCount > 0 ? unreadCount : null },
-        { id: "points",        label: "Actividad",      badge: null },
+        { id: "points",        label: "Historial",      badge: null },
     ];
 
     return (
@@ -164,11 +168,17 @@ const ProfilePage = () => {
             <div className="max-w-5xl mx-auto space-y-5 pb-16" data-testid="profile-page">
 
                 {/* ── HERO ─────────────────────────────────────────────────── */}
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-secondary to-slate-900 p-6 sm:p-8">
-                    <div className="pointer-events-none absolute -top-20 -right-20 w-64 h-64 rounded-full bg-primary/10 blur-3xl" />
-                    <div className="pointer-events-none absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-accent/10 blur-2xl" />
+                <div className="relative overflow-hidden rounded-[24px] honeycomb-header p-6 sm:p-8 text-white shadow-md">
+                    {/* Decorative elements */}
+                    <div className="absolute -right-16 -top-16 h-48 w-48 rounded-full bg-white/40" />
+                    <div className="absolute -bottom-20 -left-12 h-56 w-56 rounded-full bg-white/20" />
+                    <img 
+                        src="/icon.png" 
+                        alt="" 
+                        className="absolute -right-4 -bottom-4 w-32 h-32 object-contain opacity-10 pointer-events-none rotate-12" 
+                    />
 
-                    <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-5">
+                    <div className="relative z-10 flex flex-col sm:flex-row items-center sm:items-end gap-5">
                         {/* avatar */}
                         <div className="relative shrink-0">
                             <Avatar className="w-20 h-20 border-4 border-white/20 shadow-xl ring-4 ring-primary/20">
@@ -185,34 +195,35 @@ const ProfilePage = () => {
                         </div>
 
                         {/* name */}
-                        <div className="flex-1 text-center sm:text-left min-w-0">
+                        <div className="flex-1 text-center sm:text-left min-w-0 z-10">
                             <div className="flex flex-wrap items-center justify-center sm:justify-start gap-2 mb-0.5">
                                 <h1 className="text-xl sm:text-2xl font-black text-white truncate font-heading">
                                     {user?.name ?? "Usuario"}
                                 </h1>
                                 {user?.role === "admin" && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold uppercase tracking-widest">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/20 border border-white/30 text-white text-[10px] font-bold uppercase tracking-widest">
                                         <Shield className="w-3 h-3" /> Admin
                                     </span>
                                 )}
                             </div>
-                            <p className="text-slate-400 text-sm truncate">{user?.email}</p>
+                            <p className="text-white/80 text-sm truncate">{user?.email}</p>
                             {rank && (
-                                <p className="mt-0.5 text-xs text-slate-500">
-                                    {rankMeta?.label} · Posición <span className="text-primary font-bold">#{rank}</span>
+                                <p className="mt-0.5 text-xs text-white/80">
+                                    {rankMeta?.label} · Posición <span className="text-white font-bold">#{rank}</span>
                                 </p>
                             )}
                         </div>
 
                         {/* stat pills */}
-                        <div className="w-full sm:w-auto shrink-0 flex divide-x divide-white/10 rounded-2xl bg-white/5 border border-white/10">
+                        <div className="w-full sm:w-auto shrink-0 flex divide-x divide-white/20 rounded-2xl bg-white/20 border border-white/20 backdrop-blur-md z-10 overflow-x-auto">
                             {[
-                                { icon: Sparkles, label: "Puntos",      val: loading ? "—" : points.toLocaleString("es-ES"), color: "text-primary" },
-                                { icon: Trophy,   label: "Ranking",     val: loading ? "—" : rank ? `#${rank}` : "—",        color: "text-amber-400"  },
-                                { icon: Activity, label: "Movimientos", val: loading ? "—" : history.length,                 color: "text-slate-300"  },
+                                { icon: Sparkles, label: "Puntos",      val: loading ? "—" : points.toLocaleString("es-ES"), color: "text-white" },
+                                { icon: Coins,    label: "Créditos",    val: loading ? "—" : credits.toLocaleString("es-ES"), color: "text-white" },
+                                { icon: Trophy,   label: "Ranking",     val: loading ? "—" : rank ? `#${rank}` : "—",        color: "text-white"  },
+                                { icon: Activity, label: "Movimientos", val: loading ? "—" : history.length,                 color: "text-white"  },
                             ].map(({ icon: Icon, label, val, color }) => (
                                 <div key={label} className="flex-1 sm:flex-none flex flex-col items-center gap-1 px-3 sm:px-5 py-3">
-                                    <span className="text-[9px] font-bold uppercase tracking-widest text-slate-500 flex items-center gap-1 whitespace-nowrap">
+                                    <span className="text-[9px] font-bold uppercase tracking-widest text-white/80 flex items-center gap-1 whitespace-nowrap">
                                         <Icon className={`w-3 h-3 ${color}`} />{label}
                                     </span>
                                     <span className={`text-base sm:text-xl font-black ${color} font-heading`}>
@@ -266,6 +277,70 @@ const ProfilePage = () => {
                         </div>
 
                         {/* ── Notifications ──────────────────────────────────── */}
+                        {activeTab === "profile" && (
+                            <div className="p-6 space-y-8 animate-in fade-in duration-300">
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">Información Personal</h3>
+                                    <div className="grid sm:grid-cols-2 gap-4">
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-semibold text-slate-500">Nombre de usuario</label>
+                                            <input type="text" className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all" defaultValue={user?.name || ""} disabled />
+                                        </div>
+                                        <div className="space-y-1.5">
+                                            <label className="text-xs font-semibold text-slate-500">Correo electrónico</label>
+                                            <input type="email" className="w-full h-10 px-3 rounded-xl border border-slate-200 bg-slate-50 text-slate-900 text-sm focus:bg-white focus:ring-2 focus:ring-primary/20 outline-none transition-all" defaultValue={user?.email || ""} disabled />
+                                        </div>
+                                    </div>
+                                    <button className="h-9 px-4 rounded-xl bg-slate-100 text-slate-600 text-sm font-bold hover:bg-slate-200 transition-colors">
+                                        Editar Perfil
+                                    </button>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">Saldo y Facturación</h3>
+                                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 p-4 rounded-xl border border-slate-200 bg-slate-50">
+                                        <div className="flex items-center gap-3">
+                                            <div className="w-10 h-10 rounded-full bg-amber-100 flex items-center justify-center text-amber-600">
+                                                <Coins className="w-5 h-5" />
+                                            </div>
+                                            <div>
+                                                <p className="text-[10px] font-black text-slate-500 uppercase tracking-widest">Créditos Disponibles</p>
+                                                <p className="text-xl font-black text-slate-900 font-heading tabular-nums">{loading ? "—" : credits.toLocaleString("es-ES")}</p>
+                                            </div>
+                                        </div>
+                                        <button className="w-full sm:w-auto h-10 px-4 rounded-xl bg-slate-900 text-white text-sm font-bold shadow-lg hover:bg-slate-800 transition-all active:scale-95 flex items-center justify-center gap-2">
+                                            <CreditCard className="w-4 h-4" />
+                                            Comprar Créditos
+                                        </button>
+                                    </div>
+                                    <p className="text-[11px] text-slate-500 font-medium">
+                                        Los créditos se utilizan para revelar información premium y realizar estimaciones precisas de precios en las listas de compra.
+                                    </p>
+                                </div>
+
+                                <div className="space-y-4">
+                                    <h3 className="text-sm font-bold text-slate-800 border-b border-slate-100 pb-2">Preferencias de cuenta</h3>
+                                    <div className="space-y-3">
+                                        <div className="flex items-center justify-between">
+                                            <div>
+                                                <p className="text-sm font-semibold text-slate-800">Recibir Correos</p>
+                                                <p className="text-xs text-slate-500">Novedades y promociones semanales.</p>
+                                            </div>
+                                            <div className="w-11 h-6 rounded-full bg-primary relative cursor-pointer shadow-sm">
+                                                <div className="absolute right-1 top-1 w-4 h-4 rounded-full bg-white shadow-sm" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                                
+                                <div className="space-y-4 pt-4 border-t border-slate-100">
+                                    <button className="h-10 px-4 rounded-xl text-rose-500 bg-rose-50 hover:bg-rose-100 text-sm font-bold transition-colors">
+                                        Cerrar Sesión
+                                    </button>
+                                </div>
+                            </div>
+                        )}
+
                         {activeTab === "notifications" && (
                             <>
                                 {loading ? (
@@ -474,17 +549,23 @@ const ProfilePage = () => {
                                 {levelMeta.next ? `${levelMeta.next.min - points} puntos para ${levelMeta.next.label}` : "Nivel maximo alcanzado."}
                             </p>
                         </div>
-                        <div className="mt-3 space-y-2">
-                            {LEVELS.map((level) => (
-                                <div key={level.label} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
-                                    <div className="flex items-center justify-between gap-2">
-                                        <p className="text-sm font-bold text-slate-800">{level.label}</p>
-                                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{level.min}+ pts</span>
+                        <details className="mt-3 group">
+                            <summary className="list-none cursor-pointer p-3 rounded-xl bg-slate-50 hover:bg-slate-100 transition-colors border border-slate-100 flex items-center justify-between text-xs font-bold text-slate-700 select-none outline-none focus-visible:ring-2 focus-visible:ring-primary">
+                                <span>Ver todos los niveles</span>
+                                <ChevronDown className="w-4 h-4 text-slate-400 group-open:rotate-180 transition-transform" />
+                            </summary>
+                            <div className="mt-2 space-y-2 animate-in fade-in slide-in-from-top-2 duration-300 px-1">
+                                {LEVELS.map((level) => (
+                                    <div key={level.label} className="rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <p className="text-sm font-bold text-slate-800">{level.label}</p>
+                                            <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{level.min}+ pts</span>
+                                        </div>
+                                        <p className="mt-0.5 text-xs text-slate-500">{level.perk}</p>
                                     </div>
-                                    <p className="mt-0.5 text-xs text-slate-500">{level.perk}</p>
-                                </div>
-                            ))}
-                        </div>
+                                ))}
+                            </div>
+                        </details>
                         <p className="mt-3 text-[11px] text-slate-400">
                             Creditos y reputacion son distintos: los creditos se gastan para consultar/estimar precios; la reputacion mide confianza y progreso.
                         </p>
