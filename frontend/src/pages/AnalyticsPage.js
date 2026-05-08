@@ -18,8 +18,7 @@ import {
     Search,
     Tag,
     Layers,
-    Download,
-    ChevronDown
+    Download
 } from "lucide-react";
 
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
@@ -42,7 +41,6 @@ const AnalyticsPage = () => {
     const [productAnalytics, setProductAnalytics] = useState(null);
     const [comparison, setComparison] = useState(null);
     const [analyticsLoading, setAnalyticsLoading] = useState(false);
-    const [showFilters, setShowFilters] = useState(true);
 
     useEffect(() => {
         fetchBaseData();
@@ -377,20 +375,10 @@ const AnalyticsPage = () => {
                 />
 
                 {/* Search & Filters */}
-                <Card className="border-slate-200 overflow-hidden" data-testid="search-card">
-                    <div
-                        className="md:hidden flex items-center justify-between p-4 bg-slate-50 cursor-pointer"
-                        onClick={() => setShowFilters(!showFilters)}
-                    >
-                        <span className="text-sm font-bold text-slate-700 flex items-center gap-2">
-                            <Search className="w-4 h-4" />
-                            {showFilters ? "Ocultar filtros" : "Mostrar filtros de búsqueda"}
-                        </span>
-                        <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? "rotate-180" : ""}`} />
-                    </div>
-                    <CardContent className={`p-4 sm:p-6 ${showFilters ? "block" : "hidden md:block"}`}>
+                <Card className="border-slate-200" data-testid="search-card">
+                    <CardContent className="p-6">
                         {/* Row 1: Search + Category */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 mb-4">
+                        <div className="grid md:grid-cols-3 gap-4 mb-4">
                             <div className="relative">
                                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
                                 <Input
@@ -419,7 +407,7 @@ const AnalyticsPage = () => {
                         </div>
                         
                         {/* Row 2: Product + Brand + Supermarket + Action buttons */}
-                        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 items-end">
+                        <div className="grid md:grid-cols-4 gap-4 items-end">
                             <div className="space-y-2">
                                 <label className="text-sm font-medium text-slate-700 flex items-center gap-1.5">
                                     <Package className="w-3.5 h-3.5" />
@@ -551,7 +539,7 @@ const AnalyticsPage = () => {
                 </Card>
 
                 {(productAnalytics || comparison) && (
-                    <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 sm:gap-4">
+                    <div className="grid md:grid-cols-2 xl:grid-cols-4 gap-4">
                         <Card>
                             <CardHeader className="pb-2">
                                 <CardTitle className="text-sm text-slate-600">Precio Actual</CardTitle>
@@ -637,11 +625,11 @@ const AnalyticsPage = () => {
                 <div className="grid lg:grid-cols-2 gap-6">
                     {/* Price Evolution Chart */}
                     {productAnalytics && (
-                        <Card className="border-slate-200 overflow-hidden" data-testid="evolution-card">
-                            <CardHeader className="p-4 sm:p-6">
-                                <CardTitle className="flex items-center gap-2 font-heading">
+                        <Card className="border-slate-200" data-testid="evolution-card">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
                                     <TrendingUp className="w-5 h-5 text-primary" />
-                                    Evolución de Precio
+                                    Evolucion de Precio
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -662,28 +650,28 @@ const AnalyticsPage = () => {
                                             <span>{historySpanDays != null ? `${historySpanDays} dias de ventana` : "Ventana corta"}</span>
                                         </div>
                                         {/* Stats */}
-                                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4 mb-6">
-                                            <div className="text-center p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                                <p className="text-[10px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider">Actual</p>
-                                                <p className="font-mono text-sm sm:text-base font-bold text-slate-900 mt-1">
+                                        <div className="grid grid-cols-4 gap-4 mb-6">
+                                            <div className="text-center p-3 bg-slate-50 rounded-lg">
+                                                <p className="text-xs text-slate-500">Actual</p>
+                                                <p className="font-mono font-semibold text-slate-900">
                                                     {formatUnitPrice(productAnalytics.current_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
-                                            <div className="text-center p-2.5 sm:p-3 bg-slate-50 rounded-xl border border-slate-100">
-                                                <p className="text-[10px] sm:text-xs text-slate-500 uppercase font-bold tracking-wider">Media</p>
-                                                <p className="font-mono text-sm sm:text-base font-bold text-slate-900 mt-1">
+                                            <div className="text-center p-3 bg-slate-50 rounded-lg">
+                                                <p className="text-xs text-slate-500">Media</p>
+                                                <p className="font-mono font-semibold text-slate-900">
                                                     {formatUnitPrice(productAnalytics.avg_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
-                                            <div className="text-center p-2.5 sm:p-3 bg-emerald-50 rounded-xl border border-emerald-100">
-                                                <p className="text-[10px] sm:text-xs text-emerald-600 uppercase font-bold tracking-wider">Mínimo</p>
-                                                <p className="font-mono text-sm sm:text-base font-bold text-emerald-600 mt-1">
+                                            <div className="text-center p-3 bg-primary/10 rounded-lg">
+                                                <p className="text-xs text-primary">Minimo</p>
+                                                <p className="font-mono font-semibold text-primary">
                                                     {formatUnitPrice(productAnalytics.min_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
-                                            <div className="text-center p-2.5 sm:p-3 bg-rose-50 rounded-xl border border-rose-100">
-                                                <p className="text-[10px] sm:text-xs text-rose-600 uppercase font-bold tracking-wider">Máximo</p>
-                                                <p className="font-mono text-sm sm:text-base font-bold text-rose-600 mt-1">
+                                            <div className="text-center p-3 bg-rose-50 rounded-lg">
+                                                <p className="text-xs text-rose-600">Maximo</p>
+                                                <p className="font-mono font-semibold text-rose-600">
                                                     {formatUnitPrice(productAnalytics.max_unit_price, productAnalytics.unit_name)}
                                                 </p>
                                             </div>
@@ -731,11 +719,11 @@ const AnalyticsPage = () => {
 
                     {/* Comparison Chart */}
                     {comparison && (
-                        <Card className="border-slate-200 overflow-hidden" data-testid="comparison-card">
-                            <CardHeader className="p-4 sm:p-6">
-                                <CardTitle className="flex items-center gap-2 font-heading">
+                        <Card className="border-slate-200" data-testid="comparison-card">
+                            <CardHeader>
+                                <CardTitle className="flex items-center gap-2" style={{ fontFamily: 'Manrope, sans-serif' }}>
                                     <BarChart3 className="w-5 h-5 text-primary" />
-                                    Comparación por Súper
+                                    Comparacion por Supermercado
                                 </CardTitle>
                             </CardHeader>
                             <CardContent>
@@ -784,7 +772,7 @@ const AnalyticsPage = () => {
                                         )}
 
                                         {/* Bar Chart */}
-                                        <div className="h-64 sm:h-72">
+                                        <div className="h-56">
                                             <ResponsiveContainer width="100%" height="100%">
                                                 <BarChart 
                                                     data={comparisonSorted} 
@@ -889,9 +877,9 @@ const AnalyticsPage = () => {
                 </div>
 
                 {(productAnalytics || comparison) && (recommendations.length > 0 || (selectedVsBest && selectedSupermarketRow)) && (
-                    <Card className="border-slate-200 overflow-hidden">
-                        <CardHeader className="p-4 sm:p-6">
-                            <CardTitle className="text-lg font-heading">Recomendaciones y Hallazgos</CardTitle>
+                    <Card className="border-slate-200">
+                        <CardHeader>
+                            <CardTitle className="text-lg" style={{ fontFamily: 'Manrope, sans-serif' }}>Recomendaciones y Hallazgos</CardTitle>
                         </CardHeader>
                         <CardContent className="space-y-3">
                             {selectedVsBest && selectedSupermarketRow && (
