@@ -6,31 +6,26 @@
 
 @layer base {
     :root {
-        --background: 210 40% 98%;
+        --background: 38 20% 98%;
         --foreground: 222 47% 11%;
         --card: 0 0% 100%;
         --card-foreground: 222 47% 11%;
         --popover: 0 0% 100%;
         --popover-foreground: 222 47% 11%;
-        --primary: 160 84% 39%;
+        --primary: 38 92% 45%;
         --primary-foreground: 0 0% 100%;
         --secondary: 222 47% 11%;
         --secondary-foreground: 0 0% 100%;
-        --muted: 210 40% 96%;
+        --muted: 38 20% 94%;
         --muted-foreground: 215 16% 47%;
-        --accent: 82 78% 44%;
+        --accent: 45 93% 47%;
         --accent-foreground: 222 47% 11%;
         --destructive: 350 89% 60%;
         --destructive-foreground: 0 0% 100%;
-        --border: 214 32% 91%;
-        --input: 214 32% 91%;
-        --ring: 160 84% 39%;
-        --chart-1: 160 84% 39%;
-        --chart-2: 82 78% 44%;
-        --chart-3: 350 89% 60%;
-        --chart-4: 215 16% 47%;
-        --chart-5: 222 47% 11%;
-        --radius: 0.75rem;
+        --border: 38 15% 90%;
+        --input: 38 15% 90%;
+        --ring: 38 92% 45%;
+        --radius: 1rem;
     }
     .dark {
         --background: 222 47% 11%;
@@ -74,13 +69,22 @@
 
 @layer utilities {
     .glass {
-        @apply bg-white/80 backdrop-blur-md border-white/20 shadow-sm;
+        @apply bg-white/70 backdrop-blur-xl border-white/40 shadow-sm;
+    }
+    .hive-pattern {
+        background-color: hsl(var(--background));
+        background-image: radial-gradient(hsl(var(--primary) / 0.1) 1px, transparent 1px);
+        background-size: 24px 24px;
+        background-position: 0 0, 12px 12px;
+    }
+    .amber-gradient {
+        @apply bg-gradient-to-br from-primary via-primary to-accent;
     }
     .card-shadow {
-        box-shadow: 0 2px 8px rgba(0,0,0,0.04);
+        box-shadow: 0 4px 20px -2px rgba(0,0,0,0.05);
     }
     .float-shadow {
-        box-shadow: 0 8px 30px rgba(0,0,0,0.12);
+        box-shadow: 0 10px 40px -5px rgba(0,0,0,0.1);
     }
 }
 
@@ -135,3 +139,51 @@
     border-radius: 1.5rem !important;
     box-shadow: 0 0 0 8px rgba(16, 185, 129, 0.18) !important;
 }
+
+@keyframes bounce-subtle {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 3s infinite ease-in-out;
+}
+
+@keyframes fall {
+  0% { transform: translateY(-100px) rotate(0deg); opacity: 0; }
+  10% { opacity: 1; }
+  90% { opacity: 1; }
+  100% { transform: translateY(110vh) rotate(360deg); opacity: 0; }
+}
+
+.animate-fall {
+  animation: fall 5s linear forwards;
+}
+
+@keyframes bee-sine {
+  0%, 100% { transform: translateY(0); }
+  25% { transform: translateY(-40px) rotate(-10deg); }
+  75% { transform: translateY(40px) rotate(10deg); }
+}
+
+@keyframes fade-out {
+  0% { transform: scale(1); opacity: 0.5; }
+  100% { transform: scale(2); opacity: 0; }
+}
+
+.animate-fade-out {
+  animation: fade-out 1s forwards;
+}
+
+@keyframes bee-fly-left {
+  from { transform: translateX(0); }
+  to { transform: translateX(-140vw); }
+}
+
+@keyframes bee-fly-right {
+  from { transform: translateX(0); }
+  to { transform: translateX(140vw); }
+}
+
+.animate-bee-slow-left { animation: bee-fly-left 30s linear forwards; }
+.animate-bee-slow-right { animation: bee-fly-right 30s linear forwards; }

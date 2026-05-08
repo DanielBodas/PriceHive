@@ -40,6 +40,8 @@ const Layout = ({ children }) => {
     const navigate = useNavigate();
     const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [logoClicks, setLogoClicks] = useState(0);
+    const [showRain, setShowRain] = useState(false);
 
     const baseNavItems = [
         { path: "/dashboard", label: "Inicio", icon: <LayoutDashboard className="w-5 h-5" /> },
@@ -71,21 +73,33 @@ const Layout = ({ children }) => {
     };
 
     return (
-        <div className="min-h-screen bg-slate-50">
+        <div className="min-h-screen bg-background hive-pattern">
             {/* Top Navigation */}
-            <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm">
+            <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-slate-200/50">
                 <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
                     <div className="flex items-center justify-between h-12">
                         {/* Logo */}
-                        <div className="flex items-center gap-2 flex-shrink-0">
-                            <Link to="/dashboard" className="flex items-center gap-2">
-                                <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center">
-                                    <Tag className="w-4 h-4 text-white" />
-                                </div>
-                                <span className="text-base font-bold text-slate-900 hidden sm:block" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                                    PriceHive
-                                </span>
-                            </Link>
+                        <div className="flex items-center flex-shrink-0 -ml-2">
+                            <button 
+                                onClick={(e) => {
+                                    setLogoClicks(prev => {
+                                        const next = prev + 1;
+                                        if (next >= 5) {
+                                            setShowRain(true);
+                                            setTimeout(() => setShowRain(false), 5000);
+                                            return 0;
+                                        }
+                                        return next;
+                                    });
+                                }}
+                                className="group relative z-50 focus:outline-none"
+                            >
+                                <img 
+                                    src="/logo192.png" 
+                                    alt="PriceHive" 
+                                    className="h-24 w-auto object-contain transition-all group-hover:scale-105 drop-shadow-md" 
+                                />
+                            </button>
                         </div>
 
                         {/* Desktop Navigation - Responsive con 3 niveles */}
@@ -102,9 +116,9 @@ const Layout = ({ children }) => {
                                                     <Button
                                                         variant={isActive ? "default" : "ghost"}
                                                         size="sm"
-                                                        className={`relative gap-2 transition-all ${isActive
-                                                                ? "bg-emerald-500 text-white hover:bg-emerald-600"
-                                                                : "text-slate-600 hover:text-emerald-600 hover:bg-emerald-50"
+                                                        className={`relative gap-2 transition-all font-semibold ${isActive
+                                                                ? "bg-primary text-white hover:bg-primary/90 shadow-md shadow-primary/20"
+                                                                : "text-slate-600 hover:text-primary hover:bg-primary/5"
                                                             }`}
                                                         data-testid={`nav-${item.path.slice(1)}`}
                                                     >
@@ -143,9 +157,9 @@ const Layout = ({ children }) => {
                         {/* Right Side - User Info */}
                         <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
                             {/* Points Badge */}
-                            <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-emerald-50 rounded-full">
-                                <Star className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
-                                <span className="font-mono text-xs font-medium text-emerald-600">
+                            <div className="hidden sm:flex items-center gap-1.5 px-3 py-1 bg-primary/10 rounded-full border border-primary/20">
+                                <Star className="w-3.5 h-3.5 text-primary fill-primary flex-shrink-0" />
+                                <span className="font-mono text-xs font-bold text-primary">
                                     {user?.points || 0}
                                 </span>
                             </div>
@@ -154,9 +168,9 @@ const Layout = ({ children }) => {
                             <DropdownMenu>
                                 <DropdownMenuTrigger asChild>
                                     <Button variant="ghost" size="sm" className="flex items-center gap-1.5 lg:gap-2 px-1.5 lg:px-2">
-                                        <Avatar className="w-7 h-7 lg:w-8 lg:h-8">
+                                        <Avatar className="w-7 h-7 lg:w-8 lg:h-8 border border-slate-200 shadow-sm">
                                             <AvatarImage src={user?.picture} />
-                                            <AvatarFallback className="bg-emerald-100 text-emerald-600 text-xs lg:text-sm">
+                                            <AvatarFallback className="bg-primary/10 text-primary text-xs lg:text-sm font-bold">
                                                 {user?.name?.charAt(0).toUpperCase()}
                                             </AvatarFallback>
                                         </Avatar>
@@ -164,7 +178,7 @@ const Layout = ({ children }) => {
                                             {user?.name}
                                         </span>
                                         {user?.role === 'admin' && (
-                                            <span className="hidden xl:inline px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs font-medium rounded-full">
+                                            <span className="hidden xl:inline px-2 py-0.5 bg-primary/20 text-primary text-[10px] uppercase tracking-wider font-bold rounded-full border border-primary/20">
                                                 Admin
                                             </span>
                                         )}
@@ -222,18 +236,18 @@ const Layout = ({ children }) => {
                     <div className="md:hidden border-t border-slate-200 bg-white shadow-lg">
                         <div className="px-3 py-3 space-y-1 max-h-[calc(100vh-4rem)] overflow-y-auto">
                             {/* User info en móvil */}
-                            <div className="flex items-center gap-3 px-3 py-3 bg-emerald-50 rounded-lg mb-3">
-                                <Avatar className="w-10 h-10">
+                            <div className="flex items-center gap-3 px-4 py-3 bg-primary/10 rounded-2xl mb-4 border border-primary/20 shadow-inner">
+                                <Avatar className="w-10 h-10 border-2 border-white shadow-sm">
                                     <AvatarImage src={user?.picture} />
-                                    <AvatarFallback className="bg-emerald-100 text-emerald-600">
+                                    <AvatarFallback className="bg-primary/20 text-primary font-bold">
                                         {user?.name?.charAt(0).toUpperCase()}
                                     </AvatarFallback>
                                 </Avatar>
                                 <div className="flex-1 min-w-0">
-                                    <p className="text-sm font-medium text-slate-900 truncate">{user?.name}</p>
+                                    <p className="text-sm font-bold text-secondary truncate">{user?.name}</p>
                                     <div className="flex items-center gap-2 mt-0.5">
-                                        <Star className="w-3 h-3 text-emerald-500" />
-                                        <span className="text-xs font-mono text-emerald-600">{user?.points || 0} pts</span>
+                                        <Star className="w-3 h-3 text-primary fill-primary" />
+                                        <span className="text-xs font-mono font-bold text-primary">{user?.points || 0} pts</span>
                                     </div>
                                 </div>
                             </div>
@@ -251,9 +265,9 @@ const Layout = ({ children }) => {
                                     >
                                         <Button
                                             variant={isActive ? "default" : "ghost"}
-                                            className={`w-full justify-start gap-3 h-11 ${isActive
-                                                    ? "bg-emerald-500 text-white"
-                                                    : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                            className={`w-full justify-start gap-4 h-12 rounded-xl transition-all ${isActive
+                                                    ? "bg-primary text-white shadow-lg shadow-primary/20"
+                                                    : "text-slate-600 hover:bg-primary/10 hover:text-primary"
                                                 }`}
                                         >
                                             <span className="relative">
@@ -282,9 +296,9 @@ const Layout = ({ children }) => {
                             >
                                 <Button
                                     variant={location.pathname === "/profile" ? "default" : "ghost"}
-                                    className={`w-full justify-start gap-3 h-11 ${location.pathname === "/profile"
-                                            ? "bg-emerald-500 text-white"
-                                            : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                    className={`w-full justify-start gap-4 h-12 rounded-xl ${location.pathname === "/profile"
+                                            ? "bg-primary text-white shadow-lg shadow-primary/20"
+                                            : "text-slate-600 hover:bg-primary/10 hover:text-primary"
                                         }`}
                                 >
                                     <User className="w-5 h-5" />
@@ -299,8 +313,8 @@ const Layout = ({ children }) => {
                                 <Button
                                     variant={location.pathname === "/alerts" ? "default" : "ghost"}
                                     className={`w-full justify-start gap-3 h-11 ${location.pathname === "/alerts"
-                                            ? "bg-emerald-500 text-white"
-                                            : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                            ? "bg-primary text-white"
+                                            : "text-slate-600 hover:bg-primary/10 hover:text-primary"
                                         }`}
                                 >
                                     <Bell className="w-5 h-5" />
@@ -321,8 +335,8 @@ const Layout = ({ children }) => {
                                     <Button
                                         variant={location.pathname === "/admin" ? "default" : "ghost"}
                                         className={`w-full justify-start gap-3 h-11 ${location.pathname === "/admin"
-                                                ? "bg-emerald-500 text-white"
-                                                : "text-slate-600 hover:bg-emerald-50 hover:text-emerald-600"
+                                                ? "bg-primary text-white"
+                                                : "text-slate-600 hover:bg-primary/10 hover:text-primary"
                                             }`}
                                     >
                                         <Settings className="w-5 h-5" />
@@ -350,6 +364,31 @@ const Layout = ({ children }) => {
                     {children}
                 </div>
             </main>
+            
+            {/* Honey Rain Easter Egg */}
+            {showRain && <HoneyRain />}
+        </div>
+    );
+};
+
+const HoneyRain = () => {
+    const bees = Array.from({ length: 20 });
+    return (
+        <div className="fixed inset-0 z-[200] pointer-events-none overflow-hidden">
+            {bees.map((_, i) => (
+                <img
+                    key={i}
+                    src="/icon.png"
+                    alt=""
+                    className="absolute w-8 h-8 opacity-60 animate-fall"
+                    style={{
+                        left: `${Math.random() * 100}%`,
+                        top: '-10%',
+                        animationDelay: `${Math.random() * 5}s`,
+                        animationDuration: `${3 + Math.random() * 2}s`
+                    }}
+                />
+            ))}
         </div>
     );
 };

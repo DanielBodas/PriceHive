@@ -38,7 +38,7 @@ const RANK_META = [
     { min: 1,  max: 1,    emoji: "🥇", label: "Oro",     color: "text-amber-500",  bg: "bg-amber-50",   border: "border-amber-200" },
     { min: 2,  max: 2,    emoji: "🥈", label: "Plata",   color: "text-slate-400",  bg: "bg-slate-100",  border: "border-slate-200" },
     { min: 3,  max: 3,    emoji: "🥉", label: "Bronce",  color: "text-orange-600", bg: "bg-orange-50",  border: "border-orange-200" },
-    { min: 4,  max: 10,   emoji: "⭐", label: "Top 10",  color: "text-emerald-600",bg: "bg-emerald-50", border: "border-emerald-200" },
+    { min: 4,  max: 10,   emoji: "⭐", label: "Top 10",  color: "text-primary",   bg: "bg-primary/10", border: "border-primary/20" },
     { min: 11, max: 9999, emoji: "👤", label: "Miembro", color: "text-slate-500",  bg: "bg-slate-50",   border: "border-slate-100" },
 ];
 const getRankMeta = (rank) =>
@@ -82,7 +82,7 @@ const ShowMoreBtn = ({ shown, total, expanded, onToggle }) => {
     return (
         <button
             onClick={onToggle}
-            className="w-full flex items-center justify-center gap-1.5 py-3 text-xs font-semibold text-slate-500 hover:text-emerald-600 border-t border-slate-100 hover:bg-slate-50 transition-colors"
+            className="w-full flex items-center justify-center gap-1.5 py-3 text-xs font-semibold text-slate-500 hover:text-primary border-t border-slate-100 hover:bg-slate-50 transition-colors"
         >
             {expanded ? (
                 <><ChevronUp className="w-3.5 h-3.5" /> Ver menos</>
@@ -164,15 +164,15 @@ const ProfilePage = () => {
             <div className="max-w-5xl mx-auto space-y-5 pb-16" data-testid="profile-page">
 
                 {/* ── HERO ─────────────────────────────────────────────────── */}
-                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-slate-800 to-emerald-900 p-6 sm:p-8">
-                    <div className="pointer-events-none absolute -top-20 -right-20 w-64 h-64 rounded-full bg-emerald-500/10 blur-3xl" />
-                    <div className="pointer-events-none absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-teal-400/10 blur-2xl" />
+                <div className="relative overflow-hidden rounded-3xl bg-gradient-to-br from-slate-900 via-secondary to-slate-900 p-6 sm:p-8">
+                    <div className="pointer-events-none absolute -top-20 -right-20 w-64 h-64 rounded-full bg-primary/10 blur-3xl" />
+                    <div className="pointer-events-none absolute -bottom-12 -left-12 w-48 h-48 rounded-full bg-accent/10 blur-2xl" />
 
                     <div className="relative flex flex-col sm:flex-row items-center sm:items-end gap-5">
                         {/* avatar */}
                         <div className="relative shrink-0">
-                            <Avatar className="w-20 h-20 border-4 border-white/20 shadow-xl ring-4 ring-emerald-500/20">
-                                <AvatarFallback className="bg-emerald-600 text-white text-2xl font-black" style={{ fontFamily: "Manrope, sans-serif" }}>
+                            <Avatar className="w-20 h-20 border-4 border-white/20 shadow-xl ring-4 ring-primary/20">
+                                <AvatarFallback className="bg-primary text-white text-2xl font-black" style={{ fontFamily: "Manrope, sans-serif" }}>
                                     {user?.name?.charAt(0)?.toUpperCase() ?? "?"}
                                 </AvatarFallback>
                                 <AvatarImage src={user?.picture} />
@@ -191,7 +191,7 @@ const ProfilePage = () => {
                                     {user?.name ?? "Usuario"}
                                 </h1>
                                 {user?.role === "admin" && (
-                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/20 border border-emerald-500/30 text-emerald-300 text-[10px] font-bold uppercase tracking-widest">
+                                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-primary/20 border border-primary/30 text-primary text-[10px] font-bold uppercase tracking-widest">
                                         <Shield className="w-3 h-3" /> Admin
                                     </span>
                                 )}
@@ -199,7 +199,7 @@ const ProfilePage = () => {
                             <p className="text-slate-400 text-sm truncate">{user?.email}</p>
                             {rank && (
                                 <p className="mt-0.5 text-xs text-slate-500">
-                                    {rankMeta?.label} · Posición <span className="text-emerald-400 font-bold">#{rank}</span>
+                                    {rankMeta?.label} · Posición <span className="text-primary font-bold">#{rank}</span>
                                 </p>
                             )}
                         </div>
@@ -207,7 +207,7 @@ const ProfilePage = () => {
                         {/* stat pills */}
                         <div className="shrink-0 flex divide-x divide-white/10 rounded-2xl bg-white/5 border border-white/10">
                             {[
-                                { icon: Sparkles, label: "Puntos",      val: loading ? "—" : points.toLocaleString("es-ES"), color: "text-emerald-400" },
+                                { icon: Sparkles, label: "Puntos",      val: loading ? "—" : points.toLocaleString("es-ES"), color: "text-primary" },
                                 { icon: Trophy,   label: "Ranking",     val: loading ? "—" : rank ? `#${rank}` : "—",        color: "text-amber-400"  },
                                 { icon: Activity, label: "Movimientos", val: loading ? "—" : history.length,                 color: "text-slate-300"  },
                             ].map(({ icon: Icon, label, val, color }) => (
@@ -239,13 +239,13 @@ const ProfilePage = () => {
                                     onClick={() => setActiveTab(tab.id)}
                                     className={`flex items-center gap-2 px-5 py-3.5 text-sm font-semibold transition-colors whitespace-nowrap
                                         ${activeTab === tab.id
-                                            ? "text-emerald-700 border-b-2 border-emerald-500 bg-white -mb-px"
+                                            ? "text-primary border-b-2 border-primary bg-white -mb-px"
                                             : "text-slate-500 hover:text-slate-700"
                                         }`}
                                 >
                                     {tab.label}
                                     {tab.badge && (
-                                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-emerald-500 text-white text-[10px] font-bold">
+                                        <span className="inline-flex items-center justify-center w-5 h-5 rounded-full bg-primary text-white text-[10px] font-bold">
                                             {tab.badge}
                                         </span>
                                     )}
@@ -256,7 +256,7 @@ const ProfilePage = () => {
                                 <button
                                     onClick={handleMarkAllRead}
                                     data-testid="mark-all-read-btn"
-                                    className="ml-auto mr-4 text-xs text-emerald-600 hover:text-emerald-700 font-medium flex items-center gap-1"
+                                    className="ml-auto mr-4 text-xs text-primary hover:text-primary/80 font-bold flex items-center gap-1"
                                 >
                                     <Check className="w-3 h-3" />
                                     <span className="hidden sm:inline">Marcar leídas</span>
@@ -290,9 +290,9 @@ const ProfilePage = () => {
                                                 <div
                                                     key={n.id}
                                                     data-testid={`notification-${n.id}`}
-                                                    className={`flex items-start gap-3 px-5 py-4 transition-colors ${!n.read ? "bg-emerald-50/40" : "hover:bg-slate-50/50"}`}
+                                                    className={`flex items-start gap-3 px-5 py-4 transition-colors ${!n.read ? "bg-primary/5" : "hover:bg-slate-50/50"}`}
                                                 >
-                                                    <div className={`shrink-0 mt-0.5 w-8 h-8 rounded-xl flex items-center justify-center ${isWarning ? "bg-rose-100 text-rose-500" : "bg-emerald-100 text-emerald-600"}`}>
+                                                    <div className={`shrink-0 mt-0.5 w-8 h-8 rounded-xl flex items-center justify-center ${isWarning ? "bg-rose-100 text-rose-500" : "bg-primary/10 text-primary"}`}>
                                                         {isWarning ? <BellOff className="w-3.5 h-3.5" /> : <Bell className="w-3.5 h-3.5" />}
                                                     </div>
                                                     <div className="flex-1 min-w-0">
@@ -312,7 +312,7 @@ const ProfilePage = () => {
                                                         <button
                                                             onClick={() => handleMarkRead(n.id)}
                                                             title="Marcar como leída"
-                                                            className="shrink-0 mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-emerald-500 hover:bg-emerald-100 transition-colors"
+                                                            className="shrink-0 mt-0.5 w-7 h-7 rounded-full flex items-center justify-center text-primary hover:bg-primary/10 transition-colors"
                                                         >
                                                             <Check className="w-3.5 h-3.5" />
                                                         </button>
@@ -358,7 +358,7 @@ const ProfilePage = () => {
                                             return (
                                                 <div key={i} className="flex items-center justify-between gap-4 px-5 py-3.5 hover:bg-slate-50/60 transition-colors">
                                                     <div className="flex items-center gap-3 min-w-0">
-                                                        <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center ${positive ? "bg-emerald-50 text-emerald-500" : "bg-rose-50 text-rose-500"}`}>
+                                                        <div className={`shrink-0 w-8 h-8 rounded-xl flex items-center justify-center ${positive ? "bg-primary/10 text-primary" : "bg-rose-50 text-rose-500"}`}>
                                                             {positive ? <TrendingUp className="w-3.5 h-3.5" /> : <TrendingDown className="w-3.5 h-3.5" />}
                                                         </div>
                                                         <div className="min-w-0">
@@ -369,7 +369,7 @@ const ProfilePage = () => {
                                                             </p>
                                                         </div>
                                                     </div>
-                                                    <span className={`shrink-0 text-sm font-black tabular-nums ${positive ? "text-emerald-600" : "text-rose-500"}`}>
+                                                    <span className={`shrink-0 text-sm font-black tabular-nums ${positive ? "text-primary" : "text-rose-500"}`}>
                                                         {positive ? `+${entry.points}` : entry.points}
                                                     </span>
                                                 </div>
@@ -416,14 +416,14 @@ const ProfilePage = () => {
                                         <div
                                             key={entry.user_id}
                                             data-testid={`leaderboard-entry-${entry.rank}`}
-                                            className={`flex items-center gap-3 px-4 py-3 transition-colors ${isMe ? "bg-emerald-50/70" : "hover:bg-slate-50/50"}`}
+                                            className={`flex items-center gap-3 px-4 py-3 transition-colors ${isMe ? "bg-primary/10" : "hover:bg-slate-50/50"}`}
                                         >
                                             <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border ${meta.bg} ${meta.border} ${meta.color}`}>
                                                 {entry.rank <= 3 ? meta.emoji : entry.rank}
                                             </div>
-                                            <span className={`flex-1 text-sm truncate ${isMe ? "text-emerald-700 font-bold" : "text-slate-700 font-medium"}`}>
+                                            <span className={`flex-1 text-sm truncate ${isMe ? "text-primary font-bold" : "text-slate-700 font-medium"}`}>
                                                 {entry.user_name}
-                                                {isMe && <span className="ml-1 text-[10px] text-emerald-400 font-normal">(tú)</span>}
+                                                {isMe && <span className="ml-1 text-[10px] text-primary/60 font-normal">(tú)</span>}
                                             </span>
                                             <span className="shrink-0 text-xs font-bold text-slate-500 tabular-nums">
                                                 {entry.points.toLocaleString("es-ES")}
@@ -438,13 +438,13 @@ const ProfilePage = () => {
                         {!loading && rank && !leaderboard.some((e) => e.user_id === user?.id) && (() => {
                             const meta = getRankMeta(rank);
                             return (
-                                <div className="border-t border-slate-100 px-4 py-3 bg-emerald-50/60 flex items-center gap-3">
+                                <div className="border-t border-slate-100 px-4 py-3 bg-primary/5 flex items-center gap-3">
                                     <div className={`shrink-0 w-7 h-7 rounded-full flex items-center justify-center text-xs font-black border ${meta.bg} ${meta.border} ${meta.color}`}>
                                         {rank}
                                     </div>
-                                    <span className="flex-1 text-sm font-bold text-emerald-700 truncate">
+                                    <span className="flex-1 text-sm font-bold text-primary truncate">
                                         {user?.name}
-                                        <span className="ml-1 text-[10px] text-emerald-400 font-normal">(tú)</span>
+                                        <span className="ml-1 text-[10px] text-primary/60 font-normal">(tú)</span>
                                     </span>
                                     <span className="shrink-0 text-xs font-bold text-slate-500 tabular-nums">
                                         {points.toLocaleString("es-ES")}
@@ -456,21 +456,21 @@ const ProfilePage = () => {
 
                     <div className="rounded-2xl border border-slate-200 bg-white p-5 shadow-sm">
                         <div className="flex items-center gap-2">
-                            <Sparkles className="h-4 w-4 text-emerald-500" />
+                            <Sparkles className="h-4 w-4 text-primary" />
                             <h3 className="text-sm font-bold text-slate-800">Niveles de reputacion</h3>
                         </div>
-                        <div className="mt-4 rounded-2xl bg-emerald-50 p-4">
+                        <div className="mt-4 rounded-2xl bg-primary/10 p-4">
                             <div className="flex items-center justify-between gap-3">
                                 <div>
-                                    <p className="text-xs font-bold uppercase tracking-widest text-emerald-600">Tu nivel</p>
-                                    <p className="text-xl font-black text-emerald-800">{levelMeta.current.label}</p>
+                                    <p className="text-xs font-bold uppercase tracking-widest text-primary">Tu nivel</p>
+                                    <p className="text-xl font-black text-secondary">{levelMeta.current.label}</p>
                                 </div>
-                                <p className="text-sm font-bold text-emerald-700 tabular-nums">{points.toLocaleString("es-ES")} pts</p>
+                                <p className="text-sm font-bold text-primary tabular-nums">{points.toLocaleString("es-ES")} pts</p>
                             </div>
                             <div className="mt-3 h-2 overflow-hidden rounded-full bg-white">
-                                <div className="h-full rounded-full bg-emerald-500" style={{ width: `${levelMeta.progress}%` }} />
+                                <div className="h-full rounded-full bg-primary" style={{ width: `${levelMeta.progress}%` }} />
                             </div>
-                            <p className="mt-2 text-xs text-emerald-800">
+                            <p className="mt-2 text-xs text-primary">
                                 {levelMeta.next ? `${levelMeta.next.min - points} puntos para ${levelMeta.next.label}` : "Nivel maximo alcanzado."}
                             </p>
                         </div>

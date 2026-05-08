@@ -11,6 +11,7 @@ import AnalyticsPage from "./pages/AnalyticsPage";
 import AdminPage from "./pages/AdminPage";
 import AlertsPage from "./pages/AlertsPage";
 import ProfilePage from "./pages/ProfilePage";
+import { BeeEasterEgg } from "./components/BrandEasterEggs";
 import "./App.css";
 
 const ProtectedRoute = ({ children, adminOnly = false }) => {
@@ -25,7 +26,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <div className="animate-pulse text-emerald-600 text-lg font-medium">Cargando...</div>
+                <div className="animate-pulse text-primary text-lg font-medium">Cargando...</div>
             </div>
         );
     }
@@ -47,7 +48,7 @@ const PublicRoute = ({ children }) => {
     if (loading) {
         return (
             <div className="min-h-screen flex items-center justify-center bg-slate-50">
-                <div className="animate-pulse text-emerald-600 text-lg font-medium">Cargando...</div>
+                <div className="animate-pulse text-primary text-lg font-medium">Cargando...</div>
             </div>
         );
     }
@@ -90,6 +91,7 @@ function App() {
         <BrowserRouter>
             <AuthProvider>
                 <AppRouter />
+                <BeeEasterEgg />
                 <Toaster position="top-right" richColors />
             </AuthProvider>
         </BrowserRouter>

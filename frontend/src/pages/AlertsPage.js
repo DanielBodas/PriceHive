@@ -84,7 +84,7 @@ const AlertsPage = () => {
     const getAlertTypeIcon = (type) => {
         switch (type) {
             case "below":
-                return <TrendingDown className="w-4 h-4 text-emerald-500" />;
+                return <TrendingDown className="w-4 h-4 text-primary" />;
             case "above":
                 return <TrendingUp className="w-4 h-4 text-rose-500" />;
             default:
@@ -116,7 +116,7 @@ const AlertsPage = () => {
                     </div>
                     <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
                         <DialogTrigger asChild>
-                            <Button className="bg-emerald-500 hover:bg-emerald-600 gap-2" data-testid="create-alert-btn">
+                            <Button className="bg-primary hover:bg-primary/90 gap-2 shadow-lg shadow-primary/20" data-testid="create-alert-btn">
                                 <Plus className="w-4 h-4" />
                                 Nueva Alerta
                             </Button>
@@ -184,7 +184,7 @@ const AlertsPage = () => {
                                 )}
                                 <Button 
                                     onClick={handleCreateAlert} 
-                                    className="w-full bg-emerald-500 hover:bg-emerald-600"
+                                    className="w-full bg-primary hover:bg-primary/90 shadow-lg shadow-primary/20 font-bold"
                                     data-testid="save-alert-btn"
                                 >
                                     Crear Alerta
@@ -210,7 +210,7 @@ const AlertsPage = () => {
                         {alerts.map((alert) => (
                             <Card 
                                 key={alert.id} 
-                                className={`border ${alert.triggered ? 'border-emerald-300 bg-emerald-50' : 'border-slate-200'}`}
+                                className={`border ${alert.triggered ? 'border-primary/30 bg-primary/5' : 'border-slate-200'} hover:shadow-md transition-shadow`}
                                 data-testid={`alert-card-${alert.id}`}
                             >
                                 <CardContent className="p-4">
@@ -222,8 +222,8 @@ const AlertsPage = () => {
                                                     {getAlertTypeLabel(alert.alert_type)}
                                                 </span>
                                                 {alert.triggered && (
-                                                    <span className="px-2 py-0.5 bg-emerald-100 text-emerald-700 text-xs rounded-full flex items-center gap-1">
-                                                        <Check className="w-3 h-3" />
+                                                    <span className="px-2 py-0.5 bg-primary/20 text-primary text-[10px] font-bold rounded-full flex items-center gap-1 uppercase tracking-wider">
+                                                        <Check className="w-2.5 h-2.5" />
                                                         Activada
                                                     </span>
                                                 )}
@@ -233,7 +233,7 @@ const AlertsPage = () => {
                                                 {alert.supermarket_name || "Cualquier supermercado"}
                                             </p>
                                             {alert.alert_type !== "any_change" && (
-                                                <p className="font-mono font-semibold text-lg text-emerald-600 mt-2">
+                                                <p className="font-mono font-bold text-lg text-primary mt-2">
                                                     {alert.target_price.toFixed(2)} €
                                                 </p>
                                             )}

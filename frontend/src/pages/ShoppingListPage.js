@@ -194,7 +194,7 @@ const getTutorialBubbleStyle = (step, rect) => {
 // ProgressRing component
 // ------------------------------------------------------------------
 
-const ProgressRing = ({ percent = 0, size = 44, stroke = 4, trackColor = "#e2e8f0", color = "#10b981" }) => {
+const ProgressRing = ({ percent = 0, size = 44, stroke = 4, trackColor = "hsl(var(--primary) / 0.1)", color = "hsl(var(--primary))" }) => {
     const radius = (size - stroke) / 2;
     const circumference = 2 * Math.PI * radius;
     const offset = circumference - (percent / 100) * circumference;
@@ -588,7 +588,7 @@ const ShoppingListPage = () => {
                 setPendingChanges(false);
                 resetNewItemForm();
                 setAddItemDialogOpen(false);
-                toast.success(editingItemIndex !== null ? "Producto actualizado" : "Producto anadido");
+                toast.success(editingItemIndex !== null ? "Producto actualizado" : "Producto añadido");
             }
         } catch (error) {
             toast.error("Error al guardar producto");
@@ -731,7 +731,7 @@ const ShoppingListPage = () => {
             await saveList(cleanedItems, { listId: selectedList.id, silent: true, updateSelected: true });
             const creditsEarned = response.data?.credits_earned || 0;
             const pointsEarned = response.data?.points_earned || 0;
-            toast.success(`${response.data.message || "Precios subidos"} · +${creditsEarned} creditos · +${pointsEarned} reputacion`);
+            toast.success(`${response.data.message || "Precios subidos"} · +${creditsEarned} créditos · +${pointsEarned} reputación`);
             toast.success("Lista limpia y lista para la siguiente compra");
         } catch (error) {
             toast.error("Error al subir precios");
@@ -823,7 +823,7 @@ const ShoppingListPage = () => {
                         </Button>
                         <Button
                             onClick={() => setDialogOpen(true)}
-                            className="h-10 gap-2 rounded-xl bg-white px-4 font-black text-emerald-700 shadow-lg hover:bg-emerald-50"
+                            className="h-10 gap-2 rounded-xl bg-white px-4 font-black text-primary shadow-lg hover:bg-primary/10"
                             data-testid="new-list-btn"
                         >
                             <Plus className="h-4 w-4" strokeWidth={3} />
@@ -841,12 +841,12 @@ const ShoppingListPage = () => {
                 </div>
             ) : lists.length === 0 ? (
                 <div className="rounded-3xl border border-dashed border-slate-200 bg-white p-10 text-center">
-                    <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-3xl bg-emerald-50">
-                        <ShoppingCart className="h-8 w-8 text-emerald-500" />
+                    <div className="mx-auto flex h-20 w-20 items-center justify-center rounded-3xl bg-primary/10 shadow-lg shadow-primary/5 animate-bounce-subtle">
+                        <img src="/icon.png" alt="PriceHive Bee" className="h-12 w-12 object-contain" />
                     </div>
                     <p className="mt-5 text-lg font-bold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>Aun no tienes listas</p>
                     <p className="mt-1 text-sm text-slate-500">Crea una lista por supermercado para ir recopilando precios.</p>
-                    <Button onClick={() => setDialogOpen(true)} className="mt-6 gap-2 rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600">
+                    <Button onClick={() => setDialogOpen(true)} className="mt-6 gap-2 rounded-2xl bg-primary text-white hover:bg-primary">
                         <Plus className="h-4 w-4" />
                         Crear mi primera lista
                     </Button>
@@ -863,7 +863,7 @@ const ShoppingListPage = () => {
                         return (
                             <article
                                 key={list.id}
-                                className="group relative flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-emerald-300 hover:shadow-lg"
+                                className="group relative flex flex-col overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm transition hover:-translate-y-0.5 hover:border-primary-300 hover:shadow-lg"
                                 data-testid={`list-card-${list.id}`}
                             >
                                 <button type="button" onClick={() => handleSelectList(list)} className="flex flex-1 flex-col p-5 text-left">
@@ -887,7 +887,7 @@ const ShoppingListPage = () => {
                                                 {items.length}
                                             </span>
                                             {purchased > 0 && (
-                                                <span className="inline-flex items-center gap-1 rounded-full bg-emerald-100 px-2.5 py-1 text-[11px] font-semibold text-emerald-700">
+                                                <span className="inline-flex items-center gap-1 rounded-full bg-primary/20 px-2.5 py-1 text-[11px] font-semibold text-primary">
                                                     <CheckCircle2 className="h-3 w-3" />
                                                     {purchased}
                                                 </span>
@@ -931,7 +931,7 @@ const ShoppingListPage = () => {
                                     <button
                                         type="button"
                                         onClick={() => handleSelectList(list)}
-                                        className="ml-1 flex h-8 items-center gap-1 rounded-xl bg-emerald-500 px-3 text-xs font-bold text-white transition hover:bg-emerald-600"
+                                        className="ml-1 flex h-8 items-center gap-1 rounded-xl bg-primary px-3 text-xs font-bold text-white transition hover:bg-primary"
                                     >
                                         Abrir
                                         <ArrowRight className="h-3.5 w-3.5" />
@@ -988,7 +988,7 @@ const ShoppingListPage = () => {
                                     disabled={!readyToSubmitCount}
                                     className={`h-10 gap-2 rounded-xl px-4 text-xs font-black shadow-lg transition-all active:scale-95 ${
                                         readyToSubmitCount > 0
-                                            ? "bg-emerald-500 text-white shadow-emerald-500/25 hover:bg-emerald-600"
+                                            ? "bg-primary text-white shadow-primary/25 hover:bg-primary"
                                             : "bg-slate-100 text-slate-400 shadow-none"
                                     }`}
                                 >
@@ -1003,7 +1003,7 @@ const ShoppingListPage = () => {
                             </div>
                             <div className="mt-2 h-1 overflow-hidden rounded-full bg-slate-100">
                                 <div
-                                    className="h-full rounded-full bg-emerald-500 transition-all duration-500 ease-out shadow-[0_0_8px_rgba(16,185,129,0.4)]"
+                                    className="h-full rounded-full bg-primary transition-all duration-500 ease-out shadow-[0_0_8px_rgba(16,185,129,0.4)]"
                                     style={{ width: `${progressPct}%` }}
                                 />
                             </div>
@@ -1052,7 +1052,7 @@ const ShoppingListPage = () => {
                             type="button"
                             onClick={() => handleSetListMode("shop")}
                             disabled={!totalItems}
-                            className="group flex h-9 items-center gap-2 rounded-xl bg-emerald-50 px-3 text-emerald-700 transition hover:bg-emerald-100 disabled:opacity-30 disabled:hover:bg-emerald-50"
+                            className="group flex h-9 items-center gap-2 rounded-xl bg-primary/10 px-3 text-primary transition hover:bg-primary/20 disabled:opacity-30 disabled:hover:bg-primary/10"
                             aria-label="Ir al modo compra"
                         >
                             <span className="text-xs font-black uppercase tracking-wider">Comprar</span>
@@ -1159,13 +1159,13 @@ const ShoppingListPage = () => {
                                         listMode === "shop" ? "px-2.5 py-1" : "px-3 py-1.5"
                                     } ${
                                         active
-                                            ? "border-emerald-500 bg-emerald-500 text-white shadow-sm"
-                                            : "border-slate-200 bg-white text-slate-600 hover:border-emerald-300 hover:text-emerald-700"
+                                            ? "border-primary bg-primary text-white shadow-sm"
+                                            : "border-slate-200 bg-white text-slate-600 hover:border-primary-300 hover:text-primary"
                                     }`}
                                     data-testid={`filter-${option.value}`}
                                 >
                                     {option.label}
-                                    <span className={`tabular-nums text-[10px] ${active ? "text-emerald-50" : "text-slate-400"}`}>
+                                    <span className={`tabular-nums text-[10px] ${active ? "text-primary/10" : "text-slate-400"}`}>
                                         {count}
                                     </span>
                                 </button>
@@ -1202,7 +1202,7 @@ const ShoppingListPage = () => {
                         <p className="mt-1 text-sm text-slate-500">Anade productos que vas a comprar en {selectedList.supermarket_name}</p>
                         <Button
                             onClick={() => setAddItemDialogOpen(true)}
-                            className="mt-5 gap-2 rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600"
+                            className="mt-5 gap-2 rounded-2xl bg-primary text-white hover:bg-primary"
                         >
                             <Plus className="h-4 w-4" />
                             Anadir primer producto
@@ -1237,11 +1237,11 @@ const ShoppingListPage = () => {
                             return (
                                 <article
                                     key={`${item.sellable_product_id}-${idx}`}
-                                    className="group relative flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:border-emerald-200 hover:shadow-md"
+                                    className="group relative flex items-center justify-between rounded-2xl border border-slate-100 bg-white p-3 shadow-sm transition-all hover:border-primary/30 hover:shadow-md"
                                     data-testid={`item-card-${idx}`}
                                 >
                                     <div className="flex min-w-0 flex-1 items-center gap-3">
-                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400 group-hover:bg-emerald-50 group-hover:text-emerald-500">
+                                        <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-slate-50 text-slate-400 group-hover:bg-primary/10 group-hover:text-primary">
                                             <Package className="h-5 w-5" />
                                         </div>
                                         <div className="min-w-0 flex-1">
@@ -1286,8 +1286,8 @@ const ShoppingListPage = () => {
                                 key={`${item.sellable_product_id}-${idx}`}
                                 className={`group relative rounded-2xl border bg-white p-2.5 transition-all duration-300 ${
                                     isPurchased 
-                                        ? "border-emerald-100 bg-emerald-50/20" 
-                                        : "border-slate-100 hover:border-emerald-200 hover:shadow-md"
+                                        ? "border-primary/20 bg-primary/10/20" 
+                                        : "border-slate-100 hover:border-primary/30 hover:shadow-md"
                                 }`}
                                 data-testid={`item-card-${idx}`}
                             >
@@ -1299,9 +1299,9 @@ const ShoppingListPage = () => {
                                         className={`group/check relative flex h-10 w-10 shrink-0 items-center justify-center rounded-xl border-2 transition-all duration-300 ${
                                             isPurchased
                                                 ? hasPrice
-                                                    ? "border-emerald-500 bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                                                    ? "border-primary bg-primary text-white shadow-lg shadow-primary/20"
                                                     : "border-amber-500 bg-amber-500 text-white shadow-lg shadow-amber-500/20"
-                                                : "border-slate-200 bg-slate-50 text-transparent hover:border-emerald-400 hover:bg-white"
+                                                : "border-slate-200 bg-slate-50 text-transparent hover:border-primary hover:bg-white"
                                         }`}
                                         data-testid={`item-checkbox-${idx}`}
                                         aria-label={isPurchased ? "Desmarcar" : "Marcar comprado"}
@@ -1335,7 +1335,7 @@ const ShoppingListPage = () => {
                                                         }}
                                                         className={`inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider transition-all ${
                                                             alternatives.length > 0
-                                                                ? "bg-slate-100 text-slate-600 hover:bg-emerald-500 hover:text-white"
+                                                                ? "bg-slate-100 text-slate-600 hover:bg-primary hover:text-white"
                                                                 : "bg-slate-50 text-slate-400"
                                                         }`}
                                                     >
@@ -1358,7 +1358,7 @@ const ShoppingListPage = () => {
                                                                         handleSwapBrand(idx, alt.sellable_id);
                                                                         setExpandedBrandSwitcher(null);
                                                                     }}
-                                                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[10px] font-bold text-slate-600 transition hover:bg-emerald-50 hover:text-emerald-700"
+                                                                    className="flex w-full items-center gap-2 rounded-lg px-2.5 py-1.5 text-left text-[10px] font-bold text-slate-600 transition hover:bg-primary/10 hover:text-primary"
                                                                 >
                                                                     <div className="flex h-5 w-5 items-center justify-center rounded-md bg-slate-50 text-slate-400">
                                                                         <Tag className="h-2.5 w-2.5" />
@@ -1380,7 +1380,7 @@ const ShoppingListPage = () => {
                                         {/* Row for Quantity and Price - Independent and spaced */}
                                         <div className="flex items-center justify-between gap-3 sm:justify-end">
                                             {/* Quantity Picker */}
-                                            <div className="flex h-9 items-center rounded-xl border border-slate-200 bg-white/80 px-1 shadow-sm transition-colors focus-within:border-emerald-500">
+                                            <div className="flex h-9 items-center rounded-xl border border-slate-200 bg-white/80 px-1 shadow-sm transition-colors focus-within:border-primary">
                                                 <button
                                                     type="button"
                                                     onClick={(e) => { e.stopPropagation(); handleQuantityStep(idx, -1); }}
@@ -1405,8 +1405,8 @@ const ShoppingListPage = () => {
                                             <div className="w-24 shrink-0 sm:w-28">
                                                 <div className={`group/price flex h-9 items-center rounded-xl border px-2 transition-all duration-200 ${
                                                     hasPrice
-                                                        ? "border-emerald-300 bg-emerald-50/50"
-                                                        : "border-slate-200 bg-slate-50 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10"
+                                                        ? "border-primary-300 bg-primary/10/50"
+                                                        : "border-slate-200 bg-slate-50 focus-within:border-primary focus-within:ring-2 focus-within:ring-primary/10"
                                                 }`}>
                                                     <Input
                                                         type="number"
@@ -1416,7 +1416,7 @@ const ShoppingListPage = () => {
                                                         placeholder="0.00"
                                                         className="h-full min-w-0 flex-1 border-0 bg-transparent p-0 text-right text-sm font-black tabular-nums shadow-none focus-visible:ring-0 placeholder:text-slate-300"
                                                     />
-                                                    <span className={`ml-1 text-[9px] font-black ${hasPrice ? "text-emerald-500" : "text-slate-300"}`}>€</span>
+                                                    <span className={`ml-1 text-[9px] font-black ${hasPrice ? "text-primary" : "text-slate-300"}`}>€</span>
                                         </div>
                                     </div>
                                 </div>
@@ -1428,7 +1428,7 @@ const ShoppingListPage = () => {
                                     <div className="flex items-center gap-2">
                                         {priceInsight && !priceInsight.neutral ? (
                                             <div className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-[9px] font-black uppercase tracking-wider ${
-                                                priceInsight.isHigher ? "bg-amber-100 text-amber-700" : "bg-emerald-100 text-emerald-700"
+                                                priceInsight.isHigher ? "bg-amber-100 text-amber-700" : "bg-primary/20 text-primary"
                                             }`}>
                                                 {priceInsight.isHigher ? <TrendingUp className="h-2.5 w-2.5" /> : <TrendingDown className="h-2.5 w-2.5" />}
                                                 <span>{priceInsight.label}</span>
@@ -1514,7 +1514,7 @@ const ShoppingListPage = () => {
                         </div>
                         <Button
                             onClick={handleCreateList}
-                            className="w-full rounded-2xl bg-emerald-500 py-5 font-semibold text-white hover:bg-emerald-600"
+                            className="w-full rounded-2xl bg-primary py-5 font-semibold text-white hover:bg-primary"
                             data-testid="create-list-btn"
                         >
                             Crear lista
@@ -1554,10 +1554,10 @@ const ShoppingListPage = () => {
                                 </div>
 
                                 {newItemProduct && (
-                                    <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-emerald-50 px-3 py-2">
+                                    <div className="mt-2 flex items-center justify-between gap-2 rounded-xl bg-primary/10 px-3 py-2">
                                         <div className="min-w-0">
-                                            <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Seleccionado</p>
-                                            <p className="truncate text-sm font-bold text-emerald-900">
+                                            <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Seleccionado</p>
+                                            <p className="truncate text-sm font-bold text-primary-900">
                                                 {products.find((p) => p.id === newItemProduct)?.name || "Producto"}
                                             </p>
                                         </div>
@@ -1567,7 +1567,7 @@ const ShoppingListPage = () => {
                                                 setNewItemProduct("");
                                                 setProductSearch("");
                                             }}
-                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-emerald-700 hover:bg-emerald-100"
+                                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full text-primary hover:bg-primary/20"
                                             aria-label="Cambiar producto"
                                         >
                                             <X className="h-4 w-4" />
@@ -1590,7 +1590,7 @@ const ShoppingListPage = () => {
                                                         setNewItemProduct(product.id);
                                                         setProductSearch(product.name);
                                                     }}
-                                                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-emerald-50 active:bg-emerald-100"
+                                                    className="flex w-full items-center gap-3 rounded-xl px-3 py-3 text-left transition hover:bg-primary/10 active:bg-primary/20"
                                                 >
                                                     <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-slate-100 text-slate-500">
                                                         <Package className="h-4 w-4" />
@@ -1698,7 +1698,7 @@ const ShoppingListPage = () => {
                         <Button
                             onClick={handleAddItem}
                             disabled={!newItemUnit}
-                            className="w-full rounded-2xl bg-emerald-500 py-5 font-semibold text-white hover:bg-emerald-600"
+                            className="w-full rounded-2xl bg-primary py-5 font-semibold text-white hover:bg-primary"
                         >
                             {editingItemIndex !== null ? "Guardar cambios" : "Anadir a la lista"}
                         </Button>
@@ -1740,16 +1740,16 @@ const ShoppingListPage = () => {
                 <DialogContent className="max-h-[90vh] max-w-xl overflow-y-auto">
                     <DialogHeader>
                         <DialogTitle className="flex items-center gap-2" style={{ fontFamily: "Manrope, sans-serif" }}>
-                            <CheckCircle2 className="h-5 w-5 text-emerald-600" />
+                            <CheckCircle2 className="h-5 w-5 text-primary" />
                             Cerrar compra
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
                         {/* Summary */}
                         <div className="grid grid-cols-3 gap-2">
-                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-center">
-                                <p className="text-[10px] font-semibold uppercase tracking-wider text-emerald-600">Listos</p>
-                                <p className="mt-1 text-2xl font-bold text-emerald-700 tabular-nums">{readyToSubmitCount}</p>
+                            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-3 text-center">
+                                <p className="text-[10px] font-semibold uppercase tracking-wider text-primary">Listos</p>
+                                <p className="mt-1 text-2xl font-bold text-primary tabular-nums">{readyToSubmitCount}</p>
                             </div>
                             <div className="rounded-2xl border border-amber-200 bg-amber-50 p-3 text-center">
                                 <p className="text-[10px] font-semibold uppercase tracking-wider text-amber-600">Sin precio</p>
@@ -1774,18 +1774,18 @@ const ShoppingListPage = () => {
                         )}
 
                         {readyToSubmitCount > 0 && (
-                            <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-3">
-                                <p className="text-sm font-bold text-emerald-900">Recompensa al subir esta compra</p>
+                            <div className="rounded-2xl border border-primary/30 bg-primary/10 p-3">
+                                <p className="text-sm font-bold text-primary-900">Recompensa al subir esta compra</p>
                                 <div className="mt-2 grid grid-cols-2 gap-2">
                                     <div className="rounded-xl bg-white/80 p-2">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Creditos</p>
-                                        <p className="text-lg font-black text-emerald-700 tabular-nums">+{readyToSubmitCount * 10}</p>
-                                        <p className="text-[10px] text-emerald-700/80">Para consultar precios estimados.</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Creditos</p>
+                                        <p className="text-lg font-black text-primary tabular-nums">+{readyToSubmitCount * 10}</p>
+                                        <p className="text-[10px] text-primary/80">Para consultar precios estimados.</p>
                                     </div>
                                     <div className="rounded-xl bg-white/80 p-2">
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-emerald-600">Reputacion</p>
-                                        <p className="text-lg font-black text-emerald-700 tabular-nums">+{readyToSubmitCount * 10}</p>
-                                        <p className="text-[10px] text-emerald-700/80">Sube tu nivel y visibilidad.</p>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-primary">Reputacion</p>
+                                        <p className="text-lg font-black text-primary tabular-nums">+{readyToSubmitCount * 10}</p>
+                                        <p className="text-[10px] text-primary/80">Sube tu nivel y visibilidad.</p>
                                     </div>
                                 </div>
                             </div>
@@ -1801,8 +1801,8 @@ const ShoppingListPage = () => {
                                     {selectedItems.filter((i) => i.purchased && i.price).map((item, i) => {
                                         const upStr = formatUnitPrice(item.price, item.quantity, item.unit_name);
                                         return (
-                                            <div key={`${item.sellable_product_id}-${i}`} className="flex items-center gap-2 rounded-xl border border-emerald-200 bg-white p-2.5">
-                                                <CheckCircle2 className="h-4 w-4 shrink-0 text-emerald-600" />
+                                            <div key={`${item.sellable_product_id}-${i}`} className="flex items-center gap-2 rounded-xl border border-primary/30 bg-white p-2.5">
+                                                <CheckCircle2 className="h-4 w-4 shrink-0 text-primary" />
                                                 <div className="min-w-0 flex-1">
                                                     <p className="truncate text-sm font-bold text-slate-950">{item.product_name}</p>
                                                     <p className="truncate text-[11px] text-slate-500">
@@ -1811,7 +1811,7 @@ const ShoppingListPage = () => {
                                                     </p>
                                                 </div>
                                                 <div className="text-right">
-                                                    <p className="text-base font-bold text-emerald-700 tabular-nums">{formatCurrencyShort(item.price)}</p>
+                                                    <p className="text-base font-bold text-primary tabular-nums">{formatCurrencyShort(item.price)}</p>
                                                     {upStr && <p className="text-[10px] font-medium text-slate-500 tabular-nums">{upStr}</p>}
                                                 </div>
                                             </div>
@@ -1828,7 +1828,7 @@ const ShoppingListPage = () => {
                             <Button
                                 onClick={() => setConfirmSubmitOpen(true)}
                                 disabled={!readyToSubmitCount}
-                                className="flex-1 gap-2 rounded-2xl bg-emerald-600 py-5 font-bold text-white hover:bg-emerald-700"
+                                className="flex-1 gap-2 rounded-2xl bg-primary py-5 font-bold text-white hover:bg-primary"
                                 data-testid="submit-prices-btn"
                             >
                                 <CheckCircle2 className="h-5 w-5" />
@@ -1843,19 +1843,19 @@ const ShoppingListPage = () => {
             <Dialog open={confirmSubmitOpen} onOpenChange={setConfirmSubmitOpen}>
                 <DialogContent className="max-w-md">
                     <DialogHeader>
-                        <DialogTitle className="flex items-center gap-2 text-emerald-700" style={{ fontFamily: "Manrope, sans-serif" }}>
+                        <DialogTitle className="flex items-center gap-2 text-primary" style={{ fontFamily: "Manrope, sans-serif" }}>
                             <CheckCircle2 className="h-5 w-5" />
                             Confirmar subida
                         </DialogTitle>
                     </DialogHeader>
                     <div className="space-y-4 pt-2">
-                        <div className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm text-emerald-900">
+                        <div className="rounded-2xl border border-primary/30 bg-primary/10 p-4 text-sm text-primary-900">
                             <p className="font-semibold">Vamos a subir {readyToSubmitCount} precios a la base de datos.</p>
                             <p className="mt-1 text-xs">Se registran: producto, marca, cantidad, unidad y precio. Ayuda a toda la comunidad. Despues limpiaremos la compra para reutilizar la lista.</p>
                         </div>
                         <div className="flex gap-2">
                             <Button variant="outline" onClick={() => setConfirmSubmitOpen(false)} className="flex-1 rounded-2xl">Cancelar</Button>
-                            <Button onClick={handleSubmitPrices} className="flex-1 gap-2 rounded-2xl bg-emerald-600 text-white hover:bg-emerald-700">
+                            <Button onClick={handleSubmitPrices} className="flex-1 gap-2 rounded-2xl bg-primary text-white hover:bg-primary">
                                 <CheckCircle2 className="h-4 w-4" />
                                 Si, subir
                             </Button>
@@ -1896,7 +1896,7 @@ const ShoppingListPage = () => {
                                 </div>
                                 <div className="rounded-2xl border border-slate-200 bg-slate-50 p-3">
                                     <p className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Minimo</p>
-                                    <p className="mt-1 text-lg font-black text-emerald-700 tabular-nums">
+                                    <p className="mt-1 text-lg font-black text-primary tabular-nums">
                                         {formatCurrencyOptional(productInsightData?.analytics?.min_price)}
                                     </p>
                                 </div>
@@ -1906,7 +1906,7 @@ const ShoppingListPage = () => {
                                 <div className="mb-2 flex items-center justify-between">
                                     <p className="text-xs font-bold uppercase tracking-wider text-slate-500">Comparativa</p>
                                     {productInsightData?.comparison?.best_price && (
-                                        <span className="rounded-full bg-emerald-50 px-2 py-1 text-[10px] font-bold text-emerald-700">
+                                        <span className="rounded-full bg-primary/10 px-2 py-1 text-[10px] font-bold text-primary">
                                             Mejor: {formatCurrencyOptional(productInsightData.comparison.best_price.price)}
                                         </span>
                                     )}
@@ -2003,9 +2003,9 @@ const ShoppingListPage = () => {
                         <button
                             type="button"
                             onClick={() => { setMenuOpen(false); startTutorial(); }}
-                            className="flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3 text-left text-sm transition hover:border-emerald-200 hover:bg-emerald-50"
+                            className="flex w-full items-center gap-3 rounded-2xl border border-slate-100 bg-white p-3 text-left text-sm transition hover:border-primary/30 hover:bg-primary/10"
                         >
-                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-emerald-100 text-emerald-700">
+                            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/20 text-primary">
                                 <HelpCircle className="h-5 w-5" />
                             </div>
                             <div className="flex-1">
@@ -2045,7 +2045,7 @@ const ShoppingListPage = () => {
 
                     {tutorial.highlightRect && tutorial.activeStep.element && (
                         <div
-                            className="pointer-events-none absolute rounded-[28px] border border-emerald-300/80 bg-transparent shadow-[0_0_0_9999px_rgba(15,23,42,0.72)] transition-all duration-300"
+                            className="pointer-events-none absolute rounded-[28px] border border-primary-300/80 bg-transparent shadow-[0_0_0_9999px_rgba(15,23,42,0.72)] transition-all duration-300"
                             style={{
                                 top: tutorial.highlightRect.top - 8,
                                 left: tutorial.highlightRect.left - 8,
@@ -2061,7 +2061,7 @@ const ShoppingListPage = () => {
                     >
                         <div className="mb-4 flex items-start justify-between gap-4">
                             <div>
-                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-emerald-500">Tutorial rapido</p>
+                                <p className="text-xs font-semibold uppercase tracking-[0.24em] text-primary">Tutorial rapido</p>
                                 <h3 className="mt-2 text-lg font-semibold text-slate-950" style={{ fontFamily: "Manrope, sans-serif" }}>
                                     {tutorial.activeStep.title || "Guia rapida"}
                                 </h3>
@@ -2084,7 +2084,7 @@ const ShoppingListPage = () => {
                             </div>
                             <div className="mt-2 h-2 overflow-hidden rounded-full bg-slate-100">
                                 <div
-                                    className="h-full rounded-full bg-emerald-500 transition-all"
+                                    className="h-full rounded-full bg-primary transition-all"
                                     style={{ width: `${((tutorial.currentStep + 1) / tutorial.steps.length) * 100}%` }}
                                 />
                             </div>
@@ -2101,7 +2101,7 @@ const ShoppingListPage = () => {
                             </Button>
                             <Button
                                 onClick={nextStep}
-                                className="rounded-2xl bg-emerald-500 text-white hover:bg-emerald-600"
+                                className="rounded-2xl bg-primary text-white hover:bg-primary"
                             >
                                 {tutorial.currentStep === tutorial.steps.length - 1 ? "Empezar" : "Siguiente"}
                             </Button>
