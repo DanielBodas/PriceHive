@@ -42,8 +42,7 @@ const Layout = ({ children }) => {
     const [unreadCount, setUnreadCount] = useState(0);
 
     const baseNavItems = [
-        { path: "/dashboard", label: "Dashboard", icon: <LayoutDashboard className="w-5 h-5" /> },
-        { path: "/feed", label: "Muro", icon: <MessageSquare className="w-5 h-5" /> },
+        { path: "/dashboard", label: "Inicio", icon: <LayoutDashboard className="w-5 h-5" /> },
         { path: "/shopping-list", label: "Lista de Compra", icon: <ShoppingCart className="w-5 h-5" /> },
         { path: "/analytics", label: "Análisis", icon: <BarChart3 className="w-5 h-5" /> },
     ];
@@ -76,14 +75,14 @@ const Layout = ({ children }) => {
             {/* Top Navigation */}
             <nav className="fixed top-0 left-0 right-0 z-50 bg-white border-b border-slate-200 shadow-sm">
                 <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6">
-                    <div className="flex items-center justify-between h-16">
+                    <div className="flex items-center justify-between h-12">
                         {/* Logo */}
                         <div className="flex items-center gap-2 flex-shrink-0">
                             <Link to="/dashboard" className="flex items-center gap-2">
-                                <div className="w-9 h-9 rounded-xl bg-emerald-500 flex items-center justify-center">
-                                    <Tag className="w-5 h-5 text-white" />
+                                <div className="w-7 h-7 rounded-lg bg-emerald-500 flex items-center justify-center">
+                                    <Tag className="w-4 h-4 text-white" />
                                 </div>
-                                <span className="text-lg font-bold text-slate-900 hidden sm:block" style={{ fontFamily: 'Manrope, sans-serif' }}>
+                                <span className="text-base font-bold text-slate-900 hidden sm:block" style={{ fontFamily: 'Manrope, sans-serif' }}>
                                     PriceHive
                                 </span>
                             </Link>
@@ -144,9 +143,9 @@ const Layout = ({ children }) => {
                         {/* Right Side - User Info */}
                         <div className="flex items-center gap-2 lg:gap-3 flex-shrink-0">
                             {/* Points Badge */}
-                            <div className="hidden sm:flex items-center gap-1 px-2 lg:px-3 py-1.5 bg-emerald-50 rounded-full">
-                                <Star className="w-4 h-4 text-emerald-500 flex-shrink-0" />
-                                <span className="font-mono text-xs lg:text-sm font-medium text-emerald-600">
+                            <div className="hidden sm:flex items-center gap-1 px-2 py-1 bg-emerald-50 rounded-full">
+                                <Star className="w-3.5 h-3.5 text-emerald-500 flex-shrink-0" />
+                                <span className="font-mono text-xs font-medium text-emerald-600">
                                     {user?.points || 0}
                                 </span>
                             </div>
@@ -346,7 +345,7 @@ const Layout = ({ children }) => {
             </nav>
 
             {/* Main Content */}
-            <main className="pt-16 min-h-screen">
+            <main className="pt-12 min-h-screen">
                 <div className="max-w-7xl mx-auto px-4 sm:px-6 py-8">
                     {children}
                 </div>

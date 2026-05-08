@@ -3,7 +3,7 @@ from starlette.middleware.cors import CORSMiddleware
 import logging
 from .core.config import settings
 from .core.database import close_db_connection
-from .routers import auth, admin, prices, shopping_lists, social, analytics, search, public, user_features
+from .routers import auth, admin, prices, shopping_lists, social, analytics, search, public, user_features, community
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
@@ -37,6 +37,7 @@ app.include_router(analytics.router, prefix="/api")
 app.include_router(search.router, prefix="/api")
 app.include_router(public.router, prefix="/api")
 app.include_router(user_features.router, prefix="/api")
+app.include_router(community.router, prefix="/api")
 
 @app.on_event("shutdown")
 async def shutdown_event():

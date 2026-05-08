@@ -1,52 +1,8 @@
 /* PriceHive Custom Styles */
 
-.hero-gradient {
-    background: linear-gradient(135deg, #ecfdf5 0%, #f1f5f9 100%);
-}
-
-.dark .hero-gradient {
-    background: linear-gradient(135deg, #0f172a 0%, #1e293b 100%);
-}
-
-/* Animations */
-@keyframes fadeInUp {
-    from {
-        opacity: 0;
-        transform: translateY(20px);
-    }
-    to {
-        opacity: 1;
-        transform: translateY(0);
-    }
-}
-
-@keyframes pulse-soft {
-    0%, 100% {
-        opacity: 1;
-    }
-    50% {
-        opacity: 0.8;
-    }
-}
-
-.animate-fade-in-up {
-    animation: fadeInUp 0.5s ease-out forwards;
-}
-
-.animate-delay-100 {
-    animation-delay: 100ms;
-}
-
-.animate-delay-200 {
-    animation-delay: 200ms;
-}
-
-.animate-delay-300 {
-    animation-delay: 300ms;
-}
-
-.animate-delay-400 {
-    animation-delay: 400ms;
+/* Smooth scroll */
+html {
+    scroll-behavior: smooth;
 }
 
 /* Button hover lift */
@@ -100,15 +56,16 @@
 
 /* Price tag styles */
 .price-tag {
-    @apply font-mono font-medium;
+    font-family: monospace;
+    font-weight: 500;
 }
 
 .price-up {
-    @apply text-rose-500;
+    color: #ef4444;
 }
 
 .price-down {
-    @apply text-emerald-500;
+    color: #10b981;
 }
 
 /* Stats card gradient borders */

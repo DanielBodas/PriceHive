@@ -8,6 +8,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from ".
 import { Badge } from "../components/ui/badge";
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, BarChart, Bar, Cell } from "recharts";
 import { toast } from "sonner";
+import { PageHeader } from "../components/ui/page-header";
 import { 
     BarChart3, 
     TrendingUp, 
@@ -367,13 +368,11 @@ const AnalyticsPage = () => {
     return (
         <Layout>
             <div className="space-y-6" data-testid="analytics-page">
-                {/* Header */}
-                <div>
-                    <h1 className="text-3xl font-bold text-slate-900" style={{ fontFamily: 'Manrope, sans-serif' }}>
-                        Analisis de Precios
-                    </h1>
-                    <p className="text-slate-500 mt-1">Explora evolucion, comparativas y oportunidades de ahorro</p>
-                </div>
+                <PageHeader
+                    tag="Análisis Inteligente"
+                    title="Análisis de Precios"
+                    subtitle="Explora evolución, comparativas y oportunidades de ahorro."
+                />
 
                 {/* Search & Filters */}
                 <Card className="border-slate-200" data-testid="search-card">
