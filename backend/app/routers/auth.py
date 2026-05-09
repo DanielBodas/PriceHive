@@ -7,7 +7,7 @@ from datetime import datetime, timezone, timedelta
 from ..core.config import settings
 from ..core.database import db
 from ..core.auth import hash_password, verify_password, create_token, get_current_user, add_points
-from ..models.user import UserCreate, UserLogin, UserResponse, TokenResponse, GoogleSessionRequest
+from ..models.user import UserCreate, UserLogin, UserResponse, TokenResponse
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
@@ -75,18 +75,18 @@ async def auth_google_callback(code: str, response: Response):
     else:
         user_id = user["id"]
 
-    session_token = str(uuid.uuid4())
-    expires_at = datetime.now(timezone.utc) + timedelta(days=settings.SESSION_EXPIRY_DAYS)
+    access_token = create_token(user_id, email, user["role"])
 
-    await db.user_sessions.delete_many({"user_id": user_id})
-    await db.user_sessions.insert_one({
-        "user_id": user_id,
-        "session_token": session_token,
-        "expires_at": expires_at.isoformat(),
-        "created_at": datetime.now(timezone.utc).isoformat()
-    })
-
-    return RedirectResponse(url=f"{settings.FRONTEND_URL}/#session_id={session_token}")
+    redirect_resp = RedirectResponse(url=f"{settings.FRONTEND_URL}/")
+    redirect_resp.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=settings.JWT_EXPIRATION_HOURS * 3600
+    )
+    return redirect_resp
 
 @router.post("/logout")
 async def logout(request: Request, response: Response):
@@ -95,28 +95,12 @@ async def logout(request: Request, response: Response):
         await db.user_sessions.delete_many({"session_token": session_token})
 
     response.delete_cookie(key="session_token", path="/", secure=True, samesite="none")
+    response.delete_cookie(key="access_token", path="/", secure=True, samesite="lax")
     return {"message": "Logged out successfully"}
 
-@router.post("/google/session")
-async def google_session(data: GoogleSessionRequest):
-    session = await db.user_sessions.find_one({"session_token": data.session_id})
-    if not session:
-        raise HTTPException(status_code=401, detail="Sesión no válida o expirada")
-
-    user = await db.users.find_one({"id": session["user_id"]}, {"_id": 0})
-    if not user:
-        raise HTTPException(status_code=404, detail="Usuario no encontrado")
-
-    access_token = create_token(user["id"], user["email"], user["role"])
-
-    return {
-        "access_token": access_token,
-        "token_type": "bearer",
-        "user": UserResponse(**user)
-    }
 
 @router.post("/register", response_model=TokenResponse)
-async def register(user_data: UserCreate):
+async def register(user_data: UserCreate, response: Response):
     user_email = user_data.email.lower().strip()
     existing = await db.users.find_one({"email": user_email})
     if existing:
@@ -142,6 +126,15 @@ async def register(user_data: UserCreate):
     await add_credits(user_id, 100, "Bono de bienvenida")
     token = create_token(user_id, user_email, "user")
 
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=settings.JWT_EXPIRATION_HOURS * 3600
+    )
+
     return TokenResponse(
         access_token=token,
         token_type="bearer",
@@ -149,7 +142,7 @@ async def register(user_data: UserCreate):
     )
 
 @router.post("/login", response_model=TokenResponse)
-async def login(credentials: UserLogin):
+async def login(credentials: UserLogin, response: Response):
     user_email = credentials.email.lower().strip()
     user = await db.users.find_one({"email": user_email}, {"_id": 0})
 
@@ -157,6 +150,15 @@ async def login(credentials: UserLogin):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 
     token = create_token(user["id"], user["email"], user["role"])
+
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="lax",
+        max_age=settings.JWT_EXPIRATION_HOURS * 3600
+    )
 
     return TokenResponse(
         access_token=token,

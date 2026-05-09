@@ -31,9 +31,19 @@ def create_token(user_id: str, email: str, role: str) -> str:
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
-    # First try session token from cookie
-    session_token = request.cookies.get("session_token")
+    # 1. Try JWT from access_token cookie (Recommended)
+    access_token = request.cookies.get("access_token")
+    if access_token:
+        try:
+            payload = jwt.decode(access_token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+            user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
+            if user:
+                return user
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
+            pass
 
+    # 2. Try session token from cookie (Legacy/Google flow)
+    session_token = request.cookies.get("session_token")
     if session_token:
         session = await db.user_sessions.find_one({"session_token": session_token}, {"_id": 0})
         if session:
@@ -48,16 +58,14 @@ async def get_current_user(request: Request, credentials: HTTPAuthorizationCrede
                 if user:
                     return user
 
-    # Fallback to JWT token from Authorization header
+    # 3. Fallback to JWT token from Authorization header (Legacy API support)
     if credentials:
         try:
             payload = jwt.decode(credentials.credentials, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
             user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
             if user:
                 return user
-        except jwt.ExpiredSignatureError:
-            pass
-        except jwt.InvalidTokenError:
+        except (jwt.ExpiredSignatureError, jwt.InvalidTokenError):
             pass
 
     raise HTTPException(status_code=401, detail="Not authenticated")
