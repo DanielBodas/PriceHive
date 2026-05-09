@@ -213,7 +213,7 @@ logger = logging.getLogger(__name__)
 
 @router.get("/analytics/stats")
 async def get_general_stats(user: dict = Depends(get_current_user)):
-    logger.info(f"Fetching stats for user: {user.get('email')}")
+    logger.info(f"Fetching stats for user: {user.get('id')}")
     try:
         total_products = await db.products.count_documents({})
         total_prices = await db.prices.count_documents({"status": {"$ne": "invalid"}})

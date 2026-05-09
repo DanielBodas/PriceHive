@@ -15,6 +15,7 @@ class Settings:
     SESSION_EXPIRY_DAYS: int = 7
     FRONTEND_URL: str = os.environ.get("FRONTEND_URL", "http://localhost:3000").rstrip('/')
     BACKEND_URL: str = os.environ.get("BACKEND_URL", "http://localhost:10000").rstrip('/')
+    ENVIRONMENT: str = os.environ.get("ENVIRONMENT", "development")
     GOOGLE_CLIENT_ID: str = os.environ.get("GOOGLE_CLIENT_ID")
     GOOGLE_CLIENT_SECRET: str = os.environ.get("GOOGLE_CLIENT_SECRET")
 
