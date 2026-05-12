@@ -1,5 +1,6 @@
-from pydantic import BaseModel
-from typing import Optional, List, Dict
+from pydantic import BaseModel, field_validator
+from typing import Optional, List, Dict, Any
+from urllib.parse import urlparse
 
 class AttributeCreate(BaseModel):
     name: str
@@ -25,6 +26,20 @@ class BrandCreate(BaseModel):
     name: str
     logo_url: Optional[str] = None
 
+    @field_validator('logo_url')
+    @classmethod
+    def validate_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        allowed_domains = ["pricehive.com", "cloudinary.com", "imgur.com", "googleusercontent.com"]
+        if not v.startswith("https://"):
+            raise ValueError('URL must start with https://')
+        parsed = urlparse(v)
+        domain = parsed.netloc.lower()
+        if not any(domain == d or domain.endswith("." + d) for d in allowed_domains):
+            raise ValueError('Domain not allowed')
+        return v
+
 class BrandResponse(BaseModel):
     id: str
     name: str
@@ -33,6 +48,20 @@ class BrandResponse(BaseModel):
 class SupermarketCreate(BaseModel):
     name: str
     logo_url: Optional[str] = None
+
+    @field_validator('logo_url')
+    @classmethod
+    def validate_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        allowed_domains = ["pricehive.com", "cloudinary.com", "imgur.com", "googleusercontent.com"]
+        if not v.startswith("https://"):
+            raise ValueError('URL must start with https://')
+        parsed = urlparse(v)
+        domain = parsed.netloc.lower()
+        if not any(domain == d or domain.endswith("." + d) for d in allowed_domains):
+            raise ValueError('Domain not allowed')
+        return v
 
 class SupermarketResponse(BaseModel):
     id: str
@@ -59,6 +88,20 @@ class ProductCreate(BaseModel):
     allowed_attribute_ids: List[str] = []
     base_product_id: Optional[str] = None
     attribute_values: Optional[Dict[str, str]] = None
+
+    @field_validator('image_url')
+    @classmethod
+    def validate_url(cls, v: Optional[str]) -> Optional[str]:
+        if v is None:
+            return v
+        allowed_domains = ["pricehive.com", "cloudinary.com", "imgur.com", "googleusercontent.com"]
+        if not v.startswith("https://"):
+            raise ValueError('URL must start with https://')
+        parsed = urlparse(v)
+        domain = parsed.netloc.lower()
+        if not any(domain == d or domain.endswith("." + d) for d in allowed_domains):
+            raise ValueError('Domain not allowed')
+        return v
 
 class ProductResponse(BaseModel):
     id: str

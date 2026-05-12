@@ -19,7 +19,7 @@ from ..models.price import PriceResponse, PriceUpdate, PaginatedPriceResponse
 import pandas as pd
 import io
 import uuid
-import ast
+import json
 from pymongo import UpdateOne
 from fastapi.responses import StreamingResponse
 from fastapi import UploadFile, File
@@ -783,10 +783,21 @@ async def export_system_data(format: str = "xlsx", include_prices: bool = False,
     )
 
 @router.post("/system/import")
-async def import_system_data(file: UploadFile = File(...), user: dict = Depends(get_admin_user)):
+async def import_system_data(
+    request: Request,
+    file: UploadFile = File(...),
+    confirm_delete: bool = False,
+    user: dict = Depends(get_admin_user)
+):
     if not file.filename.endswith(('.xlsx', '.xls', '.ods')):
         raise HTTPException(status_code=400, detail="Only Excel (.xlsx, .xls) and OpenDocument (.ods) files are supported")
     
+    # 5MB Limit
+    MAX_FILE_SIZE = 5 * 1024 * 1024
+    content_length = request.headers.get("content-length")
+    if content_length and int(content_length) > MAX_FILE_SIZE:
+        raise HTTPException(status_code=413, detail="File too large (max 5MB)")
+
     contents = await file.read()
     df_dict = pd.read_excel(io.BytesIO(contents), sheet_name=None)
     
@@ -816,7 +827,7 @@ async def import_system_data(file: UploadFile = File(...), user: dict = Depends(
             for k, v in clean_rec.items():
                 if isinstance(v, str) and ((v.startswith('{') and v.endswith('}')) or (v.startswith('[') and v.endswith(']'))):
                     try:
-                        clean_rec[k] = ast.literal_eval(v)
+                        clean_rec[k] = json.loads(v.replace("'", '"'))
                     except:
                         pass
             
@@ -841,11 +852,14 @@ async def import_system_data(file: UploadFile = File(...), user: dict = Depends(
             
             # 2. Reconcile: Delete records in DB that are NOT in the Excel (for this sheet)
             # This allows "Removing" items by just deleting them from the Excel
-            delete_result = await db[sheet_name].delete_many({"id": {"$nin": excel_ids}})
+            deleted_count = 0
+            if confirm_delete:
+                delete_result = await db[sheet_name].delete_many({"id": {"$nin": excel_ids}})
+                deleted_count = delete_result.deleted_count
             
             results[sheet_name] = {
                 "upserted": len(ops),
-                "deleted": delete_result.deleted_count
+                "deleted": deleted_count
             }
             
     return {"message": "Import completed successfully (Full Sync)", "results": results}

@@ -6,25 +6,20 @@ const AuthContext = createContext(null);
 const API = `${process.env.REACT_APP_BACKEND_URL}/api`;
 
 // Configuración inicial de Axios
-const initialToken = localStorage.getItem('token');
-if (initialToken) {
-    axios.defaults.headers.common['Authorization'] = `Bearer ${initialToken}`;
-}
 axios.defaults.withCredentials = true;
 
 export const AuthProvider = ({ children }) => {
     const [user, setUser] = useState(null);
-    const [token, setToken] = useState(initialToken);
+    const [token, setToken] = useState(null);
     const [loading, setLoading] = useState(true);
 
     const fetchUser = useCallback(async () => {
         try {
             const response = await axios.get(`${API}/auth/me`);
             setUser(response.data);
+            setToken("SESSION_ACTIVE"); // Placeholder since token is in cookie
         } catch (error) {
             console.error('Error fetching user:', error);
-            localStorage.removeItem('token');
-            delete axios.defaults.headers.common['Authorization'];
             setToken(null);
             setUser(null);
         } finally {
@@ -36,12 +31,9 @@ export const AuthProvider = ({ children }) => {
     const processGoogleSession = useCallback(async (sessionId) => {
         try {
             const response = await axios.post(`${API}/auth/google/session`, { session_id: sessionId });
-            const { user: userData, access_token } = response.data;
+            const { user: userData } = response.data;
 
-            localStorage.setItem('token', access_token);
-            axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-
-            setToken(access_token);
+            setToken("SESSION_ACTIVE");
             setUser(userData);
             return userData;
         } catch (error) {
@@ -55,31 +47,26 @@ export const AuthProvider = ({ children }) => {
         const initializeAuth = async () => {
             const hash = window.location.hash;
 
-            // 1. ¿Venimos de una redirección de Google?
+            // 1. ¿Venimos de una redirección de Google? (Legacy support/Cleanup)
             if (hash.includes('session_id=')) {
                 const sessionId = hash.split('session_id=')[1];
                 try {
                     await processGoogleSession(sessionId);
-                    // Limpiamos la URL para que no quede el session_id a la vista
-                    window.history.replaceState(null, '', window.location.pathname);
                 } catch (err) {
                     console.error("Fallo al inicializar sesión de Google");
                 } finally {
+                    window.history.replaceState(null, '', window.location.pathname);
                     setLoading(false);
                 }
-                return; // Evitamos que siga al paso 2
+                return;
             }
 
-            // 2. Si no es Google, ¿tenemos un token guardado de antes?
-            if (token) {
-                await fetchUser();
-            } else {
-                setLoading(false);
-            }
+            // 2. Always try to fetch user as we rely on HttpOnly cookies now
+            await fetchUser();
         };
 
         initializeAuth();
-    }, [token, fetchUser, processGoogleSession]);
+    }, [fetchUser, processGoogleSession]);
 
     const loginWithGoogle = () => {
         window.location.href = `${process.env.REACT_APP_BACKEND_URL}/api/auth/google`;
@@ -87,20 +74,16 @@ export const AuthProvider = ({ children }) => {
 
     const login = async (email, password) => {
         const response = await axios.post(`${API}/auth/login`, { email, password });
-        const { access_token, user: userData } = response.data;
-        localStorage.setItem('token', access_token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-        setToken(access_token);
+        const { user: userData } = response.data;
+        setToken("SESSION_ACTIVE");
         setUser(userData);
         return userData;
     };
 
     const register = async (name, email, password) => {
         const response = await axios.post(`${API}/auth/register`, { name, email, password });
-        const { access_token, user: userData } = response.data;
-        localStorage.setItem('token', access_token);
-        axios.defaults.headers.common['Authorization'] = `Bearer ${access_token}`;
-        setToken(access_token);
+        const { user: userData } = response.data;
+        setToken("SESSION_ACTIVE");
         setUser(userData);
         return userData;
     };
@@ -111,8 +94,6 @@ export const AuthProvider = ({ children }) => {
         } catch (error) {
             console.error('Logout error:', error);
         }
-        localStorage.removeItem('token');
-        delete axios.defaults.headers.common['Authorization'];
         setToken(null);
         setUser(null);
     };

@@ -31,7 +31,18 @@ def create_token(user_id: str, email: str, role: str) -> str:
     return jwt.encode(payload, settings.JWT_SECRET, algorithm=settings.JWT_ALGORITHM)
 
 async def get_current_user(request: Request, credentials: HTTPAuthorizationCredentials = Depends(security)):
-    # First try session token from cookie
+    # First try JWT from cookie
+    access_token = request.cookies.get("access_token")
+    if access_token:
+        try:
+            payload = jwt.decode(access_token, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
+            user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
+            if user:
+                return user
+        except:
+            pass
+
+    # Next try session token from cookie
     session_token = request.cookies.get("session_token")
 
     if session_token:

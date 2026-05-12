@@ -28,7 +28,7 @@ const RegisterPage = () => {
             toast.success("¡Cuenta creada con éxito!");
             navigate("/dashboard");
         } catch (error) {
-            toast.error(error.response?.data?.detail || "Error al crear cuenta");
+            toast.error("Error al crear cuenta. Por favor, verifica tus datos.");
         } finally {
             setLoading(false);
         }

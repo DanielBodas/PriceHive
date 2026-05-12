@@ -1,5 +1,7 @@
 from fastapi import APIRouter, HTTPException, Depends, Request, Response
 from fastapi.responses import RedirectResponse
+from slowapi import Limiter
+from slowapi.util import get_remote_address
 import httpx
 import uuid
 import logging
@@ -11,6 +13,7 @@ from ..models.user import UserCreate, UserLogin, UserResponse, TokenResponse, Go
 
 router = APIRouter(prefix="/auth", tags=["auth"])
 logger = logging.getLogger(__name__)
+limiter = Limiter(key_func=get_remote_address)
 
 @router.get("/google")
 async def auth_google():
@@ -86,7 +89,19 @@ async def auth_google_callback(code: str, response: Response):
         "created_at": datetime.now(timezone.utc).isoformat()
     })
 
-    return RedirectResponse(url=f"{settings.FRONTEND_URL}/#session_id={session_token}")
+    # Exchange session_token for a real JWT and set as HttpOnly cookie
+    access_token = create_token(user_id, email, user["role"])
+
+    redirect_resp = RedirectResponse(url=f"{settings.FRONTEND_URL}/dashboard")
+    redirect_resp.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True, # Should be True in prod (HTTPS)
+        samesite="strict",
+        max_age=settings.JWT_EXPIRATION_HOURS * 3600
+    )
+    return redirect_resp
 
 @router.post("/logout")
 async def logout(request: Request, response: Response):
@@ -94,11 +109,12 @@ async def logout(request: Request, response: Response):
     if session_token:
         await db.user_sessions.delete_many({"session_token": session_token})
 
-    response.delete_cookie(key="session_token", path="/", secure=True, samesite="none")
+    response.delete_cookie(key="session_token", path="/", secure=True, samesite="strict")
+    response.delete_cookie(key="access_token", path="/", secure=True, samesite="strict")
     return {"message": "Logged out successfully"}
 
 @router.post("/google/session")
-async def google_session(data: GoogleSessionRequest):
+async def google_session(data: GoogleSessionRequest, response: Response):
     session = await db.user_sessions.find_one({"session_token": data.session_id})
     if not session:
         raise HTTPException(status_code=401, detail="Sesión no válida o expirada")
@@ -109,6 +125,15 @@ async def google_session(data: GoogleSessionRequest):
 
     access_token = create_token(user["id"], user["email"], user["role"])
 
+    response.set_cookie(
+        key="access_token",
+        value=access_token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=settings.JWT_EXPIRATION_HOURS * 3600
+    )
+
     return {
         "access_token": access_token,
         "token_type": "bearer",
@@ -116,7 +141,8 @@ async def google_session(data: GoogleSessionRequest):
     }
 
 @router.post("/register", response_model=TokenResponse)
-async def register(user_data: UserCreate):
+@limiter.limit("5/minute")
+async def register(request: Request, user_data: UserCreate, response: Response):
     user_email = user_data.email.lower().strip()
     existing = await db.users.find_one({"email": user_email})
     if existing:
@@ -142,6 +168,15 @@ async def register(user_data: UserCreate):
     await add_credits(user_id, 100, "Bono de bienvenida")
     token = create_token(user_id, user_email, "user")
 
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=settings.JWT_EXPIRATION_HOURS * 3600
+    )
+
     return TokenResponse(
         access_token=token,
         token_type="bearer",
@@ -149,7 +184,8 @@ async def register(user_data: UserCreate):
     )
 
 @router.post("/login", response_model=TokenResponse)
-async def login(credentials: UserLogin):
+@limiter.limit("5/minute")
+async def login(request: Request, credentials: UserLogin, response: Response):
     user_email = credentials.email.lower().strip()
     user = await db.users.find_one({"email": user_email}, {"_id": 0})
 
@@ -157,6 +193,15 @@ async def login(credentials: UserLogin):
         raise HTTPException(status_code=401, detail="Usuario o contraseña incorrectos")
 
     token = create_token(user["id"], user["email"], user["role"])
+
+    response.set_cookie(
+        key="access_token",
+        value=token,
+        httponly=True,
+        secure=True,
+        samesite="strict",
+        max_age=settings.JWT_EXPIRATION_HOURS * 3600
+    )
 
     return TokenResponse(
         access_token=token,

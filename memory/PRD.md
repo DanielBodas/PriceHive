@@ -66,8 +66,8 @@ Crear una app/web colaborativa donde los usuarios puedan registrar precios de pr
 - Productos: Leche Entera, Leche Desnatada, Yogur Natural
 
 ### Credenciales de Prueba
-- Admin: admin@pricehive.com / admin123
-- O usar Google OAuth (recomendado)
+- Las credenciales de administrador deben configurarse mediante variables de entorno en producción.
+- Usar Google OAuth (recomendado) para acceso de usuario.
 
 ## Backlog Priorizado
 

@@ -29,7 +29,7 @@ const LoginPage = () => {
 
             if (error.response) {
                 // El servidor respondió (401, 400, 500...)
-                toast.error(error.response.data?.detail || "Error en los datos");
+                toast.error("Error de autenticación. Por favor, verifica tus credenciales.");
             } else if (error.request) {
                 // El servidor NO respondió o el navegador bloqueó la respuesta (CORS)
                 toast.error("Bloqueo de seguridad (CORS) o el servidor está caído. Revisa F12.");
