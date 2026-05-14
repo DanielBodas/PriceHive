@@ -1,0 +1,15 @@
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [202532]
+INFO:     Started server process [329472]
+INFO:     Waiting for application startup.
+INFO:     Application startup complete.
+INFO:     Uvicorn running on http://0.0.0.0:10000 (Press CTRL+C to quit)
+INFO:     127.0.0.1:38850 - "GET /api/auth/google HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:43410 - "GET /api/auth/google HTTP/1.1" 307 Temporary Redirect
+INFO:     127.0.0.1:43416 - "GET / HTTP/1.1" 200 OK
+INFO:     Shutting down
+INFO:     Waiting for application shutdown.
+INFO:     Application shutdown complete.
+INFO:     Finished server process [329472]

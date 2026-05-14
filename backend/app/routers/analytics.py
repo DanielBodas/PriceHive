@@ -213,7 +213,7 @@ logger = logging.getLogger(__name__)
 
 @router.get("/analytics/stats")
 async def get_general_stats(user: dict = Depends(get_current_user)):
-    logger.info(f"Fetching stats for user: {user.get('email')}")
+    logger.info(f"Fetching stats for user_id: {user.get('id')}")
     try:
         total_products = await db.products.count_documents({})
         total_prices = await db.prices.count_documents({"status": {"$ne": "invalid"}})
@@ -281,7 +281,7 @@ async def get_general_stats(user: dict = Depends(get_current_user)):
 @router.get("/leaderboard", response_model=List[LeaderboardEntry])
 async def get_leaderboard(limit: int = 10, user: dict = Depends(get_current_user)):
     users = await db.users.find({}, {"_id": 0, "id": 1, "name": 1, "points": 1}).sort("points", -1).to_list(limit)
-    return [LeaderboardEntry(user_id=u["id"], user_name=u["name"], points=u.get("points", 0), rank=i + 1) for i, u in enumerate(users)]
+    return [LeaderboardEntry(user_id="PROTECTED", user_name=u["name"], points=u.get("points", 0), rank=i + 1) for i, u in enumerate(users)]
 
 @router.get("/my-points")
 async def get_my_points(user: dict = Depends(get_current_user)):

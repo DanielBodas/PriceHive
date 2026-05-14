@@ -1,4 +1,5 @@
 from fastapi import APIRouter, HTTPException, Depends
+import re
 from typing import Optional
 from typing import List
 from ..core.database import db
@@ -15,7 +16,7 @@ async def search_products(
 ):
     query = {}
     if q:
-        query["name"] = {"$regex": q, "$options": "i"}
+        query["name"] = {"$regex": re.escape(q), "$options": "i"}
     if category_id:
         query["category_id"] = category_id
     if brand_id:

@@ -451,6 +451,8 @@ services:
       - "27017:27017"
     environment:
       MONGO_INITDB_DATABASE: pricehive
+      MONGO_INITDB_ROOT_USERNAME: <your_username>
+      MONGO_INITDB_ROOT_PASSWORD: <your_password>
 
   backend:
     build:
@@ -846,11 +848,14 @@ client = MongoClient('mongodb://localhost:27017')
 db = client['pricehive']
 
 admin_id = str(uuid.uuid4())
-password = bcrypt.hashpw('admin123'.encode('utf-8'), bcrypt.gensalt()).decode('utf-8')
+# Usa una contraseña segura desde variables de entorno
+admin_email = os.environ.get("ADMIN_EMAIL", "admin@tu-dominio.com")
+admin_password = os.environ.get("ADMIN_PASSWORD", "cambiame_por_favor")
+password = hash_password(admin_password)
 
 db.users.insert_one({
     'id': admin_id,
-    'email': 'admin@pricehive.com',
+    'email': admin_email,
     'password': password,
     'name': 'Administrador',
     'role': 'admin',
@@ -858,7 +863,7 @@ db.users.insert_one({
     'created_at': datetime.now(timezone.utc).isoformat()
 })
 
-print('Admin created: admin@pricehive.com / admin123')
+print(f'Admin created: {admin_email}')
 ```
 
 ### Seed datos iniciales
