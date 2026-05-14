@@ -1008,7 +1008,6 @@ async def validate_price(price_id: str, user: dict = Depends(get_admin_user)):
         raise HTTPException(status_code=404, detail="Price not found")
         
     # Build response (similar to update_price)
-    from .admin import map_id
     price = map_id(price)
     
     # We could optionally give points back, but user said "de momeot CONFIGURAR para que no hace falta validarlo (validos por defecto)"
@@ -1037,6 +1036,5 @@ async def invalidate_price(price_id: str, reason: str = "Información incorrecta
         "warning"
     )
     
-    from .admin import map_id
     return PriceResponse(**map_id(price))
 
