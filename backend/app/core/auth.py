@@ -44,7 +44,7 @@ async def get_current_user(request: Request, credentials: HTTPAuthorizationCrede
                 expires_at = expires_at.replace(tzinfo=timezone.utc)
 
             if expires_at > datetime.now(timezone.utc):
-                user = await db.users.find_one({"id": session["user_id"]}, {"_id": 0})
+                user = await db.users.find_one({"id": session["user_id"]}, {"_id": 0, "password": 0})
                 if user:
                     return user
 
@@ -52,7 +52,7 @@ async def get_current_user(request: Request, credentials: HTTPAuthorizationCrede
     if credentials:
         try:
             payload = jwt.decode(credentials.credentials, settings.JWT_SECRET, algorithms=[settings.JWT_ALGORITHM])
-            user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0})
+            user = await db.users.find_one({"id": payload["user_id"]}, {"_id": 0, "password": 0})
             if user:
                 return user
         except jwt.ExpiredSignatureError:

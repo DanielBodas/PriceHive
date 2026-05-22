@@ -3,13 +3,16 @@ from pathlib import Path
 from dotenv import load_dotenv
 
 ROOT_DIR = Path(__file__).parent.parent.parent
+# Cargar .env desde la raíz del backend (backend/.env)
 load_dotenv(ROOT_DIR / '.env')
 
 class Settings:
     PROJECT_NAME: str = "PriceHive API"
+    ENVIRONMENT: str = os.environ.get("ENVIRONMENT", "development")
     MONGO_URL: str = os.environ.get("MONGO_URL", "mongodb://localhost:27017")
     DB_NAME: str = os.environ.get("DB_NAME", "pricehive")
-    JWT_SECRET: str = os.environ.get("JWT_SECRET", "pricehive_super_secret_key_2024")
+    # SECURITY WARNING: DO NOT USE DEFAULTS IN PRODUCTION
+    JWT_SECRET: str = os.environ.get("JWT_SECRET")
     JWT_ALGORITHM: str = "HS256"
     JWT_EXPIRATION_HOURS: int = 24
     SESSION_EXPIRY_DAYS: int = 7
